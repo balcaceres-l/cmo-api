@@ -1,53 +1,15 @@
-# Hospital Universitario API
+# Hospital Universitario
 
-API REST única para las aplicaciones iOS, Android y el panel administrativo del Hospital Universitario. Está construida con Laravel 12, Sanctum, MariaDB, Reverb y Scramble.
+Ecosistema multiplataforma para la gestión operativa y clínica de un hospital universitario.
 
-## Requisitos
+| Carpeta | Proyecto | Tecnología |
+| --- | --- | --- |
+| [`backend/`](backend) | API REST compartida | Laravel 12, Sanctum, MariaDB, Reverb |
+| [`android/`](android) | App de recepción, enfermería y doctores | Kotlin, Jetpack Compose, MVVM |
 
-- PHP 8.2 o superior
-- Composer 2
-- MariaDB 10.11 o superior
+Todas las apps consumen la misma API bajo `/api/v1`. La documentación interactiva queda en `/docs/api` cuando el backend está corriendo.
 
-## Instalación
+## Inicio rápido
 
-```bash
-composer install
-cp .env.example .env
-php artisan key:generate
-php artisan migrate:fresh --seed
-```
-
-Configure `APP_URL`, las variables `DB_*` y `REVERB_*` en `.env`. Para iniciar la API y el servidor de eventos:
-
-```bash
-php artisan serve
-php artisan reverb:start
-```
-
-La API usa el prefijo `/api/v1`. La documentación OpenAPI interactiva está disponible en `/docs/api`.
-
-## Usuarios de demostración
-
-Todos usan la contraseña `Hospital2026!`:
-
-| Rol | Usuario |
-| --- | --- |
-| Administrador | `admin` |
-| Médico general | `medico.general` |
-| Médico de emergencia | `medico.emergencia` |
-| Médico alergista | `medico.alergista` |
-| Recepción | `recepcion` |
-| Enfermería | `enfermeria` |
-| Pacientes | `paciente.uno`, `paciente.dos` |
-
-Los correos de demostración usan el dominio `@hospital.edu.sv`.
-
-## Módulos
-
-Autenticación y registro de pacientes, usuarios y turnos, pacientes y expediente, citas, consultas y recetas, laboratorio, habitaciones e ingresos, inventario, ambulancia en tiempo real, avisos, información pública y métricas administrativas.
-
-## Verificación
-
-```bash
-php artisan test
-```
+1. Levanta el backend siguiendo [`backend/README.md`](backend/README.md).
+2. Abre la carpeta `android/` en Android Studio y configura la URL de la API según [`android/README.md`](android/README.md).
