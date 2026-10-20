@@ -36,12 +36,12 @@ class HospitalizacionController extends ApiController
             $q->where('id_medico', $r->user()->id);
         }
 
-return $this->success($this->paginar($q, $r));
+        return $this->success($this->paginar($q, $r));
     }
 
     public function ingresar(Request $r)
     {
-        $d = $r->validate(['id_paciente' => 'required|exists:paciente,id_paciente', 'tipo' => 'required|in:VIP,SEMIPRIVADA', 'id_cama' => 'nullable|exists:cama,id_cama', 'id_medico' => 'required|exists:users,id', 'motivo' => 'required|string']);
+        $d = $r->validate(['id_paciente' => 'required|exists:paciente,id_paciente', 'tipo' => 'required|in:VIP,SEMIPRIVADA', 'id_cama' => 'nullable|exists:cama,id_cama', 'id_medico' => ['required', $this->reglaMedico()], 'motivo' => 'required|string']);
         $i = $this->servicio->asignar(Paciente::findOrFail($d['id_paciente']), $d['tipo'], $d['id_cama'] ?? null, User::findOrFail($d['id_medico']), $d['motivo'], $r->user());
 
         return $this->success($i, 'Ingreso creado.', 201);

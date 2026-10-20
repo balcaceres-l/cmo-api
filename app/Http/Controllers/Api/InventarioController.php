@@ -33,6 +33,9 @@ class InventarioController extends ApiController
 
     public function destroy(Recurso $recurso)
     {
+        if ($recurso->movimientos()->exists()) {
+            throw new ConflictoException('No se puede eliminar un recurso con movimientos registrados.');
+        }
         $recurso->delete();
 
         return $this->success(null, 'Recurso eliminado.');
@@ -45,7 +48,7 @@ class InventarioController extends ApiController
             abort(403);
         }
 
-return DB::transaction(function () use ($d, $r, $recurso) {
+        return DB::transaction(function () use ($d, $r, $recurso) {
             $recurso = Recurso::lockForUpdate()->findOrFail($recurso->getKey());
             $n = $recurso->cantidad + ($d['tipo'] === 'ENTRADA' ? $d['cantidad'] : -$d['cantidad']);
             if ($n < 0) {
@@ -57,8 +60,9 @@ return DB::transaction(function () use ($d, $r, $recurso) {
         });
     }
 
+    /** Al editar, la cantidad solo cambia mediante movimientos, para que el stock cuadre con la bitácora. */
     private function datos(Request $r, bool $p = false): array
     {
-        return $r->validate(['nombre' => ($p ? 'sometimes' : 'required').'|string', 'categoria' => ($p ? 'sometimes' : 'required').'|in:Medicamento,Insumo,Equipo', 'unidad' => ($p ? 'sometimes' : 'required').'|string', 'cantidad' => 'sometimes|integer|min:0', 'stock_minimo' => ($p ? 'sometimes' : 'required').'|integer|min:0', 'ubicacion' => 'nullable|string']);
+        return $r->validate(['nombre' => ($p ? 'sometimes' : 'required').'|string', 'categoria' => ($p ? 'sometimes' : 'required').'|in:Medicamento,Insumo,Equipo', 'unidad' => ($p ? 'sometimes' : 'required').'|string', 'cantidad' => $p ? 'prohibited' : 'sometimes|integer|min:0', 'stock_minimo' => ($p ? 'sometimes' : 'required').'|integer|min:0', 'ubicacion' => 'nullable|string']);
     }
 }

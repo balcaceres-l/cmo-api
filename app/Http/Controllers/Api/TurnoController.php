@@ -49,7 +49,7 @@ class TurnoController extends ApiController
 
     private function datos(Request $r): array
     {
-        return $r->validate(['id_usuario' => 'required|uuid|exists:users,id', 'fecha' => 'required|date', 'hora_inicio' => 'required|date_format:H:i', 'hora_fin' => 'required|date_format:H:i|after:hora_inicio', 'area' => 'required|string|max:100']);
+        return $r->validate(['id_usuario' => ['required', 'uuid', $this->reglaPersonal()], 'fecha' => 'required|date', 'hora_inicio' => 'required|date_format:H:i', 'hora_fin' => 'required|date_format:H:i|after:hora_inicio', 'area' => 'required|string|max:100']);
     }
 
     private function sinSolape(array $d, ?string $ignorar = null): void

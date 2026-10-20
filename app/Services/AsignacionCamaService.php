@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Support\TiempoReal;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AsignacionCamaService
 {
@@ -27,6 +28,9 @@ class AsignacionCamaService
 
                 return ($ocupadas ? 0 : 1).$c->codigo;
             })->first();
+            if ($idCama && ! $cama) {
+                throw ValidationException::withMessages(['id_cama' => 'La cama no pertenece a una habitación de tipo '.$tipo.'.']);
+            }
             if (! $cama || $cama->estado !== 'DISPONIBLE') {
                 throw new ConflictoException($idCama ? 'La cama seleccionada está ocupada.' : 'No hay camas disponibles en planta '.($tipo === 'VIP' ? 3 : 2));
             }try {

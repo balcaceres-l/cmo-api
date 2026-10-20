@@ -48,7 +48,7 @@ class CitaController extends ApiController
 
     public function disponibilidad(Request $r)
     {
-        $d = $r->validate(['id_medico' => 'required|exists:users,id', 'fecha' => 'required|date']);
+        $d = $r->validate(['id_medico' => ['required', $this->reglaMedico()], 'fecha' => 'required|date']);
 
         return $this->success($this->agenda->bloquesDisponibles($d['id_medico'], $d['fecha']));
     }
@@ -94,7 +94,7 @@ class CitaController extends ApiController
 
     public function confirmar(Request $r, Cita $cita)
     {
-        $d = $r->validate(['id_medico' => 'required|exists:users,id', 'fecha' => 'required|date', 'hora_inicio' => 'required|date_format:H:i']);
+        $d = $r->validate(['id_medico' => ['required', $this->reglaMedico()], 'fecha' => 'required|date', 'hora_inicio' => 'required|date_format:H:i']);
         $d['hora_fin'] = Carbon::createFromFormat('H:i', $d['hora_inicio'])->addMinutes(config('hospital.duracion_cita_min'))->format('H:i');
 
         return DB::transaction(function () use ($d, $cita) {
@@ -118,7 +118,7 @@ class CitaController extends ApiController
         $d = $r->validate([
             // Reprogramar mueve la cita en el tiempo; no la reasigna a otro paciente.
             'id_paciente' => $reprogramar ? 'prohibited' : 'required|exists:paciente,id_paciente',
-            'id_medico' => "$reglaMedico|exists:users,id",
+            'id_medico' => [$reglaMedico, $this->reglaMedico()],
             'fecha' => 'required|date',
             'hora_inicio' => 'required|date_format:H:i',
             'hora_fin' => 'nullable|date_format:H:i|after:hora_inicio',

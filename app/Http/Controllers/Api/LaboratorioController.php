@@ -7,6 +7,7 @@ use App\Models\Consulta;
 use App\Models\ExamenCatalogo;
 use App\Models\OrdenLaboratorio;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class LaboratorioController extends ApiController
 {
@@ -18,8 +19,9 @@ class LaboratorioController extends ApiController
     public function crear(Request $r, Consulta $consulta)
     {
         abort_unless($consulta->id_medico === $r->user()->id, 403);
+        abort_if($consulta->fecha_hora_fin, 409, 'La consulta ya está cerrada.');
         $d = $r->validate(['id_examen' => 'required|exists:examen_catalogo,id_examen', 'observaciones' => 'nullable|string']);
-        $o = $consulta->ordenesLaboratorio()->create($d + ['id_paciente' => $consulta->cita->id_paciente, 'id_medico' => $r->user()->id, 'fecha_solicitud' => now()]);
+        $o = $consulta->ordenesLaboratorio()->create($d + ['id_paciente' => $consulta->cita->id_paciente, 'id_medico' => $r->user()->id, 'estado' => 'PENDIENTE', 'fecha_solicitud' => now()]);
 
         return $this->success($o, 'Orden creada.', 201);
     }
@@ -32,26 +34,35 @@ class LaboratorioController extends ApiController
             $q->where('id_medico', $r->user()->id);
         }
 
-return $this->success($this->paginar($q->orderByDesc('fecha_solicitud'), $r));
+        return $this->success($this->paginar($q->orderByDesc('fecha_solicitud'), $r));
     }
 
     public function iniciar(OrdenLaboratorio $orden)
     {
-        if ($orden->estado !== 'PENDIENTE') {
-            throw new ConflictoException('La orden solo puede iniciarse desde PENDIENTE.');
-        }$orden->update(['estado' => 'EN_PROCESO', 'fecha_inicio' => now()]);
+        return DB::transaction(function () use ($orden) {
+            $orden = OrdenLaboratorio::lockForUpdate()->findOrFail($orden->getKey());
+            if ($orden->estado !== 'PENDIENTE') {
+                throw new ConflictoException('La orden solo puede iniciarse desde PENDIENTE.');
+            }
+            $orden->update(['estado' => 'EN_PROCESO', 'fecha_inicio' => now()]);
 
-        return $this->success($orden->refresh());
+            return $this->success($orden->refresh());
+        });
     }
 
     public function completar(Request $r, OrdenLaboratorio $orden)
     {
-        if ($orden->estado !== 'EN_PROCESO') {
-            throw new ConflictoException('La orden solo puede completarse desde EN_PROCESO.');
-        }$d = $r->validate(['resultado' => 'required|string']);
-        $orden->update($d + ['estado' => 'COMPLETADO', 'fecha_resultado' => now(), 'id_registrado_por' => $r->user()->id]);
+        $d = $r->validate(['resultado' => 'required|string']);
 
-        return $this->success($orden->refresh());
+        return DB::transaction(function () use ($r, $d, $orden) {
+            $orden = OrdenLaboratorio::lockForUpdate()->findOrFail($orden->getKey());
+            if ($orden->estado !== 'EN_PROCESO') {
+                throw new ConflictoException('La orden solo puede completarse desde EN_PROCESO.');
+            }
+            $orden->update($d + ['estado' => 'COMPLETADO', 'fecha_resultado' => now(), 'id_registrado_por' => $r->user()->id]);
+
+            return $this->success($orden->refresh());
+        });
     }
 
     public function mias(Request $r)

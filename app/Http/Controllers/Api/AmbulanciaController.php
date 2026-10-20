@@ -11,9 +11,22 @@ class AmbulanciaController extends ApiController
 {
     public function __construct(private AmbulanciaService $servicio) {}
 
-    public function show()
+    public function show(Request $r)
     {
-        return $this->success(Ambulancia::with(['servicios' => fn ($q) => $q->where('estado', 'EN_CURSO')])->firstOrFail());
+        $a = Ambulancia::with(['servicios' => fn ($q) => $q->where('estado', 'EN_CURSO')])->firstOrFail();
+        if ($r->user()->rol !== 'MEDICO') {
+            return $this->success($a);
+        }
+
+        // El médico no tiene acceso a la bitácora: ve el estado y la prioridad
+        // del servicio en curso, igual que el evento en tiempo real, sin datos
+        // de la persona atendida.
+        $s = $a->servicios->first();
+
+        return $this->success([
+            'estado' => $a->estado,
+            'servicio_activo' => $s ? ['prioridad' => $s->prioridad, 'hora_salida' => $s->hora_salida] : null,
+        ]);
     }
 
     public function estado(Request $r)
@@ -42,6 +55,6 @@ class AmbulanciaController extends ApiController
     {
         $q = ServicioAmbulancia::query()->when($r->desde, fn ($q, $v) => $q->whereDate('hora_solicitud', '>=', $v))->when($r->hasta, fn ($q, $v) => $q->whereDate('hora_solicitud', '<=', $v))->when($r->prioridad, fn ($q, $v) => $q->where('prioridad', $v))->when($r->estado, fn ($q, $v) => $q->where('estado', $v))->orderByDesc('hora_solicitud');
 
-        return $this->success($this->paginar($q,$r));
+        return $this->success($this->paginar($q, $r));
     }
 }

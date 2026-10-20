@@ -123,7 +123,9 @@ return new class extends Migration
             $t->text('motivo');
             $t->foreignUuid('id_registrado_por')->constrained('users')->restrictOnDelete();
             $t->timestamps();
-            if (DB::getDriverName() === 'mysql') {
+            // Con DB_CONNECTION=mariadb el driver se llama "mariadb", no "mysql";
+            // sin esta condición la base quedaría sin la protección de cupo.
+            if (in_array(DB::getDriverName(), ['mysql', 'mariadb'], true)) {
                 $t->uuid('cama_activa')->nullable()->storedAs('IF(fecha_alta IS NULL, id_cama, NULL)')->unique();
                 $t->uuid('paciente_activo')->nullable()->storedAs('IF(fecha_alta IS NULL, id_paciente, NULL)')->unique();
             }

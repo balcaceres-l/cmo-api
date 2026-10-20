@@ -36,9 +36,18 @@ class UsuarioController extends ApiController
     public function update(Request $r, User $usuario)
     {
         $d = $this->validar($r, $usuario, true);
-        if (($d['rol'] ?? $usuario->rol) === 'PACIENTE') {
+        // Las cuentas de paciente se gestionan por registro o desde recepción;
+        // convertirlas en personal mezclaría un expediente con una cuenta de staff.
+        if ($usuario->rol === 'PACIENTE' || ($d['rol'] ?? $usuario->rol) === 'PACIENTE') {
             return $this->failure('El administrador solo gestiona personal.', 422);
-        }$usuario->update($d);
+        }
+        if ($this->esSiMismo($r, $usuario) && ((isset($d['rol']) && $d['rol'] !== $usuario->rol) || ($d['estado'] ?? 'ACTIVO') === 'INACTIVO')) {
+            return $this->failure('No puedes cambiar tu propio rol ni desactivar tu cuenta.', 422);
+        }
+        if (empty($d['password'])) {
+            unset($d['password']);
+        }
+        $usuario->update($d);
         if ($usuario->estado === 'INACTIVO') {
             $usuario->tokens()->delete();
         }
@@ -49,12 +58,20 @@ class UsuarioController extends ApiController
     public function cambiarEstado(Request $r, User $usuario)
     {
         $d = $r->validate(['estado' => ['required', Rule::in(['ACTIVO', 'INACTIVO'])]]);
+        if ($this->esSiMismo($r, $usuario) && $d['estado'] === 'INACTIVO') {
+            return $this->failure('No puedes desactivar tu propia cuenta.', 422);
+        }
         $usuario->update($d);
         if ($usuario->estado === 'INACTIVO') {
             $usuario->tokens()->delete();
         }
 
         return $this->success($usuario);
+    }
+
+    private function esSiMismo(Request $r, User $usuario): bool
+    {
+        return $r->user()->is($usuario);
     }
 
     private function validar(Request $r, ?User $u = null, bool $parcial = false): array
