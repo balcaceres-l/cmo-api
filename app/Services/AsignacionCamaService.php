@@ -43,10 +43,12 @@ class AsignacionCamaService
     public function alta(Ingreso $ingreso): Ingreso
     {
         return DB::transaction(function () use ($ingreso) {
-            $ingreso->lockForUpdate();
+            $ingreso = Ingreso::lockForUpdate()->findOrFail($ingreso->getKey());
             if ($ingreso->fecha_alta) {
                 throw new ConflictoException('El ingreso ya fue dado de alta.');
-            }$ingreso->update(['fecha_alta' => now()]);
+            }
+
+            $ingreso->update(['fecha_alta' => now()]);
             $ingreso->cama()->update(['estado' => 'DISPONIBLE']);
             OcupacionActualizada::dispatch();
 

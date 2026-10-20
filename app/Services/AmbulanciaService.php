@@ -28,9 +28,12 @@ class AmbulanciaService
     {
         return DB::transaction(function () use ($s, $notas) {
             $a = Ambulancia::lockForUpdate()->findOrFail($s->id_ambulancia);
+            $s = ServicioAmbulancia::lockForUpdate()->findOrFail($s->getKey());
             if ($s->estado !== 'EN_CURSO') {
                 throw new ConflictoException('El servicio no está en curso.');
-            }$s->update(['estado' => 'FINALIZADO', 'hora_cierre' => now(), 'notas' => $notas]);
+            }
+
+            $s->update(['estado' => 'FINALIZADO', 'hora_cierre' => now(), 'notas' => $notas]);
             $a->update(['estado' => 'DISPONIBLE']);
             AmbulanciaActualizada::dispatch($a);
 

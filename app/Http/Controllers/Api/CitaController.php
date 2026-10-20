@@ -19,7 +19,7 @@ class CitaController extends ApiController
             $q->where('id_medico', $r->user()->id);
         }
 
-return $this->success($this->paginar($q, $r));
+        return $this->success($this->paginar($q, $r));
     }
 
     public function store(Request $r)
@@ -29,7 +29,7 @@ return $this->success($this->paginar($q, $r));
             $d['id_medico'] = $r->user()->id;
         }
 
-return DB::transaction(function () use ($d, $r) {
+        return DB::transaction(function () use ($d, $r) {
             $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin']);
             $d['id_creado_por'] = $r->user()->id;
             $d['estado'] = 'AGENDADA';
@@ -100,7 +100,15 @@ return DB::transaction(function () use ($d, $r) {
 
     private function datos(Request $r): array
     {
-        $d = $r->validate(['id_paciente' => 'required|exists:paciente,id_paciente', 'id_medico' => 'sometimes|exists:users,id', 'fecha' => 'required|date', 'hora_inicio' => 'required|date_format:H:i', 'hora_fin' => 'nullable|date_format:H:i|after:hora_inicio', 'motivo' => 'required|string']);
+        $reglaMedico = $r->user()->rol === 'MEDICO' ? 'sometimes' : 'required';
+        $d = $r->validate([
+            'id_paciente' => 'required|exists:paciente,id_paciente',
+            'id_medico' => "$reglaMedico|exists:users,id",
+            'fecha' => 'required|date',
+            'hora_inicio' => 'required|date_format:H:i',
+            'hora_fin' => 'nullable|date_format:H:i|after:hora_inicio',
+            'motivo' => 'required|string',
+        ]);
         $d['hora_fin'] = $d['hora_fin'] ?? Carbon::createFromFormat('H:i', $d['hora_inicio'])->addMinutes(config('hospital.duracion_cita_min'))->format('H:i');
 
         return $d;
