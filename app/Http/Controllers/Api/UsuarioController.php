@@ -25,7 +25,7 @@ class UsuarioController extends ApiController
             return $this->failure('El administrador solo puede crear personal.', 422);
         }
 
-return $this->success(User::create($d), 'Usuario creado.', 201);
+        return $this->success(User::create($d), 'Usuario creado.', 201);
     }
 
     public function show(User $usuario)
@@ -39,6 +39,9 @@ return $this->success(User::create($d), 'Usuario creado.', 201);
         if (($d['rol'] ?? $usuario->rol) === 'PACIENTE') {
             return $this->failure('El administrador solo gestiona personal.', 422);
         }$usuario->update($d);
+        if ($usuario->estado === 'INACTIVO') {
+            $usuario->tokens()->delete();
+        }
 
         return $this->success($usuario->refresh(), 'Usuario actualizado.');
     }
@@ -47,6 +50,9 @@ return $this->success(User::create($d), 'Usuario creado.', 201);
     {
         $d = $r->validate(['estado' => ['required', Rule::in(['ACTIVO', 'INACTIVO'])]]);
         $usuario->update($d);
+        if ($usuario->estado === 'INACTIVO') {
+            $usuario->tokens()->delete();
+        }
 
         return $this->success($usuario);
     }

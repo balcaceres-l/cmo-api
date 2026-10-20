@@ -9,7 +9,7 @@ trait ClinicalAccess
 {
     private function tratante(User $u, Paciente $p): bool
     {
-        return $p->citas()->where('id_medico', $u->id)->exists() || $p->ingresos()->where('id_medico', $u->id)->exists();
+        return Paciente::whereKey($p->getKey())->tratadoPor($u->id)->exists();
     }
 
     private function clinico(User $u, Paciente $p): bool

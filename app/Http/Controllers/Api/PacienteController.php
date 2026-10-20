@@ -12,7 +12,7 @@ class PacienteController extends ApiController
 {
     public function index(Request $r)
     {
-        $q = Paciente::query()->when($r->user()->rol === 'MEDICO', fn ($q) => $q->where(fn ($x) => $x->whereHas('citas', fn ($c) => $c->where('id_medico', $r->user()->id))->orWhereHas('ingresos', fn ($i) => $i->where('id_medico', $r->user()->id))))->when($r->q, fn ($q, $v) => $q->where(fn ($x) => $x->where('nombre_completo', 'like', "%$v%")->orWhere('dui', 'like', "%$v%")->orWhere('numero_expediente', 'like', "%$v%")))->orderBy('nombre_completo');
+        $q = Paciente::query()->when($r->user()->rol === 'MEDICO', fn ($q) => $q->tratadoPor($r->user()->id))->when($r->q, fn ($q, $v) => $q->where(fn ($x) => $x->where('nombre_completo', 'like', "%$v%")->orWhere('dui', 'like', "%$v%")->orWhere('numero_expediente', 'like', "%$v%")))->orderBy('nombre_completo');
 
         return $this->success($this->paginar($q, $r));
     }
@@ -83,6 +83,6 @@ class PacienteController extends ApiController
         $y = now()->format('Y');
         $last = Paciente::where('numero_expediente', 'like', "EXP-$y-%")->lockForUpdate()->max('numero_expediente');
 
-        return sprintf('EXP-%s-%06d',$y,$last ? (int) substr($last,-6) + 1 : 1);
+        return sprintf('EXP-%s-%06d', $y, $last ? (int) substr($last, -6) + 1 : 1);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Cita;
+use App\Models\Paciente;
 use App\Services\AgendaService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -27,6 +28,13 @@ class CitaController extends ApiController
         $d = $this->datos($r);
         if ($r->user()->rol === 'MEDICO') {
             $d['id_medico'] = $r->user()->id;
+            // El médico solo agenda seguimientos: si pudiera agendar a cualquier
+            // paciente, la cita lo haría tratante y le abriría el expediente.
+            abort_unless(
+                Paciente::whereKey($d['id_paciente'])->tratadoPor($r->user()->id)->exists(),
+                403,
+                'Solo puedes agendar seguimientos de tus pacientes; la primera cita la agenda recepción.',
+            );
         }
 
         return DB::transaction(function () use ($d, $r) {
@@ -48,6 +56,7 @@ class CitaController extends ApiController
     public function cancelar(Request $r, Cita $cita)
     {
         $d = $r->validate(['motivo_cancelacion' => 'required|string']);
+        $cita->exigirEstado(['SOLICITADA', 'AGENDADA', 'EN_ESPERA'], 'cancelar');
         $cita->update($d + ['estado' => 'CANCELADA']);
 
         return $this->success($cita->refresh());
@@ -55,9 +64,11 @@ class CitaController extends ApiController
 
     public function reprogramar(Request $r, Cita $cita)
     {
-        $d = $this->datos($r);
+        $d = $this->datos($r, reprogramar: true);
 
         return DB::transaction(function () use ($d, $cita) {
+            $cita = Cita::lockForUpdate()->findOrFail($cita->getKey());
+            $cita->exigirEstado(['AGENDADA', 'EN_ESPERA'], 'reprogramar');
             $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin'], $cita->getKey());
             $cita->update($d + ['estado' => 'AGENDADA']);
 
@@ -67,6 +78,7 @@ class CitaController extends ApiController
 
     public function registrarLlegada(Cita $cita)
     {
+        $cita->exigirEstado(['AGENDADA'], 'registrar la llegada de');
         $cita->update(['estado' => 'EN_ESPERA', 'hora_llegada' => now()]);
 
         return $this->success($cita->refresh());
@@ -86,6 +98,8 @@ class CitaController extends ApiController
         $d['hora_fin'] = Carbon::createFromFormat('H:i', $d['hora_inicio'])->addMinutes(config('hospital.duracion_cita_min'))->format('H:i');
 
         return DB::transaction(function () use ($d, $cita) {
+            $cita = Cita::lockForUpdate()->findOrFail($cita->getKey());
+            $cita->exigirEstado(['SOLICITADA'], 'confirmar');
             $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin'], $cita->getKey());
             $cita->update($d + ['estado' => 'AGENDADA']);
 
@@ -98,16 +112,17 @@ class CitaController extends ApiController
         return $this->success($this->paginar($r->user()->paciente()->firstOrFail()->citas()->with('medico')->orderByDesc('fecha')->getQuery(), $r));
     }
 
-    private function datos(Request $r): array
+    private function datos(Request $r, bool $reprogramar = false): array
     {
         $reglaMedico = $r->user()->rol === 'MEDICO' ? 'sometimes' : 'required';
         $d = $r->validate([
-            'id_paciente' => 'required|exists:paciente,id_paciente',
+            // Reprogramar mueve la cita en el tiempo; no la reasigna a otro paciente.
+            'id_paciente' => $reprogramar ? 'prohibited' : 'required|exists:paciente,id_paciente',
             'id_medico' => "$reglaMedico|exists:users,id",
             'fecha' => 'required|date',
             'hora_inicio' => 'required|date_format:H:i',
             'hora_fin' => 'nullable|date_format:H:i|after:hora_inicio',
-            'motivo' => 'required|string',
+            'motivo' => $reprogramar ? 'sometimes|string' : 'required|string',
         ]);
         $d['hora_fin'] = $d['hora_fin'] ?? Carbon::createFromFormat('H:i', $d['hora_inicio'])->addMinutes(config('hospital.duracion_cita_min'))->format('H:i');
 

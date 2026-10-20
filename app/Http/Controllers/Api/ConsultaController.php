@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\ConflictoException;
 use App\Models\Cita;
 use App\Models\Consulta;
 use App\Models\Receta;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -15,8 +17,14 @@ class ConsultaController extends ApiController
         abort_unless($cita->id_medico === $r->user()->id, 403);
 
         return DB::transaction(function () use ($cita, $r) {
+            $cita = Cita::lockForUpdate()->findOrFail($cita->getKey());
+            $cita->exigirEstado(['AGENDADA', 'EN_ESPERA'], 'iniciar la consulta de');
+            try {
+                $c = Consulta::create(['id_cita' => $cita->getKey(), 'id_medico' => $r->user()->id, 'fecha_hora_inicio' => now(), 'motivo' => $cita->motivo]);
+            } catch (UniqueConstraintViolationException) {
+                throw new ConflictoException('La cita ya tiene una consulta.');
+            }
             $cita->update(['estado' => 'EN_ATENCION']);
-            $c = Consulta::create(['id_cita' => $cita->getKey(), 'id_medico' => $r->user()->id, 'fecha_hora_inicio' => now(), 'motivo' => $cita->motivo]);
 
             return $this->success($c, 'Consulta iniciada.', 201);
         });
@@ -68,6 +76,6 @@ class ConsultaController extends ApiController
     private function propiaAbierta(Request $r, Consulta $c): void
     {
         abort_unless($c->id_medico === $r->user()->id, 403);
-        abort_if($c->fecha_hora_fin,409,'La consulta ya está cerrada.');
+        abort_if($c->fecha_hora_fin, 409, 'La consulta ya está cerrada.');
     }
 }

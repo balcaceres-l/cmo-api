@@ -6,6 +6,7 @@ use App\Events\AmbulanciaActualizada;
 use App\Exceptions\ConflictoException;
 use App\Models\Ambulancia;
 use App\Models\ServicioAmbulancia;
+use App\Support\TiempoReal;
 use Illuminate\Support\Facades\DB;
 
 class AmbulanciaService
@@ -18,7 +19,7 @@ class AmbulanciaService
                 throw new ConflictoException("La ambulancia no está disponible; estado actual: {$a->estado}.");
             }$s = $a->servicios()->create($datos + ['estado' => 'EN_CURSO', 'hora_solicitud' => now(), 'hora_salida' => now()]);
             $a->update(['estado' => 'EN_SERVICIO']);
-            AmbulanciaActualizada::dispatch($a);
+            TiempoReal::emitir(new AmbulanciaActualizada($a));
 
             return $s;
         });
@@ -35,7 +36,7 @@ class AmbulanciaService
 
             $s->update(['estado' => 'FINALIZADO', 'hora_cierre' => now(), 'notas' => $notas]);
             $a->update(['estado' => 'DISPONIBLE']);
-            AmbulanciaActualizada::dispatch($a);
+            TiempoReal::emitir(new AmbulanciaActualizada($a));
 
             return $s->refresh();
         });
@@ -50,7 +51,7 @@ class AmbulanciaService
             }if (! in_array([$a->estado, $estado], [['DISPONIBLE', 'EN_MANTENIMIENTO'], ['EN_MANTENIMIENTO', 'DISPONIBLE']], true)) {
                 throw new ConflictoException('Transición de estado no permitida.');
             }$a->update(['estado' => $estado]);
-            AmbulanciaActualizada::dispatch($a);
+            TiempoReal::emitir(new AmbulanciaActualizada($a));
 
             return $a;
         });

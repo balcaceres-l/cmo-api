@@ -24,7 +24,7 @@ Route::prefix('publico')->group(function () {
 Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:login');
 Route::post('auth/registro', [AuthController::class, 'registro'])->middleware('throttle:registro');
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'activo'])->group(function () {
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::patch('auth/password', [AuthController::class, 'changePassword'])->middleware('throttle:6,1');
@@ -103,6 +103,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('recursos/{recurso}', [InventarioController::class, 'update']);
         Route::delete('recursos/{recurso}', [InventarioController::class, 'destroy']);
     });
-    Route::post('recursos/{recurso}/movimientos',[InventarioController::class, 'movimiento'])->middleware('role:ADMINISTRADOR,RECEPCIONISTA');
-    Route::get('avisos',[AvisoController::class, 'index'])->middleware('role:ADMINISTRADOR,MEDICO,RECEPCIONISTA');
+    Route::post('recursos/{recurso}/movimientos', [InventarioController::class, 'movimiento'])->middleware('role:ADMINISTRADOR,RECEPCIONISTA');
+    Route::get('avisos', [AvisoController::class, 'index'])->middleware('role:ADMINISTRADOR,MEDICO,RECEPCIONISTA');
 });

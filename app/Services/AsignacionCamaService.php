@@ -8,6 +8,7 @@ use App\Models\Cama;
 use App\Models\Ingreso;
 use App\Models\Paciente;
 use App\Models\User;
+use App\Support\TiempoReal;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
@@ -31,7 +32,7 @@ class AsignacionCamaService
             }try {
                 $ingreso = Ingreso::create(['id_paciente' => $paciente->getKey(), 'id_cama' => $cama->getKey(), 'id_medico' => $medico->getKey(), 'fecha_ingreso' => now(), 'motivo' => $motivo, 'id_registrado_por' => ($registradoPor ?? $medico)->getKey()]);
                 $cama->update(['estado' => 'OCUPADA']);
-                OcupacionActualizada::dispatch();
+                TiempoReal::emitir(new OcupacionActualizada);
 
                 return $ingreso;
             } catch (UniqueConstraintViolationException) {
@@ -50,7 +51,7 @@ class AsignacionCamaService
 
             $ingreso->update(['fecha_alta' => now()]);
             $ingreso->cama()->update(['estado' => 'DISPONIBLE']);
-            OcupacionActualizada::dispatch();
+            TiempoReal::emitir(new OcupacionActualizada);
 
             return $ingreso->refresh();
         });
