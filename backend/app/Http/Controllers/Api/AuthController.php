@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\HistorialClinico;
 use App\Models\Paciente;
 use App\Models\User;
+use App\Services\ActivacionCuentaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -20,18 +21,28 @@ class AuthController extends ApiController
             return $this->failure('Credenciales incorrectas.', 401);
         }
 
-return $this->token($u);
+        return $this->token($u);
     }
 
-    public function registro(Request $r)
+    public function registro(Request $r, ActivacionCuentaService $activacion)
     {
-        $d = $r->validate(['nombre_completo' => 'required|string|max:150', 'usuario' => 'required|string|max:80|unique:users,usuario', 'email' => 'nullable|email|unique:users,email', 'password' => 'required|string|min:8|confirmed', 'dui' => 'required|string|max:12', 'fecha_nacimiento' => 'required|date|before:today', 'sexo' => ['required', Rule::in(['M', 'F'])], 'telefono' => 'nullable|string|max:25', 'direccion' => 'nullable|string']);
+        $d = $r->validate(['nombre_completo' => 'required|string|max:150', 'usuario' => 'required|string|max:80|unique:users,usuario', 'email' => 'nullable|email|unique:users,email', 'password' => 'required|string|min:8|confirmed', 'dui' => 'required|string|max:12', 'fecha_nacimiento' => 'required|date|before:today', 'sexo' => ['required', Rule::in(['M', 'F'])], 'telefono' => 'nullable|string|max:25', 'direccion' => 'nullable|string', 'codigo_activacion' => 'nullable|string|size:6']);
 
-        return DB::transaction(function () use ($d) {
+        return DB::transaction(function () use ($d, $activacion) {
             $p = Paciente::where('dui', $d['dui'])->lockForUpdate()->first();
             if ($p && $p->id_usuario) {
                 return $this->failure('Ya existe una cuenta asociada a este DUI.', 422, ['dui' => ['El DUI ya está registrado.']]);
-            }$u = User::create(['nombre_completo' => $d['nombre_completo'], 'usuario' => $d['usuario'], 'email' => $d['email'] ?? null, 'password' => $d['password'], 'rol' => 'PACIENTE', 'telefono' => $d['telefono'] ?? null, 'estado' => 'ACTIVO']);
+            }
+            // Un expediente existente solo se vincula con el código que entrega
+            // recepción; si no, cualquiera que conozca un DUI leería ese expediente.
+            if ($p && ! $activacion->consumir($p, $d['codigo_activacion'] ?? null)) {
+                return $this->failure(
+                    'Este DUI ya tiene un expediente en el hospital. Pide en recepción tu código de activación para vincular tu cuenta.',
+                    422,
+                    ['codigo_activacion' => ['Código de activación inválido o vencido.']],
+                );
+            }
+            $u = User::create(['nombre_completo' => $d['nombre_completo'], 'usuario' => $d['usuario'], 'email' => $d['email'] ?? null, 'password' => $d['password'], 'rol' => 'PACIENTE', 'telefono' => $d['telefono'] ?? null, 'estado' => 'ACTIVO']);
             if (! $p) {
                 $p = Paciente::create(['numero_expediente' => $this->expediente(), 'nombre_completo' => $d['nombre_completo'], 'fecha_nacimiento' => $d['fecha_nacimiento'], 'dui' => $d['dui'], 'sexo' => $d['sexo'], 'telefono' => $d['telefono'] ?? null, 'direccion' => $d['direccion'] ?? null, 'fecha_registro' => now()]);
                 HistorialClinico::create(['id_paciente' => $p->getKey()]);
@@ -79,6 +90,6 @@ return $this->token($u);
         }$r->user()->update(['password' => $d['password']]);
         $r->user()->tokens()->delete();
 
-        return $this->success(null,'Contraseña actualizada.');
+        return $this->success(null, 'Contraseña actualizada.');
     }
 }

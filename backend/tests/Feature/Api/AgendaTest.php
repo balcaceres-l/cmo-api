@@ -57,4 +57,16 @@ class AgendaTest extends TestCase
         $this->agendar(['id_medico' => User::factory()->create(['rol' => 'RECEPCIONISTA'])->id])
             ->assertStatus(422)->assertJsonValidationErrors('id_medico');
     }
+
+    public function test_no_se_agenda_en_el_pasado_ni_cruzando_la_medianoche(): void
+    {
+        TurnoPersonal::create(['id_usuario' => $this->medico->id, 'fecha' => today()->subDay(), 'hora_inicio' => '08:00', 'hora_fin' => '10:00', 'area' => 'Consulta general']);
+        TurnoPersonal::create(['id_usuario' => $this->medico->id, 'fecha' => $this->fecha, 'hora_inicio' => '20:00', 'hora_fin' => '23:59', 'area' => 'Emergencia']);
+
+        $this->agendar(['fecha' => today()->subDay()->toDateString()])->assertStatus(422)->assertJsonValidationErrors('fecha');
+        // 23:45 + 30 min terminaría a las 00:15: dos citas idénticas ya no se detectarían como solapadas.
+        $this->agendar(['hora_inicio' => '23:45'])->assertStatus(422)->assertJsonValidationErrors('hora_inicio');
+        $this->agendar(['hora_inicio' => '23:00'])->assertCreated();
+        $this->agendar(['hora_inicio' => '23:00'])->assertStatus(409);
+    }
 }

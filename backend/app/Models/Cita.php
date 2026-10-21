@@ -14,7 +14,7 @@ class Cita extends HospitalModel
 
     protected function casts(): array
     {
-        return ['fecha' => 'date', 'hora_llegada' => 'datetime'];
+        return ['fecha' => 'date:Y-m-d', 'hora_llegada' => 'datetime'];
     }
 
     /**

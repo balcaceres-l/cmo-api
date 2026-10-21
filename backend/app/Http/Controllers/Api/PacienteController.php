@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\ConflictoException;
 use App\Models\HistorialClinico;
 use App\Models\Paciente;
+use App\Services\ActivacionCuentaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -44,6 +46,16 @@ class PacienteController extends ApiController
         $paciente->update($this->validar($r, $paciente, true));
 
         return $this->success($paciente->refresh());
+    }
+
+    /** Recepción entrega este código al paciente para que vincule su cuenta al expediente. */
+    public function codigoActivacion(Paciente $paciente, ActivacionCuentaService $activacion)
+    {
+        if ($paciente->id_usuario) {
+            throw new ConflictoException('El paciente ya tiene una cuenta vinculada.');
+        }
+
+        return $this->success($activacion->generar($paciente), 'Código de activación generado.', 201);
     }
 
     public function expediente(Paciente $paciente)

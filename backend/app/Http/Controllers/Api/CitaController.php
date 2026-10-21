@@ -8,6 +8,7 @@ use App\Services\AgendaService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CitaController extends ApiController
 {
@@ -94,8 +95,8 @@ class CitaController extends ApiController
 
     public function confirmar(Request $r, Cita $cita)
     {
-        $d = $r->validate(['id_medico' => ['required', $this->reglaMedico()], 'fecha' => 'required|date', 'hora_inicio' => 'required|date_format:H:i']);
-        $d['hora_fin'] = Carbon::createFromFormat('H:i', $d['hora_inicio'])->addMinutes(config('hospital.duracion_cita_min'))->format('H:i');
+        $d = $r->validate(['id_medico' => ['required', $this->reglaMedico()], 'fecha' => 'required|date|after_or_equal:today', 'hora_inicio' => 'required|date_format:H:i']);
+        $d['hora_fin'] = $this->horaFin($d['hora_inicio']);
 
         return DB::transaction(function () use ($d, $cita) {
             $cita = Cita::lockForUpdate()->findOrFail($cita->getKey());
@@ -109,7 +110,11 @@ class CitaController extends ApiController
 
     public function mias(Request $r)
     {
-        return $this->success($this->paginar($r->user()->paciente()->firstOrFail()->citas()->with('medico')->orderByDesc('fecha')->getQuery(), $r));
+        // Del médico, el paciente solo necesita saber quién lo atiende: nada de
+        // usuario de acceso, correo ni teléfono del personal.
+        $citas = $r->user()->paciente()->firstOrFail()->citas()->with('medico:id,nombre_completo,cargo')->orderByDesc('fecha');
+
+        return $this->success($this->paginar($citas->getQuery(), $r));
     }
 
     private function datos(Request $r, bool $reprogramar = false): array
@@ -119,13 +124,28 @@ class CitaController extends ApiController
             // Reprogramar mueve la cita en el tiempo; no la reasigna a otro paciente.
             'id_paciente' => $reprogramar ? 'prohibited' : 'required|exists:paciente,id_paciente',
             'id_medico' => [$reglaMedico, $this->reglaMedico()],
-            'fecha' => 'required|date',
+            'fecha' => 'required|date|after_or_equal:today',
             'hora_inicio' => 'required|date_format:H:i',
             'hora_fin' => 'nullable|date_format:H:i|after:hora_inicio',
             'motivo' => $reprogramar ? 'sometimes|string' : 'required|string',
         ]);
-        $d['hora_fin'] = $d['hora_fin'] ?? Carbon::createFromFormat('H:i', $d['hora_inicio'])->addMinutes(config('hospital.duracion_cita_min'))->format('H:i');
+        $d['hora_fin'] = $this->horaFin($d['hora_inicio'], $d['hora_fin'] ?? null);
 
         return $d;
+    }
+
+    /**
+     * Fin de la cita: el indicado o el inicio más la duración configurada. Una
+     * cita no puede cruzar la medianoche: con un fin menor que el inicio la
+     * comparación de horarios dejaría de detectar solapes.
+     */
+    private function horaFin(string $inicio, ?string $fin = null): string
+    {
+        $fin ??= Carbon::createFromFormat('H:i', $inicio)->addMinutes((int) config('hospital.duracion_cita_min'))->format('H:i');
+        if ($fin <= $inicio) {
+            throw ValidationException::withMessages(['hora_inicio' => 'La cita debe terminar el mismo día; elige una hora más temprana.']);
+        }
+
+        return $fin;
     }
 }

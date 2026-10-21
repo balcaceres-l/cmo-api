@@ -52,7 +52,7 @@ class Paciente extends HospitalModel
 
     protected function casts(): array
     {
-        return ['fecha_nacimiento' => 'date', 'fecha_registro' => 'datetime'];
+        return ['fecha_nacimiento' => 'date:Y-m-d', 'fecha_registro' => 'datetime'];
     }
 
     public function usuario(): BelongsTo

@@ -24,7 +24,7 @@ php artisan serve
 php artisan reverb:start
 ```
 
-La API usa el prefijo `/api/v1`. La documentación OpenAPI interactiva está disponible en `/docs/api`.
+La API usa el prefijo `/api/v1`. La referencia completa (roles, endpoints, validaciones, estados y tiempo real) está en [`docs/API.md`](docs/API.md), y la documentación OpenAPI interactiva en `/docs/api`.
 
 ## Usuarios de demostración
 

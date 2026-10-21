@@ -46,6 +46,7 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
     Route::middleware('role:ADMINISTRADOR,RECEPCIONISTA')->group(function () {
         Route::post('pacientes', [PacienteController::class, 'store']);
         Route::put('pacientes/{paciente}', [PacienteController::class, 'update']);
+        Route::post('pacientes/{paciente}/codigo-activacion', [PacienteController::class, 'codigoActivacion']);
     });
     Route::put('pacientes/{paciente}/historial', [PacienteController::class, 'historial'])->middleware('role:ADMINISTRADOR,MEDICO');
     Route::get('mi/expediente', [PacienteController::class, 'miExpediente'])->middleware('role:PACIENTE');

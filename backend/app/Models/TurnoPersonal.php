@@ -12,7 +12,7 @@ class TurnoPersonal extends HospitalModel
 
     protected function casts(): array
     {
-        return ['fecha' => 'date'];
+        return ['fecha' => 'date:Y-m-d'];
     }
 
     public function usuario(): BelongsTo

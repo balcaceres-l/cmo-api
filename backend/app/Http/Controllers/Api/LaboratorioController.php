@@ -28,25 +28,35 @@ class LaboratorioController extends ApiController
 
     public function index(Request $r)
     {
-        abort_if($r->user()->rol === 'PACIENTE', 403);
         $q = OrdenLaboratorio::with(['paciente', 'examen'])->when($r->estado, fn ($q, $v) => $q->where('estado', $v))->when($r->paciente, fn ($q, $v) => $q->where('id_paciente', $v));
         if ($r->user()->rol === 'MEDICO') {
             $q->where('id_medico', $r->user()->id);
         }
+        $data = $this->paginar($q->orderByDesc('fecha_solicitud'), $r);
+        $data->getCollection()->each(fn ($o) => $this->protegerResultado($r, $o));
 
-        return $this->success($this->paginar($q->orderByDesc('fecha_solicitud'), $r));
+        return $this->success($data);
     }
 
-    public function iniciar(OrdenLaboratorio $orden)
+    /**
+     * Recepción procesa la cola y registra el resultado, pero el resultado es
+     * dato clínico: solo lo ven el médico tratante, el paciente y el administrador.
+     */
+    private function protegerResultado(Request $r, OrdenLaboratorio $orden): OrdenLaboratorio
     {
-        return DB::transaction(function () use ($orden) {
+        return $r->user()->rol === 'RECEPCIONISTA' ? $orden->makeHidden('resultado') : $orden;
+    }
+
+    public function iniciar(Request $r, OrdenLaboratorio $orden)
+    {
+        return DB::transaction(function () use ($r, $orden) {
             $orden = OrdenLaboratorio::lockForUpdate()->findOrFail($orden->getKey());
             if ($orden->estado !== 'PENDIENTE') {
                 throw new ConflictoException('La orden solo puede iniciarse desde PENDIENTE.');
             }
             $orden->update(['estado' => 'EN_PROCESO', 'fecha_inicio' => now()]);
 
-            return $this->success($orden->refresh());
+            return $this->success($this->protegerResultado($r, $orden->refresh()));
         });
     }
 
@@ -61,7 +71,7 @@ class LaboratorioController extends ApiController
             }
             $orden->update($d + ['estado' => 'COMPLETADO', 'fecha_resultado' => now(), 'id_registrado_por' => $r->user()->id]);
 
-            return $this->success($orden->refresh());
+            return $this->success($this->protegerResultado($r, $orden->refresh()), 'Resultado registrado.');
         });
     }
 
