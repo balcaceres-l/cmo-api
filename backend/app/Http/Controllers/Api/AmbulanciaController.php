@@ -13,20 +13,51 @@ class AmbulanciaController extends ApiController
 
     public function show(Request $r)
     {
-        $a = Ambulancia::with(['servicios' => fn ($q) => $q->where('estado', 'EN_CURSO')])->firstOrFail();
+        $a = Ambulancia::with(['servicios' => fn ($q) => $q->where('estado', 'EN_CURSO'), 'servicios.ultimoReporte'])->firstOrFail();
         if ($r->user()->rol !== 'MEDICO') {
             return $this->success($a);
         }
 
-        // El médico no tiene acceso a la bitácora: ve el estado y la prioridad
-        // del servicio en curso, igual que el evento en tiempo real, sin datos
-        // de la persona atendida.
+        // El médico no tiene acceso a la bitácora: ve el estado, la prioridad
+        // y el último reporte clínico del traslado (para preparar la atención),
+        // sin nombre ni dirección de la persona atendida.
         $s = $a->servicios->first();
+        $reporte = $s?->ultimoReporte;
 
         return $this->success([
             'estado' => $a->estado,
-            'servicio_activo' => $s ? ['prioridad' => $s->prioridad, 'hora_salida' => $s->hora_salida] : null,
+            'servicio_activo' => $s ? [
+                'id_servicio' => $s->id_servicio,
+                'prioridad' => $s->prioridad,
+                'hora_salida' => $s->hora_salida,
+                'ultimo_reporte' => $reporte?->only(['estado_paciente', 'observaciones', 'llegada_estimada', 'fecha']),
+            ] : null,
         ]);
+    }
+
+    /**
+     * Reporte desde la ambulancia en camino. `minutos_llegada` es lo que el
+     * personal puede estimar en ruta; se guarda como hora estimada de llegada.
+     */
+    public function reportar(Request $r, ServicioAmbulancia $servicio)
+    {
+        $d = $r->validate([
+            'estado_paciente' => 'required|in:ESTABLE,DELICADO,CRITICO',
+            'observaciones' => 'nullable|string|max:2000',
+            'minutos_llegada' => 'nullable|integer|min:0|max:240',
+        ]);
+        $datos = [
+            'estado_paciente' => $d['estado_paciente'],
+            'observaciones' => $d['observaciones'] ?? null,
+            'llegada_estimada' => isset($d['minutos_llegada']) ? now()->addMinutes($d['minutos_llegada']) : null,
+        ];
+
+        return $this->success($this->servicio->reportar($servicio, $r->user(), $datos), 'Reporte enviado a emergencia.', 201);
+    }
+
+    public function reportes(ServicioAmbulancia $servicio)
+    {
+        return $this->success($servicio->reportes()->with('autor:id,nombre_completo,cargo')->orderBy('fecha')->get());
     }
 
     public function estado(Request $r)

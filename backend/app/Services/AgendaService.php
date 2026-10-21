@@ -28,19 +28,34 @@ class AgendaService
             }
         }
 
-return $bloques;
+        return $bloques;
     }
 
-    public function validar(string $medico, string $fecha, string $inicio, string $fin, ?string $ignorar = null): void
+    /**
+     * La cita debe caber en un turno del médico y no chocar con otra cita
+     * activa del mismo médico ni, si se indica, del mismo consultorio.
+     */
+    public function validar(string $medico, string $fecha, string $inicio, string $fin, ?string $ignorar = null, ?string $consultorio = null): void
     {
         $enTurno = TurnoPersonal::where('id_usuario', $medico)->whereDate('fecha', $fecha)->where('hora_inicio', '<=', $inicio)->where('hora_fin', '>=', $fin)->exists();
         if (! $enTurno) {
             throw ValidationException::withMessages(['hora_inicio' => 'La cita debe estar dentro de un turno del médico.']);
-        }$q = Cita::where('id_medico', $medico)->whereDate('fecha', $fecha)->whereNotIn('estado', ['CANCELADA', 'NO_ASISTIO', 'SOLICITADA'])->where('hora_inicio', '<', $fin)->where('hora_fin', '>', $inicio);
-        if ($ignorar) {
-            $q->where('id_cita', '!=', $ignorar);
-        }if ($q->lockForUpdate()->exists()) {
+        }
+
+        $choca = fn (string $columna, string $valor) => Cita::where($columna, $valor)
+            ->whereDate('fecha', $fecha)
+            ->whereNotIn('estado', ['CANCELADA', 'NO_ASISTIO', 'SOLICITADA'])
+            ->where('hora_inicio', '<', $fin)
+            ->where('hora_fin', '>', $inicio)
+            ->when($ignorar, fn ($q) => $q->where('id_cita', '!=', $ignorar))
+            ->lockForUpdate()
+            ->exists();
+
+        if ($choca('id_medico', $medico)) {
             throw new ConflictoException('El horario solicitado ya está ocupado.');
+        }
+        if ($consultorio && $choca('id_consultorio', $consultorio)) {
+            throw new ConflictoException('El consultorio ya está ocupado a esa hora.');
         }
     }
 }

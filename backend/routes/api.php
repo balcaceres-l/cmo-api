@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AvisoController;
 use App\Http\Controllers\Api\CitaController;
 use App\Http\Controllers\Api\ConsultaController;
+use App\Http\Controllers\Api\ConsultorioController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\HospitalizacionController;
 use App\Http\Controllers\Api\InventarioController;
@@ -54,6 +55,7 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
     Route::middleware('role:ADMINISTRADOR,MEDICO,RECEPCIONISTA')->group(function () {
         Route::get('citas', [CitaController::class, 'index']);
         Route::get('agenda/disponibilidad', [CitaController::class, 'disponibilidad']);
+        Route::get('consultorios', [ConsultorioController::class, 'index']);
     });
     Route::post('citas', [CitaController::class, 'store'])->middleware('role:MEDICO,RECEPCIONISTA');
     Route::middleware('role:ADMINISTRADOR,RECEPCIONISTA')->group(function () {
@@ -96,6 +98,12 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
     Route::post('ambulancia/servicios', [AmbulanciaController::class, 'despachar'])->middleware('role:ADMINISTRADOR,MEDICO,RECEPCIONISTA');
     Route::patch('ambulancia/servicios/{servicio}/finalizar', [AmbulanciaController::class, 'finalizar'])->middleware('role:ADMINISTRADOR,RECEPCIONISTA');
     Route::get('ambulancia/servicios', [AmbulanciaController::class, 'bitacora'])->middleware('role:ADMINISTRADOR,RECEPCIONISTA');
+    // Reporte previo a la llegada: lo envía el personal de la ambulancia
+    // (recepción/enfermería con cargo de paramédico, o el médico de emergencia).
+    Route::middleware('role:ADMINISTRADOR,MEDICO,RECEPCIONISTA')->group(function () {
+        Route::post('ambulancia/servicios/{servicio}/reportes', [AmbulanciaController::class, 'reportar']);
+        Route::get('ambulancia/servicios/{servicio}/reportes', [AmbulanciaController::class, 'reportes']);
+    });
 
     Route::get('recursos', [InventarioController::class, 'index'])->middleware('role:ADMINISTRADOR,RECEPCIONISTA');
     Route::get('recursos/{recurso}', [InventarioController::class, 'show'])->middleware('role:ADMINISTRADOR,RECEPCIONISTA');

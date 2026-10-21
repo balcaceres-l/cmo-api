@@ -9,6 +9,10 @@ use App\Models\OrdenLaboratorio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * El laboratorio solo informa estados: PENDIENTE → EN_PROCESO → COMPLETADO.
+ * Los datos del examen no pasan por el sistema.
+ */
 class LaboratorioController extends ApiController
 {
     public function examenes(Request $r)
@@ -32,55 +36,38 @@ class LaboratorioController extends ApiController
         if ($r->user()->rol === 'MEDICO') {
             $q->where('id_medico', $r->user()->id);
         }
-        $data = $this->paginar($q->orderByDesc('fecha_solicitud'), $r);
-        $data->getCollection()->each(fn ($o) => $this->protegerResultado($r, $o));
 
-        return $this->success($data);
+        return $this->success($this->paginar($q->orderByDesc('fecha_solicitud'), $r));
     }
 
-    /**
-     * Recepción procesa la cola y registra el resultado, pero el resultado es
-     * dato clínico: solo lo ven el médico tratante, el paciente y el administrador.
-     */
-    private function protegerResultado(Request $r, OrdenLaboratorio $orden): OrdenLaboratorio
+    public function iniciar(OrdenLaboratorio $orden)
     {
-        return $r->user()->rol === 'RECEPCIONISTA' ? $orden->makeHidden('resultado') : $orden;
-    }
-
-    public function iniciar(Request $r, OrdenLaboratorio $orden)
-    {
-        return DB::transaction(function () use ($r, $orden) {
-            $orden = OrdenLaboratorio::lockForUpdate()->findOrFail($orden->getKey());
-            if ($orden->estado !== 'PENDIENTE') {
-                throw new ConflictoException('La orden solo puede iniciarse desde PENDIENTE.');
-            }
-            $orden->update(['estado' => 'EN_PROCESO', 'fecha_inicio' => now()]);
-
-            return $this->success($this->protegerResultado($r, $orden->refresh()));
-        });
+        return $this->avanzar($orden, 'PENDIENTE', ['estado' => 'EN_PROCESO', 'fecha_inicio' => now()], 'Orden en proceso.');
     }
 
     public function completar(Request $r, OrdenLaboratorio $orden)
     {
-        $d = $r->validate(['resultado' => 'required|string']);
-
-        return DB::transaction(function () use ($r, $d, $orden) {
-            $orden = OrdenLaboratorio::lockForUpdate()->findOrFail($orden->getKey());
-            if ($orden->estado !== 'EN_PROCESO') {
-                throw new ConflictoException('La orden solo puede completarse desde EN_PROCESO.');
-            }
-            $orden->update($d + ['estado' => 'COMPLETADO', 'fecha_resultado' => now(), 'id_registrado_por' => $r->user()->id]);
-
-            return $this->success($this->protegerResultado($r, $orden->refresh()), 'Resultado registrado.');
-        });
+        return $this->avanzar($orden, 'EN_PROCESO', ['estado' => 'COMPLETADO', 'fecha_resultado' => now(), 'id_registrado_por' => $r->user()->id], 'Orden completada.');
     }
 
     public function mias(Request $r)
     {
         $p = $r->user()->paciente()->firstOrFail();
-        $data = $this->paginar($p->ordenesLaboratorio()->with('examen')->orderByDesc('fecha_solicitud')->getQuery(), $r);
-        $data->getCollection()->each(fn ($o) => $o->estado === 'COMPLETADO' ? null : $o->setHidden(['resultado']));
 
-        return $this->success($data);
+        return $this->success($this->paginar($p->ordenesLaboratorio()->with('examen')->orderByDesc('fecha_solicitud')->getQuery(), $r));
+    }
+
+    /** Mueve la orden un paso, solo hacia adelante y con la fila bloqueada. */
+    private function avanzar(OrdenLaboratorio $orden, string $desde, array $cambios, string $mensaje)
+    {
+        return DB::transaction(function () use ($orden, $desde, $cambios, $mensaje) {
+            $orden = OrdenLaboratorio::lockForUpdate()->findOrFail($orden->getKey());
+            if ($orden->estado !== $desde) {
+                throw new ConflictoException("La orden solo puede avanzar desde {$desde}; estado actual: {$orden->estado}.");
+            }
+            $orden->update($cambios);
+
+            return $this->success($orden->refresh(), $mensaje);
+        });
     }
 }

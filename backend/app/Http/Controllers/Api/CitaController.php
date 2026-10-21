@@ -16,7 +16,7 @@ class CitaController extends ApiController
 
     public function index(Request $r)
     {
-        $q = Cita::with(['paciente', 'medico'])->orderByDesc('fecha')->orderBy('hora_inicio');
+        $q = Cita::with(['paciente', 'medico', 'consultorio'])->orderByDesc('fecha')->orderBy('hora_inicio');
         if ($r->user()->rol === 'MEDICO') {
             $q->where('id_medico', $r->user()->id);
         }
@@ -39,7 +39,7 @@ class CitaController extends ApiController
         }
 
         return DB::transaction(function () use ($d, $r) {
-            $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin']);
+            $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin'], null, $d['id_consultorio'] ?? null);
             $d['id_creado_por'] = $r->user()->id;
             $d['estado'] = 'AGENDADA';
 
@@ -70,7 +70,8 @@ class CitaController extends ApiController
         return DB::transaction(function () use ($d, $cita) {
             $cita = Cita::lockForUpdate()->findOrFail($cita->getKey());
             $cita->exigirEstado(['AGENDADA', 'EN_ESPERA'], 'reprogramar');
-            $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin'], $cita->getKey());
+            // Sin consultorio nuevo, la cita conserva el que tenía.
+            $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin'], $cita->getKey(), $d['id_consultorio'] ?? $cita->id_consultorio);
             $cita->update($d + ['estado' => 'AGENDADA']);
 
             return $this->success($cita->refresh());
@@ -95,13 +96,13 @@ class CitaController extends ApiController
 
     public function confirmar(Request $r, Cita $cita)
     {
-        $d = $r->validate(['id_medico' => ['required', $this->reglaMedico()], 'fecha' => 'required|date|after_or_equal:today', 'hora_inicio' => 'required|date_format:H:i']);
+        $d = $r->validate(['id_medico' => ['required', $this->reglaMedico()], 'id_consultorio' => ['nullable', $this->reglaConsultorio()], 'fecha' => 'required|date|after_or_equal:today', 'hora_inicio' => 'required|date_format:H:i']);
         $d['hora_fin'] = $this->horaFin($d['hora_inicio']);
 
         return DB::transaction(function () use ($d, $cita) {
             $cita = Cita::lockForUpdate()->findOrFail($cita->getKey());
             $cita->exigirEstado(['SOLICITADA'], 'confirmar');
-            $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin'], $cita->getKey());
+            $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin'], $cita->getKey(), $d['id_consultorio'] ?? null);
             $cita->update($d + ['estado' => 'AGENDADA']);
 
             return $this->success($cita->refresh());
@@ -112,7 +113,7 @@ class CitaController extends ApiController
     {
         // Del médico, el paciente solo necesita saber quién lo atiende: nada de
         // usuario de acceso, correo ni teléfono del personal.
-        $citas = $r->user()->paciente()->firstOrFail()->citas()->with('medico:id,nombre_completo,cargo')->orderByDesc('fecha');
+        $citas = $r->user()->paciente()->firstOrFail()->citas()->with(['medico:id,nombre_completo,cargo', 'consultorio:id_consultorio,codigo,nombre,planta'])->orderByDesc('fecha');
 
         return $this->success($this->paginar($citas->getQuery(), $r));
     }
@@ -124,6 +125,7 @@ class CitaController extends ApiController
             // Reprogramar mueve la cita en el tiempo; no la reasigna a otro paciente.
             'id_paciente' => $reprogramar ? 'prohibited' : 'required|exists:paciente,id_paciente',
             'id_medico' => [$reglaMedico, $this->reglaMedico()],
+            'id_consultorio' => ['nullable', $this->reglaConsultorio()],
             'fecha' => 'required|date|after_or_equal:today',
             'hora_inicio' => 'required|date_format:H:i',
             'hora_fin' => 'nullable|date_format:H:i|after:hora_inicio',

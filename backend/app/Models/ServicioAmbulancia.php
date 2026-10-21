@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ServicioAmbulancia extends HospitalModel
 {
@@ -18,5 +20,15 @@ class ServicioAmbulancia extends HospitalModel
     public function ambulancia(): BelongsTo
     {
         return $this->belongsTo(Ambulancia::class, 'id_ambulancia');
+    }
+
+    public function reportes(): HasMany
+    {
+        return $this->hasMany(ReporteAmbulancia::class, 'id_servicio');
+    }
+
+    public function ultimoReporte(): HasOne
+    {
+        return $this->hasOne(ReporteAmbulancia::class, 'id_servicio')->latestOfMany('fecha');
     }
 }

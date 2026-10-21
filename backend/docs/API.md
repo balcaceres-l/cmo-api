@@ -257,26 +257,28 @@ Reglas:
 
 | Método | Ruta | Roles | Descripción |
 | --- | --- | --- | --- |
-| GET | `/citas` | ADMINISTRADOR, MEDICO, RECEPCIONISTA | Lista paginada con paciente y médico. El MEDICO solo ve las suyas. |
+| GET | `/citas` | ADMINISTRADOR, MEDICO, RECEPCIONISTA | Lista paginada con paciente, médico y consultorio. El MEDICO solo ve las suyas. |
 | POST | `/citas` | MEDICO, RECEPCIONISTA | Agenda una cita |
 | GET | `/agenda/disponibilidad?id_medico=&fecha=` | ADMINISTRADOR, MEDICO, RECEPCIONISTA | Bloques libres del médico ese día |
+| GET | `/consultorios` | ADMINISTRADOR, MEDICO, RECEPCIONISTA | Consultorios de consulta general de la planta 1 (`C-101` a `C-104`) |
 | PATCH | `/citas/{id}/llegada` | ADMINISTRADOR, RECEPCIONISTA | Registra la llegada del paciente |
 | PATCH | `/citas/{id}/reprogramar` | ADMINISTRADOR, RECEPCIONISTA | Cambia médico, fecha u hora |
 | PATCH | `/citas/{id}/cancelar` | ADMINISTRADOR, RECEPCIONISTA | `{ "motivo_cancelacion": "…" }` |
 | PATCH | `/citas/{id}/confirmar` | ADMINISTRADOR, RECEPCIONISTA | Convierte una solicitud en cita |
 | POST | `/solicitudes-atencion` | PACIENTE | `{ "motivo": "…" }`: crea una cita `SOLICITADA` sin médico ni hora |
-| GET | `/mi/citas` | PACIENTE | Citas propias. Del médico solo trae `id`, `nombre_completo` y `cargo`. |
+| GET | `/mi/citas` | PACIENTE | Citas propias con su consultorio. Del médico solo trae `id`, `nombre_completo` y `cargo`. |
 
 ### POST /citas
 
 ```json
-{ "id_paciente": "…", "id_medico": "…", "fecha": "2026-10-27", "hora_inicio": "08:30", "motivo": "Control" }
+{ "id_paciente": "…", "id_medico": "…", "id_consultorio": "…", "fecha": "2026-10-27", "hora_inicio": "08:30", "motivo": "Control" }
 ```
 
 | Campo | Reglas |
 | --- | --- |
 | `id_paciente` | requerido, debe existir |
 | `id_medico` | requerido para recepción (un médico activo); el MEDICO agenda para sí mismo |
+| `id_consultorio` | opcional; un consultorio activo de la planta 1 |
 | `fecha` | requerido, hoy o posterior |
 | `hora_inicio` | requerido, `HH:mm` |
 | `hora_fin` | opcional; por defecto `hora_inicio` + 30 min (`DURACION_CITA_MIN`). La cita debe terminar el mismo día. |
@@ -284,12 +286,12 @@ Reglas:
 
 Errores:
 - 422 si la fecha ya pasó, si la cita cruzaría la medianoche o si la hora queda fuera de un turno del médico.
-- 409 `El horario solicitado ya está ocupado.`
+- 409 `El horario solicitado ya está ocupado.` (el médico ya tiene cita a esa hora) o `El consultorio ya está ocupado a esa hora.`
 - 403 si un MEDICO intenta agendar a un paciente del que no es tratante. El médico solo agenda seguimientos; la primera cita la agenda recepción.
 
-**Reprogramar:** mismos campos salvo `id_paciente`, que no se permite (422): reprogramar mueve la cita, no la cambia de paciente.
+**Reprogramar:** mismos campos salvo `id_paciente`, que no se permite (422): reprogramar mueve la cita, no la cambia de paciente. Si no se envía `id_consultorio`, conserva el que tenía.
 
-**Confirmar:** `{ "id_medico", "fecha", "hora_inicio" }`, con las mismas reglas de fecha y hora. Solo aplica a citas `SOLICITADA`.
+**Confirmar:** `{ "id_medico", "id_consultorio", "fecha", "hora_inicio" }` (`id_consultorio` opcional), con las mismas reglas de fecha y hora. Solo aplica a citas `SOLICITADA`.
 
 **Disponibilidad:** devuelve `[{ "hora_inicio": "08:30", "hora_fin": "09:00" }, …]`, calculado a partir de los turnos del médico menos sus citas activas.
 
@@ -323,12 +325,11 @@ Reglas:
 | POST | `/consultas/{id}/ordenes-laboratorio` | MEDICO (de la consulta abierta) | `{ "id_examen", "observaciones" }`; se crea `PENDIENTE` |
 | GET | `/ordenes-laboratorio?estado=&paciente=` | ADMINISTRADOR, RECEPCIONISTA, MEDICO | Cola de órdenes; el MEDICO ve las que él solicitó |
 | PATCH | `/ordenes-laboratorio/{id}/iniciar` | ADMINISTRADOR, RECEPCIONISTA | `PENDIENTE` → `EN_PROCESO` |
-| PATCH | `/ordenes-laboratorio/{id}/completar` | ADMINISTRADOR, RECEPCIONISTA | `{ "resultado": "…" }`; `EN_PROCESO` → `COMPLETADO` |
-| GET | `/mi/laboratorio` | PACIENTE | Órdenes propias |
+| PATCH | `/ordenes-laboratorio/{id}/completar` | ADMINISTRADOR, RECEPCIONISTA | Sin cuerpo; `EN_PROCESO` → `COMPLETADO` |
+| GET | `/mi/laboratorio` | PACIENTE | Órdenes propias con su estado |
 
+- **El laboratorio solo informa estados** (`PENDIENTE`, `EN_PROCESO`, `COMPLETADO`) con sus fechas (`fecha_solicitud`, `fecha_inicio`, `fecha_resultado`). Los datos del examen no se registran ni se devuelven en ningún endpoint.
 - Las transiciones solo avanzan; cualquier otra responde 409.
-- En `/mi/laboratorio`, el campo `resultado` solo aparece cuando la orden está `COMPLETADO`.
-- La RECEPCIONISTA procesa la cola y registra el resultado, pero no lo recibe: ni en el listado ni en la respuesta de `/completar`. El resultado es dato clínico y solo lo ven el médico, el paciente y el administrador.
 
 ---
 
@@ -340,6 +341,7 @@ Infraestructura fija, creada por el seeder (no hay endpoints para crear ni borra
 | --- | --- | --- | --- |
 | 3 | `VIP` (individual) | VIP-301 a VIP-305 | 5 (`VIP-301` …) |
 | 2 | `SEMIPRIVADA` (compartida) | HAB-201 a HAB-206 | 12 (`HAB-201-A`, `HAB-201-B` …) |
+| 1 | Consulta general | Consultorios C-101 a C-104 (`GET /consultorios`) | No hospitaliza |
 
 | Método | Ruta | Roles | Descripción |
 | --- | --- | --- | --- |
@@ -387,11 +389,13 @@ El hospital tiene **una sola ambulancia** (creada por el seeder).
 
 | Método | Ruta | Roles | Descripción |
 | --- | --- | --- | --- |
-| GET | `/ambulancia` | ADMINISTRADOR, RECEPCIONISTA, MEDICO | Estado y servicio en curso. El MEDICO recibe solo `{ estado, servicio_activo: { prioridad, hora_salida } }`, sin datos de la persona atendida. |
+| GET | `/ambulancia` | ADMINISTRADOR, RECEPCIONISTA, MEDICO | Estado y servicio en curso con su último reporte. El MEDICO recibe solo `{ estado, servicio_activo: { id_servicio, prioridad, hora_salida, ultimo_reporte } }`, sin nombre ni dirección de la persona atendida. |
 | POST | `/ambulancia/servicios` | ADMINISTRADOR, RECEPCIONISTA, MEDICO | Despacha la ambulancia |
 | PATCH | `/ambulancia/servicios/{id}/finalizar` | ADMINISTRADOR, RECEPCIONISTA | `{ "notas" }`: cierra el servicio y la ambulancia vuelve a `DISPONIBLE` |
 | PATCH | `/ambulancia/estado` | ADMINISTRADOR | `{ "estado": "DISPONIBLE" \| "EN_MANTENIMIENTO" }` |
 | GET | `/ambulancia/servicios?desde=&hasta=&prioridad=&estado=` | ADMINISTRADOR, RECEPCIONISTA | Bitácora filtrable |
+| POST | `/ambulancia/servicios/{id}/reportes` | ADMINISTRADOR, MEDICO, RECEPCIONISTA | Reporte desde la ambulancia en camino (ver abajo) |
+| GET | `/ambulancia/servicios/{id}/reportes` | ADMINISTRADOR, MEDICO, RECEPCIONISTA | Reportes del traslado, del más antiguo al más reciente |
 
 ### POST /ambulancia/servicios
 
@@ -403,6 +407,24 @@ El hospital tiene **una sola ambulancia** (creada por el seeder).
 - `prioridad`: `BAJA`, `MEDIA`, `ALTA` o `CRITICA`.
 - 409 si la ambulancia no está `DISPONIBLE`; el mensaje indica su estado actual.
 - No se puede pasar a mantenimiento con un servicio en curso (409).
+
+### Reporte previo a la llegada: POST /ambulancia/servicios/{id}/reportes
+
+El personal de la ambulancia (usuario `RECEPCIONISTA` con cargo de paramédico o enfermería, o el médico de emergencia) envía información del paciente durante el traslado, para que emergencia prepare la atención antes de que llegue.
+
+```json
+{ "estado_paciente": "CRITICO", "observaciones": "Consciente, sangrado en pierna izquierda", "minutos_llegada": 12 }
+```
+
+| Campo | Reglas |
+| --- | --- |
+| `estado_paciente` | requerido: `ESTABLE`, `DELICADO` o `CRITICO` |
+| `observaciones` | opcional, máx. 2000 caracteres |
+| `minutos_llegada` | opcional, de 0 a 240; se guarda como `llegada_estimada` (hora actual + minutos) |
+
+- Se pueden enviar varios reportes por servicio; `GET /ambulancia` muestra el último.
+- 409 si el servicio ya no está `EN_CURSO`.
+- Cada reporte se avisa en tiempo real por el canal privado `personal` (ver Tiempo real).
 
 ---
 
@@ -439,17 +461,19 @@ El hospital tiene **una sola ambulancia** (creada por el seeder).
 
 ## 14. Tiempo real
 
-Laravel Reverb (protocolo Pusher), canales **públicos**:
+Laravel Reverb (protocolo Pusher). Dos canales **públicos** y uno **privado** del personal:
 
 | Canal | Evento | Payload | Cuándo |
 | --- | --- | --- | --- |
 | `ambulancia` | `App\Events\AmbulanciaActualizada` | `{ "estado": "EN_SERVICIO", "servicio_activo": { "prioridad": "ALTA", "hora_salida": "…" } }` | Despacho, finalización o cambio de estado |
 | `ocupacion` | `App\Events\OcupacionActualizada` | `{ "actualizada_en": "…" }` | Ingreso, alta o traslado: la app vuelve a pedir `/habitaciones` o `/publico/ocupacion` |
+| `private-personal` | `App\Events\ReporteAmbulanciaRecibido` | `{ "id_servicio", "estado_paciente": "CRITICO", "llegada_estimada": "…" }` | Reporte desde la ambulancia; la app pide el detalle con `GET /ambulancia/servicios/{id}/reportes` |
 
 - **Conexión:** `ws://<REVERB_HOST>:<REVERB_PORT>/app/<REVERB_APP_KEY>`. Sirven los clientes de Pusher para Swift y Kotlin, y `laravel-echo` en web.
 - **Cuándo se emiten:** los eventos salen después de guardar en la base de datos. Si Reverb no está disponible, la operación se guarda igual y el error solo queda en el log.
 - **Respaldo:** si no hay conexión WebSocket, consulta `GET /publico/ambulancia` cada 10 segundos.
-- **Sin datos personales:** los payloads nunca llevan información de pacientes.
+- **Canal privado `personal`:** solo para ADMINISTRADOR, MEDICO y RECEPCIONISTA activos. Para suscribirse, el cliente autoriza el canal con `POST /api/v1/broadcasting/auth` enviando su token Bearer (en Pusher: `authEndpoint` + cabecera `Authorization`).
+- **Sin datos personales:** ningún payload lleva nombre, DUI ni dirección del paciente; los canales públicos tampoco llevan datos clínicos.
 
 ---
 
@@ -484,7 +508,9 @@ SOLICITADA ──confirmar──▶ AGENDADA ──llegada──▶ EN_ESPERA �
 | Ocupación, médicos de turno, avisos públicos, estado de la ambulancia | Cualquiera, sin token |
 | Nombre, fecha de nacimiento, DUI, teléfono, dirección, expediente | Paciente, médico tratante, administrador, recepción |
 | Tipo de sangre y alergias | Paciente, médico tratante y administrador. Se ocultan para los demás, también cuando el paciente viene dentro de citas, ingresos u órdenes. |
-| Diagnósticos, recetas, antecedentes, resultados de laboratorio | Paciente (resultados al estar completados), médico tratante y administrador. Recepción registra resultados pero no los ve. |
+| Diagnósticos, recetas, antecedentes | Paciente, médico tratante y administrador |
+| Estado de las órdenes de laboratorio | Paciente, médico, recepción y administrador (el sistema no guarda datos del examen) |
+| Reportes de la ambulancia en camino | Administrador, médicos y recepción |
 | Usuario de acceso, correo y teléfono del personal | Administrador. El paciente solo ve nombre y cargo de su médico. |
 | Habitación y cama de un paciente | Paciente, médico tratante, administrador y recepción |
 | Persona atendida por la ambulancia | Administrador y recepción |
@@ -497,7 +523,9 @@ Cuando no hay permiso, la API responde 403 sin indicar si el registro existe.
 
 `php artisan migrate --seed` crea:
 
-- 11 habitaciones y 17 camas, y 1 ambulancia (`P-123456`).
+- Planta 1: 4 consultorios de consulta general (`C-101` a `C-104`).
+- Plantas 2 y 3: 11 habitaciones y 17 camas.
+- 1 ambulancia (`P-123456`).
 - Catálogo de exámenes, turnos de la semana actual, recursos de inventario y avisos.
 - Los usuarios de abajo, todos con la contraseña `Hospital2026!`:
 

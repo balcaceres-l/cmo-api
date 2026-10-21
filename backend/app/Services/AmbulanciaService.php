@@ -3,9 +3,12 @@
 namespace App\Services;
 
 use App\Events\AmbulanciaActualizada;
+use App\Events\ReporteAmbulanciaRecibido;
 use App\Exceptions\ConflictoException;
 use App\Models\Ambulancia;
+use App\Models\ReporteAmbulancia;
 use App\Models\ServicioAmbulancia;
+use App\Models\User;
 use App\Support\TiempoReal;
 use Illuminate\Support\Facades\DB;
 
@@ -39,6 +42,26 @@ class AmbulanciaService
             TiempoReal::emitir(new AmbulanciaActualizada($a));
 
             return $s->refresh();
+        });
+    }
+
+    /**
+     * Reporte enviado desde la ambulancia durante el traslado (estado del
+     * paciente, observaciones, hora estimada de llegada). Solo con el servicio
+     * en curso: uno finalizado ya no recibe reportes.
+     */
+    public function reportar(ServicioAmbulancia $s, User $autor, array $datos): ReporteAmbulancia
+    {
+        return DB::transaction(function () use ($s, $autor, $datos) {
+            $s = ServicioAmbulancia::lockForUpdate()->findOrFail($s->getKey());
+            if ($s->estado !== 'EN_CURSO') {
+                throw new ConflictoException('Solo se pueden enviar reportes de un servicio en curso.');
+            }
+
+            $reporte = $s->reportes()->create($datos + ['id_autor' => $autor->getKey(), 'fecha' => now()]);
+            TiempoReal::emitir(new ReporteAmbulanciaRecibido($reporte));
+
+            return $reporte;
         });
     }
 

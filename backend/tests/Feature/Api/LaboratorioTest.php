@@ -17,7 +17,7 @@ class LaboratorioTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_flujo_y_resultado_privado_hasta_completar(): void
+    public function test_el_laboratorio_solo_informa_estados(): void
     {
         $medico = User::factory()->create(['rol' => 'MEDICO']);
         $recepcion = User::factory()->create(['rol' => 'RECEPCIONISTA']);
@@ -27,14 +27,25 @@ class LaboratorioTest extends TestCase
         $cita = Cita::create(['id_paciente' => $p->id_paciente, 'id_medico' => $medico->id, 'fecha' => today(), 'hora_inicio' => '08:00', 'hora_fin' => '08:30', 'motivo' => 'Control', 'estado' => 'EN_ATENCION', 'id_creado_por' => $medico->id]);
         $consulta = Consulta::create(['id_cita' => $cita->id_cita, 'id_medico' => $medico->id, 'fecha_hora_inicio' => now()]);
         $ex = ExamenCatalogo::create(['nombre' => 'Hemograma', 'activo' => true]);
-        $o = OrdenLaboratorio::create(['id_consulta' => $consulta->id_consulta, 'id_paciente' => $p->id_paciente, 'id_examen' => $ex->id_examen, 'id_medico' => $medico->id, 'fecha_solicitud' => now(), 'estado' => 'PENDIENTE', 'resultado' => 'no-visible']);
+        $o = OrdenLaboratorio::create(['id_consulta' => $consulta->id_consulta, 'id_paciente' => $p->id_paciente, 'id_examen' => $ex->id_examen, 'id_medico' => $medico->id, 'fecha_solicitud' => now(), 'estado' => 'PENDIENTE']);
         Sanctum::actingAs($cuenta);
-        $this->getJson('/api/v1/mi/laboratorio')->assertOk()->assertJsonMissing(['resultado' => 'no-visible']);
+        $this->getJson('/api/v1/mi/laboratorio')->assertOk()->assertJsonPath('data.data.0.estado', 'PENDIENTE');
+
         Sanctum::actingAs($recepcion);
-        $this->patchJson("/api/v1/ordenes-laboratorio/{$o->id_orden}/iniciar")->assertOk();
+        $this->patchJson("/api/v1/ordenes-laboratorio/{$o->id_orden}/completar")->assertStatus(409);
+        $this->patchJson("/api/v1/ordenes-laboratorio/{$o->id_orden}/iniciar")->assertOk()->assertJsonPath('data.estado', 'EN_PROCESO');
         $this->patchJson("/api/v1/ordenes-laboratorio/{$o->id_orden}/iniciar")->assertStatus(409);
-        $this->patchJson("/api/v1/ordenes-laboratorio/{$o->id_orden}/completar", ['resultado' => 'Normal'])->assertOk();
-        Sanctum::actingAs($cuenta);
-        $this->getJson('/api/v1/mi/laboratorio')->assertJsonPath('data.data.0.resultado', 'Normal');
+        // Completar no pide ni guarda datos del examen: solo cambia el estado.
+        $this->patchJson("/api/v1/ordenes-laboratorio/{$o->id_orden}/completar")->assertOk()
+            ->assertJsonPath('data.estado', 'COMPLETADO')
+            ->assertJsonMissingPath('data.resultado');
+
+        foreach ([$cuenta, $medico] as $u) {
+            Sanctum::actingAs($u);
+            $ruta = $u->is($cuenta) ? '/api/v1/mi/laboratorio' : '/api/v1/ordenes-laboratorio';
+            $this->getJson($ruta)->assertOk()
+                ->assertJsonPath('data.data.0.estado', 'COMPLETADO')
+                ->assertJsonMissingPath('data.data.0.resultado');
+        }
     }
 }
