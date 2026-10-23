@@ -9,25 +9,25 @@
     { "id": "S6", "fecha": "21 nov", "nombre": "Entrega final y defensa", "meta": "Presentación en vivo, repositorio y documento de arquitectura completos." }
   ],
   "epicas": [
-    { "id": "FUN", "n": "Fundación y entorno", "d": "Que todos puedan correr la API y tener los tres proyectos base creados." },
-    { "id": "DIS", "n": "Diseño UX/UI en Figma", "d": "Figma al 100% con flujos de las 3 plataformas, sistema de diseño y prototipo." },
-    { "id": "AUT", "n": "Autenticación y roles", "d": "Login, registro de pacientes, sesión y ruteo por rol." },
-    { "id": "PER", "n": "Personal y pacientes", "d": "CRUD de personal de salud y de pacientes, código de activación." },
-    { "id": "CIT", "n": "Citas y agenda", "d": "Agendar, confirmar, reprogramar, cancelar y atender citas." },
-    { "id": "CON", "n": "Consulta, recetas y expediente", "d": "Consulta general, diagnóstico, recetas y expediente clínico." },
-    { "id": "LAB", "n": "Laboratorio", "d": "Órdenes de examen con estados Pendiente, En proceso y Completado." },
-    { "id": "CAM", "n": "Habitaciones e ingresos", "d": "5 VIP en planta 3 y 12 camas semiprivadas en planta 2, sin sobrecupo." },
-    { "id": "AMB", "n": "Ambulancia única", "d": "Estado en tiempo real, despacho, bitácora y reportes de traslado." },
-    { "id": "TUR", "n": "Turnos del personal", "d": "Registro y visualización de horarios por cargo." },
-    { "id": "PUB", "n": "Información pública y avisos", "d": "Lo que cualquiera puede ver sin sesión y los avisos del hospital." },
-    { "id": "ADM", "n": "Administración web e inventario", "d": "Panel del administrador: layout, dashboard, inventario." },
-    { "id": "PRI", "n": "Privacidad y control de acceso", "d": "Datos públicos vs. privados aplicados en cada cliente." },
-    { "id": "QA", "n": "Calidad e integración", "d": "Pruebas, concurrencia, demo de punta a punta y pulido." },
-    { "id": "DOC", "n": "Documentación y entrega", "d": "Evidencias semanales, documento de arquitectura, README y defensa." }
+    { "id": "FUN", "num": "EPIC-1", "n": "Fundación y entorno", "d": "Que todos puedan correr la API y tener los tres proyectos base creados." },
+    { "id": "DIS", "num": "EPIC-2", "n": "Diseño UX/UI en Figma", "d": "Figma al 100% con flujos de las 3 plataformas, sistema de diseño y prototipo." },
+    { "id": "AUT", "num": "EPIC-3", "n": "Autenticación y roles", "d": "Login, registro de pacientes, sesión y ruteo por rol." },
+    { "id": "PER", "num": "EPIC-4", "n": "Personal y pacientes", "d": "CRUD de personal de salud y de pacientes, código de activación." },
+    { "id": "CIT", "num": "EPIC-5", "n": "Citas y agenda", "d": "Agendar, confirmar, reprogramar, cancelar y atender citas." },
+    { "id": "CON", "num": "EPIC-6", "n": "Consulta, recetas y expediente", "d": "Consulta general, diagnóstico, recetas y expediente clínico." },
+    { "id": "LAB", "num": "EPIC-7", "n": "Laboratorio", "d": "Órdenes de examen con estados Pendiente, En proceso y Completado." },
+    { "id": "CAM", "num": "EPIC-8", "n": "Habitaciones e ingresos", "d": "5 VIP en planta 3 y 12 camas semiprivadas en planta 2, sin sobrecupo." },
+    { "id": "AMB", "num": "EPIC-9", "n": "Ambulancia única", "d": "Estado en tiempo real, despacho, bitácora y reportes de traslado." },
+    { "id": "TUR", "num": "EPIC-10", "n": "Turnos del personal", "d": "Registro y visualización de horarios por cargo." },
+    { "id": "PUB", "num": "EPIC-11", "n": "Información pública y avisos", "d": "Lo que cualquiera puede ver sin sesión y los avisos del hospital." },
+    { "id": "ADM", "num": "EPIC-12", "n": "Administración web e inventario", "d": "Panel del administrador: layout, dashboard, inventario." },
+    { "id": "PRI", "num": "EPIC-13", "n": "Privacidad y control de acceso", "d": "Datos públicos vs. privados aplicados en cada cliente." },
+    { "id": "QA", "num": "EPIC-14", "n": "Calidad e integración", "d": "Pruebas, concurrencia, demo de punta a punta y pulido." },
+    { "id": "DOC", "num": "EPIC-15", "n": "Documentación y entrega", "d": "Evidencias semanales, documento de arquitectura, README y defensa." }
   ],
   "hu": [
     {
-      "id": "FUN-OPS-1", "ep": "FUN", "pl": "OPS", "h": "S2", "m": 1, "p": "Alta", "pts": 2,
+      "id": "FUN-OPS-1", "num": "HU-1", "ep": "FUN", "pl": "OPS", "h": "S2", "m": 1, "p": "Alta", "pts": 2,
       "t": "Levantar la API y la base de datos en local",
       "q": "Como integrante del equipo quiero correr la API y la base de datos en mi computadora para probar las apps sin depender de otra persona.",
       "ac": [
@@ -39,20 +39,20 @@
       "api": "POST /auth/login · GET /publico/ocupacion", "fig": "—", "dep": [], "ref": []
     },
     {
-      "id": "FUN-OPS-2", "ep": "FUN", "pl": "OPS", "h": "S2", "m": 1, "p": "Alta", "pts": 2,
+      "id": "FUN-OPS-2", "num": "HU-2", "ep": "FUN", "pl": "OPS", "h": "S2", "m": 1, "p": "Alta", "pts": 2,
       "t": "Estructura del monorepo y convenciones de trabajo",
       "q": "Como equipo quiero un solo repositorio con una carpeta por plataforma para trabajar en paralelo sin pisarnos.",
       "ac": [
         "El repositorio tiene backend/, android/, ios/, web/ y docs/, cada una con su README.",
         "Hay un .gitignore por plataforma y ninguna plataforma necesita archivos de otra para compilar.",
-        "El README raíz tiene la tabla de carpetas, el cómo correr cada una y la convención de ramas (<plataforma>-<persona>-s<N>, por ejemplo ios-kath-s2) y de commits (empiezan con el id de la HU).",
+        "El README raíz tiene la tabla de carpetas, el cómo correr cada una y la convención de ramas (<plataforma>-<persona>-s<N>, por ejemplo ios-kath-s2) y de commits (empiezan con el número de la HU, por ejemplo HU-24).",
         "Nadie hace push directo a development: todo entra por pull request con al menos una persona revisando.",
         "La API (hoy en feature/hospital-universitario) está integrada en development para que todas las ramas salgan con el backend."
       ],
       "api": "—", "fig": "—", "dep": [], "ref": []
     },
     {
-      "id": "FUN-OPS-3", "ep": "FUN", "pl": "OPS", "h": "S2", "m": 1, "p": "Alta", "pts": 2,
+      "id": "FUN-OPS-3", "num": "HU-3", "ep": "FUN", "pl": "OPS", "h": "S2", "m": 1, "p": "Alta", "pts": 2,
       "t": "Configuración por entorno (URL de la API y claves)",
       "q": "Como desarrollador quiero cambiar la URL de la API sin tocar el código para probar en emulador, simulador o dispositivo.",
       "ac": [
@@ -64,7 +64,7 @@
       "api": "—", "fig": "—", "dep": ["FUN-OPS-1"], "ref": []
     },
     {
-      "id": "FUN-OPS-4", "ep": "FUN", "pl": "OPS", "h": "S4", "m": 0, "p": "Media", "pts": 3,
+      "id": "FUN-OPS-4", "num": "HU-4", "ep": "FUN", "pl": "OPS", "h": "S4", "m": 0, "p": "Media", "pts": 3,
       "t": "API accesible desde dispositivos físicos y para la demo",
       "q": "Como equipo quiero que las apps lleguen a una misma API durante la defensa para demostrar los flujos entre plataformas.",
       "ac": [
@@ -76,7 +76,7 @@
       "api": "—", "fig": "—", "dep": ["FUN-OPS-3"], "ref": []
     },
     {
-      "id": "FUN-API-1", "ep": "FUN", "pl": "API", "h": "S2", "m": 1, "p": "Alta", "pts": 2,
+      "id": "FUN-API-1", "num": "HU-5", "ep": "FUN", "pl": "API", "h": "S2", "m": 1, "p": "Alta", "pts": 2,
       "t": "Verificar la API: pruebas, datos semilla y colección de endpoints",
       "q": "Como equipo quiero comprobar que la API funciona de verdad y tener una colección de ejemplos para que las apps sepan qué llamar.",
       "ac": [
@@ -88,7 +88,7 @@
       "api": "php artisan test · /docs/api", "fig": "—", "dep": ["FUN-OPS-1"], "ref": []
     },
     {
-      "id": "FUN-AND-1", "ep": "FUN", "pl": "AND", "h": "S2", "m": 1, "p": "Alta", "pts": 5,
+      "id": "FUN-AND-1", "num": "HU-6", "ep": "FUN", "pl": "AND", "h": "S2", "m": 1, "p": "Alta", "pts": 5,
       "t": "Proyecto Android base (Kotlin, Compose, MVVM)",
       "q": "Como equipo Android quiero un proyecto base con la arquitectura definida para que todas las pantallas se construyan igual.",
       "ac": [
@@ -101,7 +101,7 @@
       "api": "—", "fig": "Figma 4:655 · 4:2", "dep": ["FUN-OPS-2", "FUN-OPS-3"], "ref": []
     },
     {
-      "id": "FUN-IOS-1", "ep": "FUN", "pl": "IOS", "h": "S2", "m": 1, "p": "Alta", "pts": 5,
+      "id": "FUN-IOS-1", "num": "HU-7", "ep": "FUN", "pl": "IOS", "h": "S2", "m": 1, "p": "Alta", "pts": 5,
       "t": "Proyecto Xcode base (SwiftUI, MVVM)",
       "q": "Como equipo iOS quiero un proyecto base con la arquitectura definida para que todas las pantallas se construyan igual.",
       "ac": [
@@ -115,7 +115,7 @@
       "api": "—", "fig": "Figma 8:2 · 8:100", "dep": ["FUN-OPS-2", "FUN-OPS-3"], "ref": []
     },
     {
-      "id": "FUN-WEB-1", "ep": "FUN", "pl": "WEB", "h": "S2", "m": 1, "p": "Alta", "pts": 3,
+      "id": "FUN-WEB-1", "num": "HU-8", "ep": "FUN", "pl": "WEB", "h": "S2", "m": 1, "p": "Alta", "pts": 3,
       "t": "Proyecto web base (React + Vite)",
       "q": "Como equipo web quiero un proyecto base del panel para empezar a construir módulos sobre la misma estructura.",
       "ac": [
@@ -127,7 +127,7 @@
       "api": "—", "fig": "Figma 10:2", "dep": ["FUN-OPS-2", "FUN-OPS-3"], "ref": []
     },
     {
-      "id": "DOC-DOC-1", "ep": "DOC", "pl": "DOC", "h": "S2", "m": 1, "p": "Alta", "pts": 3,
+      "id": "DOC-DOC-1", "num": "HU-88", "ep": "DOC", "pl": "DOC", "h": "S2", "m": 1, "p": "Alta", "pts": 3,
       "t": "Documento Evidencia de avance 2",
       "q": "Como equipo quiero entregar la evidencia de la semana 2 con pruebas reales de lo que ya funciona.",
       "ac": [
@@ -140,7 +140,7 @@
       "api": "GET /habitaciones · GET /turnos", "fig": "—", "dep": ["AUT-AND-1", "AUT-IOS-1", "AUT-WEB-1", "FUN-API-1"], "ref": []
     },
     {
-      "id": "DIS-DSG-1", "ep": "DIS", "pl": "DSG", "h": "S2", "m": 1, "p": "Alta", "pts": 2,
+      "id": "DIS-DSG-1", "num": "HU-9", "ep": "DIS", "pl": "DSG", "h": "S2", "m": 1, "p": "Alta", "pts": 2,
       "t": "Auditar el Figma actual",
       "q": "Como equipo de diseño quiero saber qué pantallas se conservan, cuáles se corrigen y cuáles se eliminan antes de seguir diseñando.",
       "ac": [
@@ -152,7 +152,7 @@
       "api": "—", "fig": "Todos", "dep": [], "ref": []
     },
     {
-      "id": "DIS-DSG-2", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 3,
+      "id": "DIS-DSG-2", "num": "HU-10", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 3,
       "t": "Retirar del diseño lo que no está en los requisitos ni en la API",
       "q": "Como equipo quiero que el diseño muestre solo lo que el sistema hace para no prometer funciones que no existen.",
       "ac": [
@@ -165,7 +165,7 @@
       "api": "—", "fig": "4:655 · 4:2 · 4:1065 · 8:2 · 8:100 · 8:596 · 8:1706 · 10:2", "dep": ["DIS-DSG-1"], "ref": []
     },
     {
-      "id": "DIS-DSG-3", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 3,
+      "id": "DIS-DSG-3", "num": "HU-11", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 3,
       "t": "Sistema de diseño básico",
       "q": "Como equipo quiero una paleta, tipografía y componentes con estados para que las tres plataformas se vean como un solo producto.",
       "ac": [
@@ -177,7 +177,7 @@
       "api": "—", "fig": "Nueva página Sistema de diseño", "dep": ["DIS-DSG-1"], "ref": []
     },
     {
-      "id": "DIS-DSG-4", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 2,
+      "id": "DIS-DSG-4", "num": "HU-12", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 2,
       "t": "Diseño de autenticación: login, registro de paciente y cambio de contraseña",
       "q": "Como persona usuaria quiero entrar con mi usuario y contraseña y, si soy paciente, crear mi cuenta.",
       "ac": [
@@ -190,7 +190,7 @@
       "api": "POST /auth/login · POST /auth/registro · PATCH /auth/password", "fig": "4:655 · 8:2 · nuevo (registro, web)", "dep": ["DIS-DSG-3"], "ref": []
     },
     {
-      "id": "DIS-DSG-5", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
+      "id": "DIS-DSG-5", "num": "HU-13", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
       "t": "Flujos de recepción y enfermería (Android)",
       "q": "Como equipo Android quiero el flujo completo de recepción y enfermería diseñado para no improvisar al programar.",
       "ac": [
@@ -202,7 +202,7 @@
       "api": "—", "fig": "4:2 · 4:303 · 4:753 · 4:1065 · 4:1311 · 4:1602 + nuevas", "dep": ["DIS-DSG-2", "DIS-DSG-3"], "ref": []
     },
     {
-      "id": "DIS-DSG-6", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
+      "id": "DIS-DSG-6", "num": "HU-14", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
       "t": "Flujos del médico (iOS y Android)",
       "q": "Como médico quiero que mi flujo esté diseñado de la agenda a la receta para atender sin pasos de más.",
       "ac": [
@@ -214,7 +214,7 @@
       "api": "—", "fig": "8:100 · 8:357 · 8:596 · 8:833 · 8:1132 · 8:1464 · 8:1706", "dep": ["DIS-DSG-2", "DIS-DSG-3"], "ref": []
     },
     {
-      "id": "DIS-DSG-7", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
+      "id": "DIS-DSG-7", "num": "HU-15", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
       "t": "Flujos del paciente (iOS)",
       "q": "Como paciente quiero ver mis citas, mi expediente y mi laboratorio desde el teléfono.",
       "ac": [
@@ -226,7 +226,7 @@
       "api": "—", "fig": "nuevo (hoy no hay pantallas de paciente; 8:1706 sirve de base para Mi habitación)", "dep": ["DIS-DSG-2", "DIS-DSG-3"], "ref": []
     },
     {
-      "id": "DIS-DSG-8", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 8,
+      "id": "DIS-DSG-8", "num": "HU-16", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 8,
       "t": "Panel web administrativo completo",
       "q": "Como administrador quiero un panel para gestionar usuarios, espacios, recursos y ver métricas.",
       "ac": [
@@ -238,11 +238,11 @@
       "api": "GET /dashboard/metricas", "fig": "10:2 · 10:762 · 10:1561 · 10:2033 + nuevas", "dep": ["DIS-DSG-2", "DIS-DSG-3"], "ref": []
     },
     {
-      "id": "DIS-DSG-9", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 3,
+      "id": "DIS-DSG-9", "num": "HU-17", "ep": "DIS", "pl": "DSG", "h": "S3", "m": 1, "p": "Alta", "pts": 3,
       "t": "Prototipo interactivo conectado",
       "q": "Como equipo quiero un prototipo que se pueda recorrer para presentarlo y para validar los flujos antes de programar.",
       "ac": [
-        "Cada flujo de los pasos DIS-DSG-4 a DIS-DSG-8 se puede recorrer de principio a fin con el modo prototipo.",
+        "Cada flujo de las HU-12 a HU-16 se puede recorrer de principio a fin con el modo prototipo.",
         "Los flujos tienen nombre y punto de partida claros por plataforma.",
         "El enlace del prototipo está en el README y en el documento de arquitectura.",
         "Quien no participó en el diseño puede recorrerlo sin explicación."
@@ -250,7 +250,7 @@
       "api": "—", "fig": "Todos", "dep": ["DIS-DSG-4", "DIS-DSG-5", "DIS-DSG-6", "DIS-DSG-7", "DIS-DSG-8"], "ref": []
     },
     {
-      "id": "AUT-API-1", "ep": "AUT", "pl": "API", "h": "S2", "m": 1, "p": "Alta", "pts": 1,
+      "id": "AUT-API-1", "num": "HU-18", "ep": "AUT", "pl": "API", "h": "S2", "m": 1, "p": "Alta", "pts": 1,
       "t": "Verificar login con los cuatro roles y CORS",
       "q": "Como equipo de clientes quiero confirmar que el login responde bien para cada rol antes de programar las pantallas.",
       "ac": [
@@ -262,7 +262,7 @@
       "api": "POST /auth/login · GET /auth/me", "fig": "—", "dep": ["FUN-OPS-1"], "ref": []
     },
     {
-      "id": "AUT-AND-1", "ep": "AUT", "pl": "AND", "h": "S2", "m": 1, "p": "Alta", "pts": 3,
+      "id": "AUT-AND-1", "num": "HU-19", "ep": "AUT", "pl": "AND", "h": "S2", "m": 1, "p": "Alta", "pts": 3,
       "t": "Iniciar sesión (Android)",
       "q": "Como recepcionista, enfermero o médico quiero iniciar sesión con mi usuario y contraseña para entrar a las pantallas de mi rol.",
       "ac": [
@@ -275,7 +275,7 @@
       "api": "POST /auth/login", "fig": "4:655", "dep": ["FUN-AND-1"], "ref": ["AUT-API-1", "DIS-DSG-4"]
     },
     {
-      "id": "AUT-AND-2", "ep": "AUT", "pl": "AND", "h": "S3", "m": 1, "p": "Media", "pts": 3,
+      "id": "AUT-AND-2", "num": "HU-20", "ep": "AUT", "pl": "AND", "h": "S3", "m": 1, "p": "Media", "pts": 3,
       "t": "Sesión en Android: cerrar sesión, token vencido y cambio de contraseña",
       "q": "Como usuario quiero que mi sesión se cierre de forma segura y poder cambiar mi contraseña.",
       "ac": [
@@ -287,7 +287,7 @@
       "api": "POST /auth/logout · PATCH /auth/password · GET /auth/me", "fig": "nuevo", "dep": ["AUT-AND-1"], "ref": []
     },
     {
-      "id": "AUT-IOS-1", "ep": "AUT", "pl": "IOS", "h": "S2", "m": 1, "p": "Alta", "pts": 3,
+      "id": "AUT-IOS-1", "num": "HU-21", "ep": "AUT", "pl": "IOS", "h": "S2", "m": 1, "p": "Alta", "pts": 3,
       "t": "Iniciar sesión (iOS)",
       "q": "Como médico o paciente quiero iniciar sesión para ver la información que me corresponde.",
       "ac": [
@@ -299,7 +299,7 @@
       "api": "POST /auth/login", "fig": "8:2", "dep": ["FUN-IOS-1"], "ref": ["AUT-API-1", "DIS-DSG-4"]
     },
     {
-      "id": "AUT-IOS-2", "ep": "AUT", "pl": "IOS", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
+      "id": "AUT-IOS-2", "num": "HU-22", "ep": "AUT", "pl": "IOS", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
       "t": "Registro de paciente (iOS)",
       "q": "Como paciente quiero crear mi cuenta para consultar mis citas, mi expediente y mi laboratorio.",
       "ac": [
@@ -312,7 +312,7 @@
       "api": "POST /auth/registro", "fig": "nuevo", "dep": ["AUT-IOS-1"], "ref": ["DIS-DSG-4"]
     },
     {
-      "id": "AUT-IOS-3", "ep": "AUT", "pl": "IOS", "h": "S3", "m": 1, "p": "Media", "pts": 3,
+      "id": "AUT-IOS-3", "num": "HU-23", "ep": "AUT", "pl": "IOS", "h": "S3", "m": 1, "p": "Media", "pts": 3,
       "t": "Sesión en iOS: cerrar sesión, token vencido y cambio de contraseña",
       "q": "Como usuario quiero que mi sesión se cierre de forma segura y poder cambiar mi contraseña.",
       "ac": [
@@ -324,7 +324,7 @@
       "api": "POST /auth/logout · PATCH /auth/password", "fig": "nuevo", "dep": ["AUT-IOS-1"], "ref": []
     },
     {
-      "id": "AUT-WEB-1", "ep": "AUT", "pl": "WEB", "h": "S2", "m": 1, "p": "Alta", "pts": 3,
+      "id": "AUT-WEB-1", "num": "HU-24", "ep": "AUT", "pl": "WEB", "h": "S2", "m": 1, "p": "Alta", "pts": 3,
       "t": "Iniciar sesión (web administrativa)",
       "q": "Como administrador quiero entrar al panel con mi usuario y contraseña.",
       "ac": [
@@ -337,7 +337,7 @@
       "api": "POST /auth/login", "fig": "nuevo (el Figma web no tiene login)", "dep": ["FUN-WEB-1"], "ref": ["AUT-API-1", "DIS-DSG-4"]
     },
     {
-      "id": "AUT-WEB-2", "ep": "AUT", "pl": "WEB", "h": "S3", "m": 1, "p": "Media", "pts": 2,
+      "id": "AUT-WEB-2", "num": "HU-25", "ep": "AUT", "pl": "WEB", "h": "S3", "m": 1, "p": "Media", "pts": 2,
       "t": "Sesión en la web: cerrar sesión, token vencido y cambio de contraseña",
       "q": "Como administrador quiero cerrar sesión y cambiar mi contraseña desde el panel.",
       "ac": [
@@ -348,7 +348,7 @@
       "api": "POST /auth/logout · PATCH /auth/password", "fig": "nuevo", "dep": ["AUT-WEB-1"], "ref": []
     },
     {
-      "id": "PER-API-1", "ep": "PER", "pl": "API", "h": "S3", "m": 1, "p": "Media", "pts": 2,
+      "id": "PER-API-1", "num": "HU-26", "ep": "PER", "pl": "API", "h": "S3", "m": 1, "p": "Media", "pts": 2,
       "t": "Filtros en el listado de usuarios (rol, estado y búsqueda)",
       "q": "Como administrador quiero filtrar el personal por rol, estado o nombre para encontrar a alguien sin recorrer todas las páginas.",
       "ac": [
@@ -359,7 +359,7 @@
       "api": "GET /usuarios", "fig": "—", "dep": [], "ref": []
     },
     {
-      "id": "PER-AND-1", "ep": "PER", "pl": "AND", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
+      "id": "PER-AND-1", "num": "HU-27", "ep": "PER", "pl": "AND", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
       "t": "Pacientes en Android: buscar, registrar y editar (recepción)",
       "q": "Como recepcionista quiero registrar y buscar pacientes para ingresarlos y agendarles citas.",
       "ac": [
@@ -372,7 +372,7 @@
       "api": "GET/POST/PUT /pacientes", "fig": "4:1065 (admisión) + nuevo", "dep": ["AUT-AND-1"], "ref": ["DIS-DSG-5"]
     },
     {
-      "id": "PER-AND-2", "ep": "PER", "pl": "AND", "h": "S3", "m": 0, "p": "Media", "pts": 2,
+      "id": "PER-AND-2", "num": "HU-28", "ep": "PER", "pl": "AND", "h": "S3", "m": 0, "p": "Media", "pts": 2,
       "t": "Código de activación de cuenta (Android recepción)",
       "q": "Como recepcionista quiero generar un código para que un paciente ya registrado vincule su cuenta.",
       "ac": [
@@ -383,7 +383,7 @@
       "api": "POST /pacientes/{id}/codigo-activacion", "fig": "nuevo", "dep": ["PER-AND-1"], "ref": []
     },
     {
-      "id": "PER-IOS-1", "ep": "PER", "pl": "IOS", "h": "S3", "m": 0, "p": "Media", "pts": 3,
+      "id": "PER-IOS-1", "num": "HU-29", "ep": "PER", "pl": "IOS", "h": "S3", "m": 0, "p": "Media", "pts": 3,
       "t": "Mis pacientes (iOS médico)",
       "q": "Como médico quiero ver y buscar a mis pacientes para abrir su expediente.",
       "ac": [
@@ -395,7 +395,7 @@
       "api": "GET /pacientes · GET /pacientes/{id}", "fig": "8:833", "dep": ["AUT-IOS-1"], "ref": ["DIS-DSG-6"]
     },
     {
-      "id": "PER-WEB-1", "ep": "PER", "pl": "WEB", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
+      "id": "PER-WEB-1", "num": "HU-30", "ep": "PER", "pl": "WEB", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
       "t": "Gestión del personal (web): crear, editar y activar o desactivar",
       "q": "Como administrador quiero gestionar las cuentas del personal de salud.",
       "ac": [
@@ -409,19 +409,19 @@
       "api": "GET/POST/PUT /usuarios · PATCH /usuarios/{id}/estado", "fig": "nuevo", "dep": ["AUT-WEB-1", "ADM-WEB-1"], "ref": ["DIS-DSG-8"]
     },
     {
-      "id": "PER-WEB-2", "ep": "PER", "pl": "WEB", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
+      "id": "PER-WEB-2", "num": "HU-31", "ep": "PER", "pl": "WEB", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
       "t": "Pacientes (web): buscar, registrar, editar y código de activación",
       "q": "Como administrador quiero gestionar los pacientes del hospital.",
       "ac": [
         "Puedo buscar por nombre, DUI o expediente, con paginación.",
         "Puedo registrar y editar un paciente con las mismas validaciones que en Android.",
         "Puedo generar el código de activación y veo su vencimiento.",
-        "Desde el paciente puedo abrir su expediente (ver CON-WEB-1)."
+        "Desde el paciente puedo abrir su expediente (ver HU-44)."
       ],
       "api": "GET/POST/PUT /pacientes · POST /pacientes/{id}/codigo-activacion", "fig": "nuevo", "dep": ["ADM-WEB-1"], "ref": ["DIS-DSG-8"]
     },
     {
-      "id": "CIT-API-1", "ep": "CIT", "pl": "API", "h": "S3", "m": 0, "p": "Media", "pts": 2,
+      "id": "CIT-API-1", "num": "HU-32", "ep": "CIT", "pl": "API", "h": "S3", "m": 0, "p": "Media", "pts": 2,
       "t": "Filtros en el listado de citas (fecha, estado, médico y texto)",
       "q": "Como recepcionista y administrador quiero filtrar citas desde el servidor para no descargar todo y filtrar en la app.",
       "ac": [
@@ -432,7 +432,7 @@
       "api": "GET /citas", "fig": "—", "dep": [], "ref": []
     },
     {
-      "id": "CIT-AND-1", "ep": "CIT", "pl": "AND", "h": "S3", "m": 0, "p": "Alta", "pts": 5,
+      "id": "CIT-AND-1", "num": "HU-33", "ep": "CIT", "pl": "AND", "h": "S3", "m": 0, "p": "Alta", "pts": 5,
       "t": "Agendar citas (Android recepción)",
       "q": "Como recepcionista quiero asignar una cita a un paciente con un médico, un consultorio y un horario libre.",
       "ac": [
@@ -445,7 +445,7 @@
       "api": "GET /agenda/disponibilidad · POST /citas · GET /consultorios · GET /medicos", "fig": "nuevo", "dep": ["PER-AND-1"], "ref": ["DIS-DSG-5"]
     },
     {
-      "id": "CIT-AND-2", "ep": "CIT", "pl": "AND", "h": "S4", "m": 0, "p": "Alta", "pts": 5,
+      "id": "CIT-AND-2", "num": "HU-34", "ep": "CIT", "pl": "AND", "h": "S4", "m": 0, "p": "Alta", "pts": 5,
       "t": "Gestionar citas: llegada, reprogramar, cancelar y confirmar solicitudes (Android recepción)",
       "q": "Como recepcionista quiero avanzar el estado de las citas y atender las solicitudes de los pacientes.",
       "ac": [
@@ -458,7 +458,7 @@
       "api": "PATCH /citas/{id}/llegada · /reprogramar · /cancelar · /confirmar", "fig": "nuevo", "dep": ["CIT-AND-1"], "ref": []
     },
     {
-      "id": "CIT-AND-3", "ep": "CIT", "pl": "AND", "h": "S3", "m": 0, "p": "Alta", "pts": 3,
+      "id": "CIT-AND-3", "num": "HU-35", "ep": "CIT", "pl": "AND", "h": "S3", "m": 0, "p": "Alta", "pts": 3,
       "t": "Agenda del día (Android médico)",
       "q": "Como médico quiero ver mis citas del día para saber a quién atender.",
       "ac": [
@@ -469,7 +469,7 @@
       "api": "GET /citas", "fig": "8:100", "dep": ["AUT-AND-1"], "ref": ["DIS-DSG-6"]
     },
     {
-      "id": "CIT-IOS-1", "ep": "CIT", "pl": "IOS", "h": "S3", "m": 0, "p": "Alta", "pts": 3,
+      "id": "CIT-IOS-1", "num": "HU-36", "ep": "CIT", "pl": "IOS", "h": "S3", "m": 0, "p": "Alta", "pts": 3,
       "t": "Agenda del día y seguimientos (iOS médico)",
       "q": "Como médico quiero ver mi agenda y agendar seguimientos a mis pacientes.",
       "ac": [
@@ -480,7 +480,7 @@
       "api": "GET /citas · POST /citas · GET /agenda/disponibilidad", "fig": "8:100", "dep": ["AUT-IOS-1"], "ref": ["DIS-DSG-6"]
     },
     {
-      "id": "CIT-IOS-2", "ep": "CIT", "pl": "IOS", "h": "S3", "m": 0, "p": "Alta", "pts": 5,
+      "id": "CIT-IOS-2", "num": "HU-37", "ep": "CIT", "pl": "IOS", "h": "S3", "m": 0, "p": "Alta", "pts": 5,
       "t": "Mis citas y solicitud de atención (iOS paciente)",
       "q": "Como paciente quiero ver mis citas y pedir atención cuando la necesito.",
       "ac": [
@@ -492,7 +492,7 @@
       "api": "GET /mi/citas · POST /solicitudes-atencion", "fig": "nuevo", "dep": ["AUT-IOS-2"], "ref": ["DIS-DSG-7"]
     },
     {
-      "id": "CIT-WEB-1", "ep": "CIT", "pl": "WEB", "h": "S4", "m": 0, "p": "Media", "pts": 5,
+      "id": "CIT-WEB-1", "num": "HU-38", "ep": "CIT", "pl": "WEB", "h": "S4", "m": 0, "p": "Media", "pts": 5,
       "t": "Citas (web): lista, filtros y gestión",
       "q": "Como administrador quiero supervisar y corregir las citas del hospital.",
       "ac": [
@@ -503,7 +503,7 @@
       "api": "GET /citas · PATCH /citas/{id}/*", "fig": "nuevo", "dep": ["ADM-WEB-1"], "ref": ["CIT-API-1"]
     },
     {
-      "id": "CON-AND-1", "ep": "CON", "pl": "AND", "h": "S3", "m": 0, "p": "Alta", "pts": 5,
+      "id": "CON-AND-1", "num": "HU-39", "ep": "CON", "pl": "AND", "h": "S3", "m": 0, "p": "Alta", "pts": 5,
       "t": "Consulta general y recetas (Android médico)",
       "q": "Como médico quiero registrar el diagnóstico y las recetas de la consulta para dejar la atención documentada.",
       "ac": [
@@ -516,7 +516,7 @@
       "api": "POST /citas/{id}/consulta · PUT /consultas/{id} · POST /consultas/{id}/recetas · PATCH /consultas/{id}/finalizar", "fig": "8:357", "dep": ["CIT-AND-3"], "ref": []
     },
     {
-      "id": "CON-IOS-1", "ep": "CON", "pl": "IOS", "h": "S3", "m": 0, "p": "Alta", "pts": 5,
+      "id": "CON-IOS-1", "num": "HU-40", "ep": "CON", "pl": "IOS", "h": "S3", "m": 0, "p": "Alta", "pts": 5,
       "t": "Consulta general y recetas (iOS médico)",
       "q": "Como médico quiero registrar el diagnóstico y las recetas desde el iPhone.",
       "ac": [
@@ -528,7 +528,7 @@
       "api": "POST /citas/{id}/consulta · PUT /consultas/{id} · POST /consultas/{id}/recetas · PATCH /consultas/{id}/finalizar", "fig": "8:357", "dep": ["CIT-IOS-1"], "ref": []
     },
     {
-      "id": "CON-AND-2", "ep": "CON", "pl": "AND", "h": "S4", "m": 0, "p": "Media", "pts": 3,
+      "id": "CON-AND-2", "num": "HU-41", "ep": "CON", "pl": "AND", "h": "S4", "m": 0, "p": "Media", "pts": 3,
       "t": "Expediente e historial del paciente (Android médico)",
       "q": "Como médico tratante quiero revisar el expediente y actualizar los antecedentes de mi paciente.",
       "ac": [
@@ -539,7 +539,7 @@
       "api": "GET /pacientes/{id}/expediente · PUT /pacientes/{id}/historial", "fig": "8:833", "dep": ["CIT-AND-3"], "ref": []
     },
     {
-      "id": "CON-IOS-2", "ep": "CON", "pl": "IOS", "h": "S4", "m": 0, "p": "Media", "pts": 3,
+      "id": "CON-IOS-2", "num": "HU-42", "ep": "CON", "pl": "IOS", "h": "S4", "m": 0, "p": "Media", "pts": 3,
       "t": "Expediente e historial del paciente (iOS médico)",
       "q": "Como médico tratante quiero revisar el expediente y actualizar los antecedentes de mi paciente.",
       "ac": [
@@ -550,7 +550,7 @@
       "api": "GET /pacientes/{id}/expediente · PUT /pacientes/{id}/historial", "fig": "8:833", "dep": ["PER-IOS-1"], "ref": []
     },
     {
-      "id": "CON-IOS-3", "ep": "CON", "pl": "IOS", "h": "S4", "m": 0, "p": "Alta", "pts": 3,
+      "id": "CON-IOS-3", "num": "HU-43", "ep": "CON", "pl": "IOS", "h": "S4", "m": 0, "p": "Alta", "pts": 3,
       "t": "Mi expediente (iOS paciente)",
       "q": "Como paciente quiero consultar mi historial, mis diagnósticos y mis recetas.",
       "ac": [
@@ -561,7 +561,7 @@
       "api": "GET /mi/expediente · GET /consultas/{id}", "fig": "nuevo", "dep": ["AUT-IOS-2"], "ref": ["DIS-DSG-7"]
     },
     {
-      "id": "CON-WEB-1", "ep": "CON", "pl": "WEB", "h": "S4", "m": 0, "p": "Media", "pts": 3,
+      "id": "CON-WEB-1", "num": "HU-44", "ep": "CON", "pl": "WEB", "h": "S4", "m": 0, "p": "Media", "pts": 3,
       "t": "Expediente en el panel web (administrador autorizado)",
       "q": "Como administrador autorizado quiero consultar el expediente de un paciente cuando la gestión lo requiere.",
       "ac": [
@@ -572,7 +572,7 @@
       "api": "GET /pacientes/{id}/expediente", "fig": "nuevo", "dep": ["PER-WEB-2"], "ref": []
     },
     {
-      "id": "LAB-AND-1", "ep": "LAB", "pl": "AND", "h": "S3", "m": 0, "p": "Media", "pts": 3,
+      "id": "LAB-AND-1", "num": "HU-45", "ep": "LAB", "pl": "AND", "h": "S3", "m": 0, "p": "Media", "pts": 3,
       "t": "Cola de laboratorio (Android recepción y enfermería)",
       "q": "Como personal de laboratorio quiero avanzar el estado de las órdenes para que médicos y pacientes sepan en qué van.",
       "ac": [
@@ -584,7 +584,7 @@
       "api": "GET /ordenes-laboratorio · PATCH /ordenes-laboratorio/{id}/iniciar · /completar", "fig": "4:1311", "dep": ["AUT-AND-1"], "ref": ["DIS-DSG-5"]
     },
     {
-      "id": "LAB-AND-2", "ep": "LAB", "pl": "AND", "h": "S3", "m": 0, "p": "Media", "pts": 3,
+      "id": "LAB-AND-2", "num": "HU-46", "ep": "LAB", "pl": "AND", "h": "S3", "m": 0, "p": "Media", "pts": 3,
       "t": "Solicitar exámenes desde la consulta (Android médico)",
       "q": "Como médico quiero pedir un examen durante la consulta para que laboratorio lo procese.",
       "ac": [
@@ -595,7 +595,7 @@
       "api": "GET /examenes · POST /consultas/{id}/ordenes-laboratorio · GET /ordenes-laboratorio", "fig": "8:596", "dep": ["CON-AND-1"], "ref": []
     },
     {
-      "id": "LAB-IOS-1", "ep": "LAB", "pl": "IOS", "h": "S3", "m": 0, "p": "Media", "pts": 3,
+      "id": "LAB-IOS-1", "num": "HU-47", "ep": "LAB", "pl": "IOS", "h": "S3", "m": 0, "p": "Media", "pts": 3,
       "t": "Solicitar exámenes y ver su estado (iOS médico)",
       "q": "Como médico quiero pedir exámenes y ver en qué estado están.",
       "ac": [
@@ -606,7 +606,7 @@
       "api": "GET /examenes · POST /consultas/{id}/ordenes-laboratorio · GET /ordenes-laboratorio", "fig": "8:596", "dep": ["CON-IOS-1"], "ref": []
     },
     {
-      "id": "LAB-IOS-2", "ep": "LAB", "pl": "IOS", "h": "S4", "m": 0, "p": "Alta", "pts": 3,
+      "id": "LAB-IOS-2", "num": "HU-48", "ep": "LAB", "pl": "IOS", "h": "S4", "m": 0, "p": "Alta", "pts": 3,
       "t": "Mi laboratorio (iOS paciente)",
       "q": "Como paciente quiero saber si mis exámenes están pendientes, en proceso o completados.",
       "ac": [
@@ -617,7 +617,7 @@
       "api": "GET /mi/laboratorio", "fig": "nuevo", "dep": ["AUT-IOS-2"], "ref": ["DIS-DSG-7"]
     },
     {
-      "id": "LAB-WEB-1", "ep": "LAB", "pl": "WEB", "h": "S4", "m": 0, "p": "Media", "pts": 3,
+      "id": "LAB-WEB-1", "num": "HU-49", "ep": "LAB", "pl": "WEB", "h": "S4", "m": 0, "p": "Media", "pts": 3,
       "t": "Laboratorio en el panel web",
       "q": "Como administrador quiero ver y avanzar las órdenes de laboratorio del hospital.",
       "ac": [
@@ -628,7 +628,7 @@
       "api": "GET /ordenes-laboratorio · PATCH /ordenes-laboratorio/{id}/*", "fig": "nuevo", "dep": ["ADM-WEB-1"], "ref": []
     },
     {
-      "id": "CAM-AND-1", "ep": "CAM", "pl": "AND", "h": "S4", "m": 0, "p": "Alta", "pts": 5,
+      "id": "CAM-AND-1", "num": "HU-50", "ep": "CAM", "pl": "AND", "h": "S4", "m": 0, "p": "Alta", "pts": 5,
       "t": "Mapa de habitaciones y camas (Android)",
       "q": "Como recepcionista quiero ver qué camas están libres para ingresar pacientes sin errores.",
       "ac": [
@@ -640,7 +640,7 @@
       "api": "GET /habitaciones · canal ocupacion", "fig": "4:303", "dep": ["AUT-AND-1"], "ref": ["AMB-API-1", "DIS-DSG-5"]
     },
     {
-      "id": "CAM-AND-2", "ep": "CAM", "pl": "AND", "h": "S4", "m": 0, "p": "Alta", "pts": 5,
+      "id": "CAM-AND-2", "num": "HU-51", "ep": "CAM", "pl": "AND", "h": "S4", "m": 0, "p": "Alta", "pts": 5,
       "t": "Ingresar paciente a una cama (Android recepción)",
       "q": "Como recepcionista quiero asignar una cama a un paciente sin sobrecupo ni doble asignación.",
       "ac": [
@@ -653,7 +653,7 @@
       "api": "POST /ingresos", "fig": "4:1065 (paso 3)", "dep": ["CAM-AND-1", "PER-AND-1"], "ref": []
     },
     {
-      "id": "CAM-AND-3", "ep": "CAM", "pl": "AND", "h": "S4", "m": 0, "p": "Media", "pts": 3,
+      "id": "CAM-AND-3", "num": "HU-52", "ep": "CAM", "pl": "AND", "h": "S4", "m": 0, "p": "Media", "pts": 3,
       "t": "Alta y traslado de pacientes (Android recepción)",
       "q": "Como recepcionista quiero dar de alta o trasladar a un paciente para liberar y reasignar camas.",
       "ac": [
@@ -664,7 +664,7 @@
       "api": "PATCH /ingresos/{id}/alta · /trasladar", "fig": "nuevo", "dep": ["CAM-AND-2"], "ref": []
     },
     {
-      "id": "CAM-IOS-1", "ep": "CAM", "pl": "IOS", "h": "S4", "m": 0, "p": "Media", "pts": 3,
+      "id": "CAM-IOS-1", "num": "HU-53", "ep": "CAM", "pl": "IOS", "h": "S4", "m": 0, "p": "Media", "pts": 3,
       "t": "Mis pacientes ingresados y su ubicación (iOS médico)",
       "q": "Como médico quiero ver dónde está hospitalizado cada uno de mis pacientes.",
       "ac": [
@@ -675,7 +675,7 @@
       "api": "GET /ingresos?activos=1 · GET /habitaciones", "fig": "8:1706", "dep": ["AUT-IOS-1"], "ref": ["DIS-DSG-6"]
     },
     {
-      "id": "CAM-IOS-2", "ep": "CAM", "pl": "IOS", "h": "S4", "m": 0, "p": "Media", "pts": 3,
+      "id": "CAM-IOS-2", "num": "HU-54", "ep": "CAM", "pl": "IOS", "h": "S4", "m": 0, "p": "Media", "pts": 3,
       "t": "Mi habitación y cama (iOS paciente)",
       "q": "Como paciente hospitalizado quiero saber en qué habitación y cama estoy.",
       "ac": [
@@ -686,7 +686,7 @@
       "api": "GET /mi/expediente", "fig": "8:1706 (adaptar)", "dep": ["CON-IOS-3"], "ref": []
     },
     {
-      "id": "CAM-WEB-1", "ep": "CAM", "pl": "WEB", "h": "S4", "m": 0, "p": "Alta", "pts": 5,
+      "id": "CAM-WEB-1", "num": "HU-55", "ep": "CAM", "pl": "WEB", "h": "S4", "m": 0, "p": "Alta", "pts": 5,
       "t": "Mapa de camas en tiempo real (web)",
       "q": "Como administrador quiero ver la ocupación completa del hospital en vivo.",
       "ac": [
@@ -698,7 +698,7 @@
       "api": "GET /habitaciones · canal ocupacion", "fig": "10:762", "dep": ["ADM-WEB-1"], "ref": ["AMB-API-1", "DIS-DSG-8"]
     },
     {
-      "id": "CAM-WEB-2", "ep": "CAM", "pl": "WEB", "h": "S4", "m": 0, "p": "Media", "pts": 5,
+      "id": "CAM-WEB-2", "num": "HU-56", "ep": "CAM", "pl": "WEB", "h": "S4", "m": 0, "p": "Media", "pts": 5,
       "t": "Ingresos, altas y traslados (web)",
       "q": "Como administrador quiero asignar espacios y corregir ingresos desde el panel.",
       "ac": [
@@ -709,7 +709,7 @@
       "api": "GET/POST /ingresos · PATCH /ingresos/{id}/*", "fig": "10:762", "dep": ["CAM-WEB-1"], "ref": []
     },
     {
-      "id": "AMB-API-1", "ep": "AMB", "pl": "API", "h": "S4", "m": 0, "p": "Alta", "pts": 3,
+      "id": "AMB-API-1", "num": "HU-57", "ep": "AMB", "pl": "API", "h": "S4", "m": 0, "p": "Alta", "pts": 3,
       "t": "Tiempo real: Reverb funcionando y documentado",
       "q": "Como equipo de clientes quiero conectarme a los canales en vivo con instrucciones probadas.",
       "ac": [
@@ -721,7 +721,7 @@
       "api": "POST /broadcasting/auth · canales ambulancia, ocupacion, private-personal", "fig": "—", "dep": ["FUN-OPS-1"], "ref": []
     },
     {
-      "id": "AMB-AND-1", "ep": "AMB", "pl": "AND", "h": "S4", "m": 0, "p": "Alta", "pts": 5,
+      "id": "AMB-AND-1", "num": "HU-58", "ep": "AMB", "pl": "AND", "h": "S4", "m": 0, "p": "Alta", "pts": 5,
       "t": "Estado y despacho de la ambulancia (Android)",
       "q": "Como recepcionista quiero despachar la única ambulancia y ver su estado en vivo.",
       "ac": [
@@ -733,7 +733,7 @@
       "api": "GET /ambulancia · POST /ambulancia/servicios · PATCH /ambulancia/servicios/{id}/finalizar", "fig": "4:753", "dep": ["AUT-AND-1"], "ref": ["AMB-API-1", "DIS-DSG-5"]
     },
     {
-      "id": "AMB-AND-2", "ep": "AMB", "pl": "AND", "h": "S4", "m": 0, "p": "Media", "pts": 3,
+      "id": "AMB-AND-2", "num": "HU-59", "ep": "AMB", "pl": "AND", "h": "S4", "m": 0, "p": "Media", "pts": 3,
       "t": "Reporte desde la ambulancia en camino (Android paramédico y enfermería)",
       "q": "Como personal de la ambulancia quiero avisar el estado del paciente antes de llegar para que emergencia se prepare.",
       "ac": [
@@ -744,7 +744,7 @@
       "api": "POST/GET /ambulancia/servicios/{id}/reportes", "fig": "nuevo", "dep": ["AMB-AND-1"], "ref": []
     },
     {
-      "id": "AMB-IOS-1", "ep": "AMB", "pl": "IOS", "h": "S4", "m": 0, "p": "Media", "pts": 3,
+      "id": "AMB-IOS-1", "num": "HU-60", "ep": "AMB", "pl": "IOS", "h": "S4", "m": 0, "p": "Media", "pts": 3,
       "t": "Ambulancia y alertas para el médico (iOS)",
       "q": "Como médico de emergencia quiero ver el estado de la ambulancia y los reportes del traslado.",
       "ac": [
@@ -755,7 +755,7 @@
       "api": "GET /ambulancia · canal private-personal", "fig": "8:1464", "dep": ["AUT-IOS-1"], "ref": ["AMB-API-1", "DIS-DSG-6"]
     },
     {
-      "id": "AMB-WEB-1", "ep": "AMB", "pl": "WEB", "h": "S4", "m": 0, "p": "Alta", "pts": 5,
+      "id": "AMB-WEB-1", "num": "HU-61", "ep": "AMB", "pl": "WEB", "h": "S4", "m": 0, "p": "Alta", "pts": 5,
       "t": "Control de la ambulancia (web)",
       "q": "Como administrador quiero controlar el estado de la ambulancia y despacharla.",
       "ac": [
@@ -767,7 +767,7 @@
       "api": "GET /ambulancia · PATCH /ambulancia/estado · POST /ambulancia/servicios", "fig": "10:1561", "dep": ["ADM-WEB-1"], "ref": ["AMB-API-1", "DIS-DSG-8"]
     },
     {
-      "id": "AMB-WEB-2", "ep": "AMB", "pl": "WEB", "h": "S4", "m": 0, "p": "Media", "pts": 3,
+      "id": "AMB-WEB-2", "num": "HU-62", "ep": "AMB", "pl": "WEB", "h": "S4", "m": 0, "p": "Media", "pts": 3,
       "t": "Bitácora de emergencias (web)",
       "q": "Como administrador quiero consultar las emergencias atendidas con filtros.",
       "ac": [
@@ -778,7 +778,7 @@
       "api": "GET /ambulancia/servicios", "fig": "10:1561", "dep": ["AMB-WEB-1"], "ref": []
     },
     {
-      "id": "TUR-API-1", "ep": "TUR", "pl": "API", "h": "S4", "m": 0, "p": "Media", "pts": 2,
+      "id": "TUR-API-1", "num": "HU-63", "ep": "TUR", "pl": "API", "h": "S4", "m": 0, "p": "Media", "pts": 2,
       "t": "Recepción puede consultar la grilla de turnos",
       "q": "Como recepcionista quiero ver los turnos del personal porque el control de turnos es parte de mi rol.",
       "ac": [
@@ -789,7 +789,7 @@
       "api": "GET /turnos", "fig": "—", "dep": [], "ref": []
     },
     {
-      "id": "TUR-WEB-1", "ep": "TUR", "pl": "WEB", "h": "S3", "m": 0, "p": "Alta", "pts": 5,
+      "id": "TUR-WEB-1", "num": "HU-64", "ep": "TUR", "pl": "WEB", "h": "S3", "m": 0, "p": "Alta", "pts": 5,
       "t": "Programación de turnos del personal (web)",
       "q": "Como administrador quiero programar los turnos de doctores, enfermeras, alergistas, emergencia, asistentes y recepcionistas.",
       "ac": [
@@ -801,18 +801,18 @@
       "api": "GET/POST/PUT/DELETE /turnos", "fig": "10:2033", "dep": ["ADM-WEB-1"], "ref": ["DIS-DSG-8"]
     },
     {
-      "id": "TUR-AND-1", "ep": "TUR", "pl": "AND", "h": "S3", "m": 0, "p": "Media", "pts": 3,
+      "id": "TUR-AND-1", "num": "HU-65", "ep": "TUR", "pl": "AND", "h": "S3", "m": 0, "p": "Media", "pts": 3,
       "t": "Mis turnos y médicos de turno (Android)",
       "q": "Como personal quiero ver mi horario y quién está de turno ahora.",
       "ac": [
         "Veo mis turnos de la semana con fecha, horario y área.",
         "Veo los médicos de turno en este momento.",
-        "Si TUR-API-1 está lista, recepción ve también la grilla completa."
+        "Si HU-63 está lista, recepción ve también la grilla completa."
       ],
       "api": "GET /mi/turnos · GET /publico/medicos-de-turno", "fig": "4:1602", "dep": ["AUT-AND-1"], "ref": ["DIS-DSG-5"]
     },
     {
-      "id": "TUR-IOS-1", "ep": "TUR", "pl": "IOS", "h": "S3", "m": 0, "p": "Media", "pts": 2,
+      "id": "TUR-IOS-1", "num": "HU-66", "ep": "TUR", "pl": "IOS", "h": "S3", "m": 0, "p": "Media", "pts": 2,
       "t": "Mis turnos (iOS médico)",
       "q": "Como médico quiero ver mis turnos de guardia.",
       "ac": [
@@ -822,7 +822,7 @@
       "api": "GET /mi/turnos", "fig": "8:1132", "dep": ["AUT-IOS-1"], "ref": ["DIS-DSG-6"]
     },
     {
-      "id": "PUB-AND-1", "ep": "PUB", "pl": "AND", "h": "S3", "m": 0, "p": "Media", "pts": 2,
+      "id": "PUB-AND-1", "num": "HU-67", "ep": "PUB", "pl": "AND", "h": "S3", "m": 0, "p": "Media", "pts": 2,
       "t": "Información pública sin iniciar sesión (Android)",
       "q": "Como visitante quiero ver ocupación, médicos de turno y avisos sin crear una cuenta.",
       "ac": [
@@ -833,7 +833,7 @@
       "api": "GET /publico/*", "fig": "nuevo", "dep": ["FUN-AND-1"], "ref": []
     },
     {
-      "id": "PUB-IOS-1", "ep": "PUB", "pl": "IOS", "h": "S3", "m": 0, "p": "Media", "pts": 2,
+      "id": "PUB-IOS-1", "num": "HU-68", "ep": "PUB", "pl": "IOS", "h": "S3", "m": 0, "p": "Media", "pts": 2,
       "t": "Información pública sin iniciar sesión (iOS)",
       "q": "Como visitante o paciente quiero ver ocupación, médicos de turno y avisos sin crear una cuenta.",
       "ac": [
@@ -844,7 +844,7 @@
       "api": "GET /publico/*", "fig": "nuevo", "dep": ["FUN-IOS-1"], "ref": []
     },
     {
-      "id": "PUB-WEB-1", "ep": "PUB", "pl": "WEB", "h": "S4", "m": 0, "p": "Baja", "pts": 2,
+      "id": "PUB-WEB-1", "num": "HU-69", "ep": "PUB", "pl": "WEB", "h": "S4", "m": 0, "p": "Baja", "pts": 2,
       "t": "Página pública del hospital (web)",
       "q": "Como visitante quiero ver ocupación, médicos de turno y avisos desde el navegador.",
       "ac": [
@@ -854,7 +854,7 @@
       "api": "GET /publico/*", "fig": "nuevo", "dep": ["FUN-WEB-1"], "ref": []
     },
     {
-      "id": "PUB-WEB-2", "ep": "PUB", "pl": "WEB", "h": "S4", "m": 0, "p": "Media", "pts": 3,
+      "id": "PUB-WEB-2", "num": "HU-70", "ep": "PUB", "pl": "WEB", "h": "S4", "m": 0, "p": "Media", "pts": 3,
       "t": "Avisos del hospital (web)",
       "q": "Como administrador quiero publicar avisos públicos e internos.",
       "ac": [
@@ -865,7 +865,7 @@
       "api": "GET/POST/PUT/DELETE /avisos", "fig": "nuevo", "dep": ["ADM-WEB-1"], "ref": []
     },
     {
-      "id": "PUB-AND-2", "ep": "PUB", "pl": "AND", "h": "S4", "m": 0, "p": "Baja", "pts": 2,
+      "id": "PUB-AND-2", "num": "HU-71", "ep": "PUB", "pl": "AND", "h": "S4", "m": 0, "p": "Baja", "pts": 2,
       "t": "Avisos internos del personal (Android)",
       "q": "Como personal quiero leer los avisos internos del hospital.",
       "ac": [
@@ -875,7 +875,7 @@
       "api": "GET /avisos", "fig": "nuevo", "dep": ["AUT-AND-1"], "ref": []
     },
     {
-      "id": "PUB-IOS-2", "ep": "PUB", "pl": "IOS", "h": "S4", "m": 0, "p": "Baja", "pts": 2,
+      "id": "PUB-IOS-2", "num": "HU-72", "ep": "PUB", "pl": "IOS", "h": "S4", "m": 0, "p": "Baja", "pts": 2,
       "t": "Avisos internos del personal (iOS médico)",
       "q": "Como médico quiero leer los avisos internos del hospital.",
       "ac": [
@@ -885,7 +885,7 @@
       "api": "GET /avisos", "fig": "nuevo", "dep": ["AUT-IOS-1"], "ref": []
     },
     {
-      "id": "ADM-WEB-1", "ep": "ADM", "pl": "WEB", "h": "S3", "m": 1, "p": "Alta", "pts": 3,
+      "id": "ADM-WEB-1", "num": "HU-73", "ep": "ADM", "pl": "WEB", "h": "S3", "m": 1, "p": "Alta", "pts": 3,
       "t": "Layout y navegación del panel",
       "q": "Como administrador quiero una estructura de navegación clara para moverme entre módulos.",
       "ac": [
@@ -897,7 +897,7 @@
       "api": "—", "fig": "10:2", "dep": ["AUT-WEB-1"], "ref": ["DIS-DSG-3"]
     },
     {
-      "id": "ADM-WEB-2", "ep": "ADM", "pl": "WEB", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
+      "id": "ADM-WEB-2", "num": "HU-74", "ep": "ADM", "pl": "WEB", "h": "S3", "m": 1, "p": "Alta", "pts": 5,
       "t": "Dashboard inicial con métricas reales",
       "q": "Como administrador quiero ver el estado general del hospital al entrar al panel.",
       "ac": [
@@ -910,7 +910,7 @@
       "api": "GET /dashboard/metricas", "fig": "10:2 (corregir)", "dep": ["ADM-WEB-1"], "ref": ["DIS-DSG-2"]
     },
     {
-      "id": "ADM-WEB-3", "ep": "ADM", "pl": "WEB", "h": "S4", "m": 0, "p": "Media", "pts": 5,
+      "id": "ADM-WEB-3", "num": "HU-75", "ep": "ADM", "pl": "WEB", "h": "S4", "m": 0, "p": "Media", "pts": 5,
       "t": "Inventario y recursos (web)",
       "q": "Como administrador quiero controlar el stock de medicamentos, insumos y equipos.",
       "ac": [
@@ -923,7 +923,7 @@
       "api": "GET/POST/PUT/DELETE /recursos · POST /recursos/{id}/movimientos", "fig": "nuevo", "dep": ["ADM-WEB-1"], "ref": []
     },
     {
-      "id": "ADM-AND-1", "ep": "ADM", "pl": "AND", "h": "S4", "m": 0, "p": "Baja", "pts": 3,
+      "id": "ADM-AND-1", "num": "HU-76", "ep": "ADM", "pl": "AND", "h": "S4", "m": 0, "p": "Baja", "pts": 3,
       "t": "Inventario (Android recepción): ver y registrar salidas",
       "q": "Como recepcionista quiero registrar el consumo de insumos.",
       "ac": [
@@ -934,7 +934,7 @@
       "api": "GET /recursos · POST /recursos/{id}/movimientos", "fig": "nuevo", "dep": ["AUT-AND-1"], "ref": []
     },
     {
-      "id": "PRI-API-1", "ep": "PRI", "pl": "API", "h": "S4", "m": 1, "p": "Alta", "pts": 2,
+      "id": "PRI-API-1", "num": "HU-77", "ep": "PRI", "pl": "API", "h": "S4", "m": 1, "p": "Alta", "pts": 2,
       "t": "Auditoría de privacidad de la API",
       "q": "Como equipo quiero comprobar que la API cumple la política de datos públicos y privados.",
       "ac": [
@@ -945,7 +945,7 @@
       "api": "—", "fig": "—", "dep": ["FUN-API-1"], "ref": []
     },
     {
-      "id": "PRI-AND-1", "ep": "PRI", "pl": "AND", "h": "S4", "m": 1, "p": "Alta", "pts": 3,
+      "id": "PRI-AND-1", "num": "HU-78", "ep": "PRI", "pl": "AND", "h": "S4", "m": 1, "p": "Alta", "pts": 3,
       "t": "Privacidad aplicada en Android",
       "q": "Como hospital queremos que la app nunca muestre datos que el rol no puede ver.",
       "ac": [
@@ -957,7 +957,7 @@
       "api": "—", "fig": "—", "dep": ["PER-AND-1", "CON-AND-2"], "ref": []
     },
     {
-      "id": "PRI-IOS-1", "ep": "PRI", "pl": "IOS", "h": "S4", "m": 1, "p": "Alta", "pts": 3,
+      "id": "PRI-IOS-1", "num": "HU-79", "ep": "PRI", "pl": "IOS", "h": "S4", "m": 1, "p": "Alta", "pts": 3,
       "t": "Privacidad aplicada en iOS",
       "q": "Como hospital queremos que la app nunca muestre datos que el rol no puede ver.",
       "ac": [
@@ -969,7 +969,7 @@
       "api": "—", "fig": "—", "dep": ["CON-IOS-3", "PER-IOS-1"], "ref": []
     },
     {
-      "id": "PRI-WEB-1", "ep": "PRI", "pl": "WEB", "h": "S4", "m": 1, "p": "Alta", "pts": 3,
+      "id": "PRI-WEB-1", "num": "HU-80", "ep": "PRI", "pl": "WEB", "h": "S4", "m": 1, "p": "Alta", "pts": 3,
       "t": "Privacidad y control de acceso en la web",
       "q": "Como hospital queremos que el panel solo muestre lo que el administrador puede ver.",
       "ac": [
@@ -981,7 +981,7 @@
       "api": "—", "fig": "—", "dep": ["CON-WEB-1", "ADM-WEB-1"], "ref": []
     },
     {
-      "id": "QA-API-1", "ep": "QA", "pl": "API", "h": "S5", "m": 0, "p": "Alta", "pts": 3,
+      "id": "QA-API-1", "num": "HU-81", "ep": "QA", "pl": "API", "h": "S5", "m": 0, "p": "Alta", "pts": 3,
       "t": "Pruebas de concurrencia con evidencia",
       "q": "Como equipo queremos demostrar que no hay sobrecupo ni doble despacho aunque varias personas actúen a la vez.",
       "ac": [
@@ -993,7 +993,7 @@
       "api": "POST /ingresos · POST /ambulancia/servicios · POST /turnos", "fig": "—", "dep": ["FUN-API-1"], "ref": []
     },
     {
-      "id": "QA-OPS-1", "ep": "QA", "pl": "OPS", "h": "S5", "m": 0, "p": "Alta", "pts": 3,
+      "id": "QA-OPS-1", "num": "HU-82", "ep": "QA", "pl": "OPS", "h": "S5", "m": 0, "p": "Alta", "pts": 3,
       "t": "Guion de demo de punta a punta",
       "q": "Como equipo queremos ensayar el recorrido completo entre las tres plataformas antes de la defensa.",
       "ac": [
@@ -1005,7 +1005,7 @@
       "api": "—", "fig": "—", "dep": ["CAM-AND-2", "AMB-WEB-1", "CON-IOS-1"], "ref": []
     },
     {
-      "id": "QA-AND-1", "ep": "QA", "pl": "AND", "h": "S5", "m": 0, "p": "Media", "pts": 3,
+      "id": "QA-AND-1", "num": "HU-83", "ep": "QA", "pl": "AND", "h": "S5", "m": 0, "p": "Media", "pts": 3,
       "t": "Pruebas unitarias de ViewModels y repositorios (Android)",
       "q": "Como equipo quiero comprobar la lógica de la app sin depender del servidor.",
       "ac": [
@@ -1016,7 +1016,7 @@
       "api": "—", "fig": "—", "dep": ["AUT-AND-1", "CAM-AND-2"], "ref": []
     },
     {
-      "id": "QA-IOS-1", "ep": "QA", "pl": "IOS", "h": "S5", "m": 0, "p": "Media", "pts": 3,
+      "id": "QA-IOS-1", "num": "HU-84", "ep": "QA", "pl": "IOS", "h": "S5", "m": 0, "p": "Media", "pts": 3,
       "t": "Pruebas de ViewModels (iOS)",
       "q": "Como equipo quiero comprobar la lógica de la app sin depender del servidor.",
       "ac": [
@@ -1027,7 +1027,7 @@
       "api": "—", "fig": "—", "dep": ["AUT-IOS-2", "CIT-IOS-2"], "ref": []
     },
     {
-      "id": "QA-WEB-1", "ep": "QA", "pl": "WEB", "h": "S5", "m": 0, "p": "Media", "pts": 2,
+      "id": "QA-WEB-1", "num": "HU-85", "ep": "QA", "pl": "WEB", "h": "S5", "m": 0, "p": "Media", "pts": 2,
       "t": "Pruebas de la web: login y rutas protegidas",
       "q": "Como equipo quiero comprobar que el panel no deja entrar a quien no corresponde.",
       "ac": [
@@ -1038,7 +1038,7 @@
       "api": "—", "fig": "—", "dep": ["AUT-WEB-1"], "ref": []
     },
     {
-      "id": "QA-OPS-2", "ep": "QA", "pl": "OPS", "h": "S5", "m": 0, "p": "Media", "pts": 5,
+      "id": "QA-OPS-2", "num": "HU-86", "ep": "QA", "pl": "OPS", "h": "S5", "m": 0, "p": "Media", "pts": 5,
       "t": "Pulido visual y accesibilidad",
       "q": "Como equipo queremos que las tres plataformas se vean consistentes y se puedan usar con comodidad.",
       "ac": [
@@ -1050,7 +1050,7 @@
       "api": "—", "fig": "Todos", "dep": ["DIS-DSG-3"], "ref": []
     },
     {
-      "id": "QA-OPS-3", "ep": "QA", "pl": "OPS", "h": "S5", "m": 0, "p": "Alta", "pts": 5,
+      "id": "QA-OPS-3", "num": "HU-87", "ep": "QA", "pl": "OPS", "h": "S5", "m": 0, "p": "Alta", "pts": 5,
       "t": "Corrección de errores de integración",
       "q": "Como equipo queremos cerrar los errores que aparezcan al conectar las tres plataformas.",
       "ac": [
@@ -1061,7 +1061,7 @@
       "api": "—", "fig": "—", "dep": ["QA-OPS-1"], "ref": []
     },
     {
-      "id": "DOC-DOC-2", "ep": "DOC", "pl": "DOC", "h": "S3", "m": 1, "p": "Alta", "pts": 3,
+      "id": "DOC-DOC-2", "num": "HU-89", "ep": "DOC", "pl": "DOC", "h": "S3", "m": 1, "p": "Alta", "pts": 3,
       "t": "Paquete de la entrega de avance del 31 de octubre",
       "q": "Como equipo queremos mostrar cada criterio de la entrega del 50% con evidencia.",
       "ac": [
@@ -1073,7 +1073,7 @@
       "api": "—", "fig": "—", "dep": ["DIS-DSG-9", "PER-WEB-1", "ADM-WEB-2", "AUT-IOS-2"], "ref": []
     },
     {
-      "id": "DOC-DOC-3", "ep": "DOC", "pl": "DOC", "h": "S5", "m": 0, "p": "Alta", "pts": 3,
+      "id": "DOC-DOC-3", "num": "HU-90", "ep": "DOC", "pl": "DOC", "h": "S5", "m": 0, "p": "Alta", "pts": 3,
       "t": "Diagrama de arquitectura de software",
       "q": "Como equipo queremos explicar cómo interactúan iOS, Android, Web y el backend.",
       "ac": [
@@ -1084,7 +1084,7 @@
       "api": "—", "fig": "—", "dep": [], "ref": []
     },
     {
-      "id": "DOC-DOC-4", "ep": "DOC", "pl": "DOC", "h": "S5", "m": 0, "p": "Media", "pts": 2,
+      "id": "DOC-DOC-4", "num": "HU-91", "ep": "DOC", "pl": "DOC", "h": "S5", "m": 0, "p": "Media", "pts": 2,
       "t": "Diagrama ER igual a la API (guardado para después)",
       "q": "Como equipo queremos que el diagrama coincida con la base de datos real antes de la entrega final.",
       "ac": [
@@ -1095,18 +1095,18 @@
       "api": "—", "fig": "—", "dep": [], "ref": []
     },
     {
-      "id": "DOC-DOC-5", "ep": "DOC", "pl": "DOC", "h": "S4", "m": 1, "p": "Alta", "pts": 3,
+      "id": "DOC-DOC-5", "num": "HU-92", "ep": "DOC", "pl": "DOC", "h": "S4", "m": 1, "p": "Alta", "pts": 3,
       "t": "Matriz de control de acceso por rol (RBAC)",
       "q": "Como equipo queremos documentar qué puede hacer cada rol en endpoints y vistas.",
       "ac": [
         "La tabla cruza los 4 roles con cada endpoint y cada vista de las tres plataformas.",
         "Se contrasta con routes/api.php y con RbacTest.",
-        "Cualquier cambio de permisos (por ejemplo TUR-API-1) se refleja aquí."
+        "Cualquier cambio de permisos (por ejemplo HU-63) se refleja aquí."
       ],
       "api": "—", "fig": "—", "dep": ["PRI-API-1"], "ref": []
     },
     {
-      "id": "DOC-DOC-6", "ep": "DOC", "pl": "DOC", "h": "S4", "m": 1, "p": "Alta", "pts": 2,
+      "id": "DOC-DOC-6", "num": "HU-93", "ep": "DOC", "pl": "DOC", "h": "S4", "m": 1, "p": "Alta", "pts": 2,
       "t": "Política de privacidad de datos",
       "q": "Como equipo queremos documentar qué campos del expediente son públicos y cuáles privados.",
       "ac": [
@@ -1117,7 +1117,7 @@
       "api": "—", "fig": "—", "dep": ["PRI-API-1"], "ref": []
     },
     {
-      "id": "DOC-DOC-7", "ep": "DOC", "pl": "DOC", "h": "S6", "m": 0, "p": "Alta", "pts": 3,
+      "id": "DOC-DOC-7", "num": "HU-94", "ep": "DOC", "pl": "DOC", "h": "S6", "m": 0, "p": "Alta", "pts": 3,
       "t": "README principal y guías de ejecución",
       "q": "Como docente quiero poder instalar y correr las tres plataformas siguiendo el README.",
       "ac": [
@@ -1128,7 +1128,7 @@
       "api": "—", "fig": "—", "dep": ["FUN-OPS-3"], "ref": []
     },
     {
-      "id": "DOC-DOC-8", "ep": "DOC", "pl": "DOC", "h": "S6", "m": 0, "p": "Alta", "pts": 5,
+      "id": "DOC-DOC-8", "num": "HU-95", "ep": "DOC", "pl": "DOC", "h": "S6", "m": 0, "p": "Alta", "pts": 5,
       "t": "Documento de arquitectura (PDF) final",
       "q": "Como equipo queremos entregar el documento técnico completo que pide el curso.",
       "ac": [
@@ -1139,7 +1139,7 @@
       "api": "—", "fig": "—", "dep": ["DOC-DOC-3", "DOC-DOC-4", "DOC-DOC-5", "DOC-DOC-6", "DIS-DSG-9"], "ref": []
     },
     {
-      "id": "DOC-DOC-9", "ep": "DOC", "pl": "DOC", "h": "S6", "m": 0, "p": "Alta", "pts": 3,
+      "id": "DOC-DOC-9", "num": "HU-96", "ep": "DOC", "pl": "DOC", "h": "S6", "m": 0, "p": "Alta", "pts": 3,
       "t": "Preparar la defensa técnica",
       "q": "Como equipo queremos llegar a la defensa con un recorrido ensayado.",
       "ac": [
