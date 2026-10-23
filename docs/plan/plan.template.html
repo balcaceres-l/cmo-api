@@ -181,6 +181,7 @@ Object.keys(PL).forEach(p=>{
 });
 const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $ = s => document.querySelector(s);
+const JIRA = 'https://centromedicodeoccidente.atlassian.net';
 
 /* ---------- estado ---------- */
 const S = { tab:'plan', plat:'AND', open:new Set(), f:{q:'',ep:'',pl:'',h:'',estado:'',min:false,libres:false,mios:false},
@@ -203,7 +204,7 @@ function barra(list){
 }
 function huChip(id){
   const h=BYID[id]; if(!h) return '';
-  return `<a class="chip mono" data-goto="${esc(id)}" role="button" tabindex="0" title="${esc(h.t)}">${esc(id)} · ${ESTADOS[estadoDe(id)]}</a>`;
+  return `<a class="chip mono" data-goto="${esc(id)}" role="button" tabindex="0" title="${esc(h.t)}">${esc(h.num)} · ${ESTADOS[estadoDe(id)]}</a>`;
 }
 
 /* ---------- PLAN ---------- */
@@ -229,7 +230,7 @@ function renderPlan(){
       <div class="card"><h3>Cómo se trabaja una HU</h3><ol class="steps" style="margin-top:12px">
         <li><span>Entra a <b>Plataformas</b> o a <b>Backlog</b>, filtra por tu plataforma y toma la siguiente HU libre de la ruta (el número <i>Ruta #</i>).</span></li>
         <li><span>Pulsa <b>Tomar</b>. Queda con tu nombre y en <i>En curso</i>.</span></li>
-        <li><span>Trabaja en tu rama de la semana, <code>&lt;plataforma&gt;-&lt;persona&gt;-s&lt;N&gt;</code> (por ejemplo <code>ios-kath-s2</code>), y empieza cada commit con el id de la HU. Detalle en Referencia.</span></li>
+        <li><span>Trabaja en tu rama de la semana, <code>&lt;plataforma&gt;-&lt;persona&gt;-s&lt;N&gt;</code> (por ejemplo <code>ios-kath-s2</code>), y empieza cada commit con el número de la HU (por ejemplo <code>HU-24</code>). Detalle en Referencia.</span></li>
         <li><span>Cuando cumplas todos los criterios, cambia a <b>En revisión</b>. Otra persona la prueba y la marca <b>Hecha</b>.</span></li></ol></div>
       <div class="card"><h3>Cuándo una HU está hecha</h3><ul class="ticks" style="margin-top:8px">
         <li>Cumple todos sus criterios de aceptación, no solo el camino feliz.</li>
@@ -453,7 +454,7 @@ function filtrar(){
     if(f.estado&&estadoDe(h.id)!==f.estado) return false;
     if(f.min&&!h.m) return false; if(f.libres&&estadoDe(h.id)!=='libre') return false;
     if(f.mios&&claim(h.id).dueno!==S.me) return false;
-    if(q&&!(h.id+' '+h.t+' '+h.q+' '+h.api).toLowerCase().includes(q)) return false;
+    if(q&&!(h.num+' '+h.id+' '+h.t+' '+h.q+' '+h.api).toLowerCase().includes(q)) return false;
     return true;}).sort((a,b)=>(+a.h.slice(1))-(+b.h.slice(1))||(a.pl<b.pl?-1:a.pl>b.pl?1:0)||ORD[a.id]-ORD[b.id]);
 }
 function huRow(h){
@@ -476,7 +477,8 @@ function huRow(h){
       <p style="margin-top:12px">${esc(h.q)}</p>
       <div><h4>Criterios de aceptación</h4><ol>${h.ac.map(a=>`<li>${esc(a)}</li>`).join('')}</ol></div>
       <div class="meta">
-        <div><b>Épica:</b> ${esc(EP[h.ep].n)} · <b>Hito:</b> ${h.h} (${esc(HITO[h.h].fecha)})</div>
+        <div><b>Épica:</b> ${esc(EP[h.ep].num)} · ${esc(EP[h.ep].n)} · <b>Hito:</b> ${h.h} (${esc(HITO[h.h].fecha)})</div>
+        <div><b>Jira:</b> <a href="${JIRA}/browse/SCRUM-${+h.num.slice(3)+19}" target="_blank" rel="noopener">SCRUM-${+h.num.slice(3)+19}</a></div>
         ${h.api&&h.api!=='—'?`<div><b>API:</b> <code>${esc(h.api)}</code></div>`:''}
         ${h.fig&&h.fig!=='—'?`<div><b>Figma:</b> ${esc(h.fig)}</div>`:''}
         ${c.nota&&!puedeEditar(h.id)?`<div><b>Nota:</b> ${esc(c.nota)}</div>`:''}
@@ -485,7 +487,7 @@ function huRow(h){
       </div>${acts}</div>`;
   }
   return `<article class="hu" data-id="${h.id}"><button class="head" data-toggle="${h.id}" aria-expanded="${open}">
-    <span class="line1"><span class="id">${h.id}</span><span class="t">${esc(h.t)}</span></span>
+    <span class="line1"><span class="id">${h.num} · ${h.id}</span><span class="t">${esc(h.t)}</span></span>
     <span class="line2">${chipPl(h.pl)}<span class="chip mono" title="Orden dentro de la ruta de su plataforma">Ruta #${ORD[h.id]}</span><span class="chip">${h.h} · ${esc(HITO[h.h].fecha)}</span><span class="chip">${h.pts} pts</span><span class="chip">${h.p}</span>
     ${h.m?`<span class="pill exig" title="${esc(EXIG[h.h]||'')}">Exigida</span>`:''}${pillEstado(e)}${dueno}</span></button>${body}</article>`;
 }
@@ -496,7 +498,7 @@ function renderBacklogShell(){
     <div class="card"><div class="filters">
       <label>Buscar<input type="search" id="f-q" value="${esc(S.f.q)}" placeholder="Título, id o endpoint"></label>
       <label>Plataforma<select id="f-pl">${o([['','Todas'],...Object.keys(PL).map(k=>[k,PL[k][0]])],S.f.pl)}</select></label>
-      <label>Épica<select id="f-ep">${o([['','Todas'],...D.epicas.map(e=>[e.id,e.n])],S.f.ep)}</select></label>
+      <label>Épica<select id="f-ep">${o([['','Todas'],...D.epicas.map(e=>[e.id,e.num+' · '+e.n])],S.f.ep)}</select></label>
       <label>Hito<select id="f-h">${o([['','Todos'],...D.hitos.map(h=>[h.id,h.id+' · '+h.fecha])],S.f.h)}</select></label>
       <label>Estado<select id="f-estado">${o([['','Todos'],...Object.entries(ESTADOS)],S.f.estado)}</select></label></div>
       <div class="checks" style="margin-top:10px">
@@ -596,6 +598,14 @@ function renderReferencia(){
         <tr><td><code>recepcion</code></td><td>RECEPCIONISTA</td><td>Recepcionista</td></tr>
         <tr><td><code>enfermeria</code></td><td>RECEPCIONISTA</td><td>Enfermera</td></tr>
         <tr><td><code>paciente.uno</code>, <code>paciente.dos</code></td><td>PACIENTE</td><td>—</td></tr></tbody></table></div></div></div>
+    <div class="card"><h3>Jira</h3>
+      <p class="small muted" style="margin-top:6px">Las 15 épicas y las 96 HU están cargadas en el proyecto Centro Médico de Occidente. Jira da las claves en orden, así que el número del plan y la clave de Jira se relacionan así:</p>
+      <ul class="ticks small" style="margin-top:8px">
+        <li><b>HU-n</b> es <code>SCRUM-(n+19)</code>. Por ejemplo, HU-24 es SCRUM-43.</li>
+        <li><b>EPIC-n</b> es <code>SCRUM-(n+4)</code>. Por ejemplo, EPIC-3 es SCRUM-7.</li>
+        <li>El número HU-n está al inicio del título de cada issue, así que se puede buscar en Jira por ese texto.</li>
+        <li>Todas se crearon sin sprint. Se pasan a Sprint 1 desde el tablero; las entregas por semana se distinguen con las etiquetas <code>s2</code> a <code>s6</code>.</li></ul>
+      <p class="small" style="margin-top:8px"><a href="https://centromedicodeoccidente.atlassian.net/issues?jql=project%20%3D%20SCRUM" target="_blank" rel="noopener">Abrir el proyecto en Jira</a></p></div>
     <div class="card"><h3>Ramas y commits</h3>
       <p class="small muted" style="margin-top:6px">Una rama por persona, plataforma y semana. Se crea al empezar la semana y se cierra con un pull request al terminar. Así hay pocas ramas y cada una dice de quién es.</p>
       <div style="margin-top:12px">${cmd('<plataforma>-<persona>-s<N>')}</div>
@@ -606,7 +616,7 @@ function renderReferencia(){
         <tr><th>ejemplos</th><td><code>ios-kath-s2</code> · <code>web-luis-s3</code> · <code>android-dennis-s3</code></td></tr></tbody></table></div>
       <ul class="ticks small" style="margin-top:12px">
         <li>La rama sale de <code>development</code> actualizado. Cada vez que empieces a trabajar, trae lo nuevo: <code>git fetch</code> y <code>git merge origin/development</code>.</li>
-        <li>Cada commit empieza con el id de la HU: <code>AUT-WEB-1: login del administrador</code>.</li>
+        <li>Cada commit empieza con el número de la HU: <code>HU-24: login del administrador</code>.</li>
         <li>Al terminar la semana abres un pull request a <code>development</code>, con las HU hechas en la descripción y otra persona revisando. Si otra plataforma depende de lo tuyo (por ejemplo el login), abres el pull request antes.</li>
         <li>Nadie hace push directo a <code>development</code>.</li>
         <li><b>Las ramas no se borran.</b> Cada semana deja su rama como historial; en GitHub no pulses «Delete branch» al integrar. La semana siguiente nace una nueva desde <code>development</code>, por ejemplo <code>ios-kath-s3</code>.</li>
