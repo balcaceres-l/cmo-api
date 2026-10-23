@@ -1,0 +1,751 @@
+<title>CMO Plan de Trabajo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Schibsted+Grotesk:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+/* Layout: cabecera fija con pestañas; contenido en una columna de lectura de 1100px; el backlog es una lista filtrable de filas expandibles. */
+:root{
+  --bg:#f3f6f4; --surface:#ffffff; --surface-2:#e8efeb; --ink:#13221c; --ink-2:#4a5c53; --line:#d1dcd6;
+  --brand:#0b5d4b; --brand-ink:#ffffff; --brand-soft:#d6ebe3;
+  --info:#0e5c86; --info-soft:#dbebf4; --warn:#85560a; --warn-soft:#fae9c8; --bad:#a3262a; --bad-soft:#f7dada; --good:#1a7541; --good-soft:#d9efe1;
+  --p-and:#2e8b57; --p-ios:#2f6fd0; --p-web:#c27a12; --p-api:#5b6b78; --p-dsg:#b0407a; --p-doc:#7a6f5a; --p-ops:#6a55b8;
+  --f-head:"Schibsted Grotesk",system-ui,sans-serif; --f-body:"Source Sans 3",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1612; --surface:#15221d; --surface-2:#1d2d26; --ink:#e5efea; --ink-2:#a2b7ad; --line:#2b4036;
+  --brand:#4fc4a2; --brand-ink:#06201a; --brand-soft:#17382f;
+  --info:#6cb7e3; --info-soft:#14313f; --warn:#e6b455; --warn-soft:#3a2d12; --bad:#f08a8c; --bad-soft:#3d1c1d; --good:#68d196; --good-soft:#16361f;
+  --p-and:#5fcf93; --p-ios:#7aa6f0; --p-web:#e4a447; --p-api:#94a5b3; --p-dsg:#e285b5; --p-doc:#bdb299; --p-ops:#a894ee; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1612; --surface:#15221d; --surface-2:#1d2d26; --ink:#e5efea; --ink-2:#a2b7ad; --line:#2b4036;
+  --brand:#4fc4a2; --brand-ink:#06201a; --brand-soft:#17382f;
+  --info:#6cb7e3; --info-soft:#14313f; --warn:#e6b455; --warn-soft:#3a2d12; --bad:#f08a8c; --bad-soft:#3d1c1d; --good:#68d196; --good-soft:#16361f;
+  --p-and:#5fcf93; --p-ios:#7aa6f0; --p-web:#e4a447; --p-api:#94a5b3; --p-dsg:#e285b5; --p-doc:#bdb299; --p-ops:#a894ee; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--surface);z-index:30}
+h1,h2,h3{font-family:var(--f-head);line-height:1.15;margin:0;text-wrap:balance}
+h2{font-size:1.5rem;font-weight:700;letter-spacing:-.01em}
+h3{font-size:1.05rem;font-weight:600}
+p{margin:0}
+a{color:var(--info)}
+code,.mono{font-family:var(--f-mono);font-size:.82em}
+button,select,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.wrap{max-width:1100px;margin:0 auto}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));padding:12px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line)}
+.top-in{max-width:1100px;margin:0 auto}
+.brandrow{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;justify-content:space-between}
+.brandrow h1{font-size:1.2rem;font-weight:700;letter-spacing:-.01em}
+.brandrow .sub{color:var(--ink-2);font-size:.88rem}
+.who{font-size:.85rem;color:var(--ink-2)}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:8px;scrollbar-width:thin}
+nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;cursor:pointer;white-space:nowrap;color:var(--ink-2);font-weight:600}
+nav.tabs button[aria-selected="true"]{color:var(--brand);border-bottom-color:var(--brand)}
+main{padding-top:24px;display:grid;gap:28px}
+section.panel{display:grid;gap:20px}
+.lead{max-width:68ch;color:var(--ink-2)}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr))}
+.g5{grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+.card.flat{background:var(--surface-2);border-color:transparent}
+.card h3+p,.card h3+ul{margin-top:6px}
+.muted{color:var(--ink-2)}
+.small{font-size:.86rem}
+.stat{display:flex;gap:20px;flex-wrap:wrap}
+.stat div{display:grid}
+.stat b{font:700 1.7rem var(--f-head);font-variant-numeric:tabular-nums}
+.stat span{font-size:.82rem;color:var(--ink-2)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:.76rem;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--surface-2);color:var(--ink);white-space:nowrap}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--c,var(--ink-2))}
+.chip.mono{font-family:var(--f-mono);font-weight:400}
+.pill{display:inline-block;font-size:.76rem;font-weight:700;padding:2px 9px;border-radius:5px;white-space:nowrap}
+.pill.libre{background:var(--surface-2);color:var(--ink-2)}
+.pill.en_curso{background:var(--info-soft);color:var(--info)}
+.pill.revision{background:var(--warn-soft);color:var(--warn)}
+.pill.hecha{background:var(--good-soft);color:var(--good)}
+.pill.exig{background:var(--brand-soft);color:var(--brand)}
+.pill.dec{background:var(--warn-soft);color:var(--warn)}
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--surface-2)}
+.bar i{display:block;height:100%}
+.bar .b-hecha{background:var(--good)} .bar .b-revision{background:var(--warn)} .bar .b-en_curso{background:var(--info)}
+.bartxt{display:flex;justify-content:space-between;font-size:.8rem;color:var(--ink-2);font-variant-numeric:tabular-nums;margin-top:4px}
+.hito{display:grid;gap:8px;align-content:start}
+.hito .fecha{font:700 1.5rem var(--f-head)}
+.hito button{justify-self:start;background:none;border:0;padding:0;color:var(--info);cursor:pointer;text-decoration:underline;font-size:.86rem}
+.steps{display:grid;gap:10px;padding:0;margin:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:28px 1fr;gap:10px}
+.steps li::before{content:counter(s);width:26px;height:26px;border-radius:50%;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-weight:700;font-size:.85rem}
+ul.ticks{margin:0;padding-left:18px;display:grid;gap:4px}
+.callout{border-left:4px solid var(--warn);background:var(--warn-soft);padding:12px 14px;border-radius:0 6px 6px 0}
+.callout.ok{border-color:var(--good);background:var(--good-soft)}
+.callout.info{border-color:var(--info);background:var(--info-soft)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{padding:8px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--surface-2);font-weight:600;position:sticky;top:0}
+tr:last-child td{border-bottom:0}
+td.no{color:var(--ink-2)}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.flow span{background:var(--surface-2);padding:3px 9px;border-radius:5px;font-size:.84rem}
+.flow b{color:var(--ink-2);font-weight:400}
+.platbar{display:flex;flex-wrap:wrap;gap:6px}
+.platbar button,.pillbtn{background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:6px 14px;cursor:pointer;font-weight:600}
+.platbar button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.filters{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));align-items:end}
+.filters label{display:grid;gap:3px;font-size:.78rem;font-weight:600;color:var(--ink-2)}
+.filters input[type=search],.filters select{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 8px;min-width:0}
+.checks{display:flex;gap:16px;flex-wrap:wrap;font-size:.9rem}
+.checks label{display:flex;gap:6px;align-items:center;font-weight:400;color:var(--ink)}
+.list{display:grid;gap:8px}
+.hu{background:var(--surface);border:1px solid var(--line);border-radius:8px;min-width:0}
+.hu>button.head{width:100%;background:none;border:0;text-align:left;padding:12px 14px;cursor:pointer;display:grid;gap:6px}
+.hu .line1{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.hu .id{font-family:var(--f-mono);font-size:.78rem;color:var(--ink-2)}
+.hu .t{font-weight:600}
+.hu .line2{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hu .own{margin-left:auto;font-size:.82rem;color:var(--ink-2)}
+.hu .body{padding:0 14px 14px;display:grid;gap:12px;border-top:1px solid var(--line)}
+.hu .body h4{font:600 .8rem var(--f-head);text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);margin:12px 0 4px}
+.hu ol,.hu ul{margin:0;padding-left:20px;display:grid;gap:4px}
+.hu .meta{display:grid;gap:4px;font-size:.88rem}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{background:var(--brand);color:var(--brand-ink);border:0;border-radius:6px;padding:7px 14px;font-weight:600;cursor:pointer}
+.btn.sec{background:var(--surface-2);color:var(--ink)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.actions select,.actions textarea{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+.actions textarea{flex:1 1 220px;min-height:36px;resize:vertical}
+.dep a{cursor:pointer}
+pre.cmd{margin:0;background:var(--surface-2);border-radius:6px;padding:10px 12px;overflow-x:auto;font:400 .82rem/1.5 var(--f-mono);position:relative}
+.empty{padding:24px;text-align:center;color:var(--ink-2);background:var(--surface);border:1px dashed var(--line);border-radius:8px}
+.scr{display:grid;gap:6px;align-content:start}
+.scr h4{font:600 1rem var(--f-head);margin:0}
+.scr dl{margin:0;display:grid;gap:4px;font-size:.88rem}
+.scr dt{font-weight:600;color:var(--ink-2);font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+.scr dd{margin:0}
+.grouph{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.hidden{display:none!important}
+@media (prefers-reduced-motion:no-preference){.hu .body{animation:in .12s ease-out}@keyframes in{from{opacity:.4}to{opacity:1}}}
+</style>
+
+<header class="top"><div class="top-in">
+  <div class="brandrow">
+    <div><h1>Centro Médico de Occidente</h1><div class="sub">Plan de trabajo · iOS, Android, Web y API</div></div>
+    <div class="who" id="who"></div>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="Secciones">
+    <button role="tab" data-tab="plan">Plan</button>
+    <button role="tab" data-tab="sabado">Sábado 24</button>
+    <button role="tab" data-tab="entregas">Entregas</button>
+    <button role="tab" data-tab="plataformas">Plataformas</button>
+    <button role="tab" data-tab="final">App terminada</button>
+    <button role="tab" data-tab="backlog">Backlog</button>
+    <button role="tab" data-tab="referencia">Referencia</button>
+  </nav>
+</div></header>
+
+<main class="wrap" id="main">
+  <div id="banner"></div>
+  <section class="panel" id="t-plan"></section>
+  <section class="panel" id="t-sabado"></section>
+  <section class="panel" id="t-entregas"></section>
+  <section class="panel" id="t-plataformas"></section>
+  <section class="panel" id="t-final"></section>
+  <section class="panel" id="t-backlog"></section>
+  <section class="panel" id="t-referencia"></section>
+</main>
+
+<script id="datos" type="application/json">__BACKLOG__</script>
+<script>
+(function(){
+"use strict";
+const D = JSON.parse(document.getElementById('datos').textContent);
+const HU = D.hu, BYID = Object.fromEntries(HU.map(h=>[h.id,h]));
+const EP = Object.fromEntries(D.epicas.map(e=>[e.id,e]));
+const HITO = Object.fromEntries(D.hitos.map(h=>[h.id,h]));
+const PL = {AND:['Android','--p-and'],IOS:['iOS','--p-ios'],WEB:['Web','--p-web'],API:['API','--p-api'],DSG:['Diseño','--p-dsg'],DOC:['Documentos','--p-doc'],OPS:['Equipo','--p-ops']};
+const ESTADOS = {libre:'Libre',en_curso:'En curso',revision:'En revisión',hecha:'Hecha'};
+const EXIG = {S2:'Entrega del sábado',S3:'Mínimo del 31 oct',S4:'Criterio de la entrega final'};
+/* Ruta de trabajo: orden dentro de cada plataforma, por hito y respetando las dependencias de la misma plataforma. */
+const ORD = {};
+Object.keys(PL).forEach(p=>{
+  const hecho=new Set(); let n=0;
+  let resto=HU.filter(h=>h.pl===p).sort((a,b)=>(+a.h.slice(1))-(+b.h.slice(1))||HU.indexOf(a)-HU.indexOf(b));
+  while(resto.length){
+    const i=resto.findIndex(h=>h.dep.filter(x=>BYID[x].pl===p).every(x=>hecho.has(x)));
+    const h=resto.splice(i<0?0:i,1)[0]; hecho.add(h.id); ORD[h.id]=++n;
+  }
+});
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = s => document.querySelector(s);
+
+/* ---------- estado ---------- */
+const S = { tab:'plan', plat:'AND', open:new Set(), f:{q:'',ep:'',pl:'',h:'',estado:'',min:false,libres:false,mios:false},
+  claims:new Map(), names:{}, me:null, canWrite:null, canEdit:false, db:null, busy:new Set(), live:false };
+
+const claim = id => S.claims.get(id) || {estado:'libre'};
+const estadoDe = id => claim(id).estado || 'libre';
+const nombre = id => (id && S.names[id]) || (id ? 'Alguien del equipo' : '');
+const puedeEscribir = () => !!S.db && S.canWrite !== false;
+const puedeEditar = id => puedeEscribir() && (S.canEdit || (S.me && claim(id).dueno === S.me));
+
+function chipPl(p){const [n,c]=PL[p]||[p,'--ink-2'];return `<span class="chip" style="--c:var(${c})"><i></i>${esc(n)}</span>`}
+function pillEstado(e){return `<span class="pill ${e}">${ESTADOS[e]}</span>`}
+function conteo(list){const c={libre:0,en_curso:0,revision:0,hecha:0};list.forEach(h=>c[estadoDe(h.id)]++);return c}
+function barra(list){
+  const c=conteo(list), n=list.length||1;
+  const seg=['hecha','revision','en_curso'].map(k=>c[k]?`<i class="b-${k}" style="width:${c[k]/n*100}%" title="${ESTADOS[k]}: ${c[k]}"></i>`:'').join('');
+  return `<div class="bar" role="img" aria-label="${c.hecha} hechas, ${c.revision} en revisión, ${c.en_curso} en curso de ${list.length}">${seg}</div>
+  <div class="bartxt"><span>${c.hecha} hechas · ${c.revision} en revisión · ${c.en_curso} en curso</span><span>${list.length} HU</span></div>`;
+}
+function huChip(id){
+  const h=BYID[id]; if(!h) return '';
+  return `<a class="chip mono" data-goto="${esc(id)}" role="button" tabindex="0" title="${esc(h.t)}">${esc(id)} · ${ESTADOS[estadoDe(id)]}</a>`;
+}
+
+/* ---------- PLAN ---------- */
+function renderPlan(){
+  const pts = HU.reduce((a,h)=>a+h.pts,0);
+  const hitos = D.hitos.map(h=>{
+    const l=HU.filter(x=>x.h===h.id), ex=l.filter(x=>x.m).length;
+    return `<div class="card hito"><div class="muted small mono">${h.id} · ${esc(h.nombre)}</div><div class="fecha">${esc(h.fecha)}</div>
+      <p class="small">${esc(h.meta)}</p>${barra(l)}
+      <p class="small muted">${ex?`${ex} HU exigidas por el PDF · `:''}${l.length-ex} complementarias</p>
+      <button data-hito="${h.id}">Ver estas HU</button></div>`;}).join('');
+  const plats = Object.keys(PL).map(p=>{const l=HU.filter(h=>h.pl===p);return `<div class="card"><div>${chipPl(p)}</div><div style="margin-top:8px">${barra(l)}</div></div>`}).join('');
+  const dec = D.decisiones.slice().sort((a,b)=>(a.ok?1:0)-(b.ok?1:0)).map(d=>`<div class="card"><div class="line1"><span class="pill ${d.ok?'hecha':'dec'}">${d.ok?'Decidida':'Abierta'}</span> <span class="id">${d.id}</span> <b>${esc(d.t)}</b></div><p class="small muted" style="margin-top:6px">${esc(d.d)}</p><p class="small" style="margin-top:6px"><b>${esc(d.r)}</b></p></div>`).join('');
+  $('#t-plan').innerHTML = `
+    <div><h2>Un solo plan para las tres plataformas</h2>
+    <p class="lead" style="margin-top:8px">Cada historia de usuario (HU) tiene su rol, sus criterios de aceptación, los endpoints que usa y la pantalla del Figma que le corresponde. Cualquiera puede tomar una HU libre y empezar. Lo que se tomó y lo que se terminó queda visible para todo el equipo.</p></div>
+    <div class="card"><div class="stat">
+      <div><b>${HU.length}</b><span>historias</span></div><div><b>${D.epicas.length}</b><span>épicas</span></div>
+      <div><b>${pts}</b><span>puntos</span></div><div><b>${HU.filter(h=>estadoDe(h.id)==='hecha').length}</b><span>hechas</span></div>
+      <div><b>${HU.filter(h=>estadoDe(h.id)==='libre').length}</b><span>libres</span></div></div></div>
+    <div><h3 style="margin-bottom:10px">Hitos del cronograma</h3><div class="grid g5">${hitos}</div></div>
+    <div class="grid g2">
+      <div class="card"><h3>Cómo se trabaja una HU</h3><ol class="steps" style="margin-top:12px">
+        <li><span>Entra a <b>Plataformas</b> o a <b>Backlog</b>, filtra por tu plataforma y toma la siguiente HU libre de la ruta (el número <i>Ruta #</i>).</span></li>
+        <li><span>Pulsa <b>Tomar</b>. Queda con tu nombre y en <i>En curso</i>.</span></li>
+        <li><span>Trabaja en tu rama de la semana, <code>&lt;plataforma&gt;-&lt;persona&gt;-s&lt;N&gt;</code> (por ejemplo <code>ios-kath-s2</code>), y empieza cada commit con el id de la HU. Detalle en Referencia.</span></li>
+        <li><span>Cuando cumplas todos los criterios, cambia a <b>En revisión</b>. Otra persona la prueba y la marca <b>Hecha</b>.</span></li></ol></div>
+      <div class="card"><h3>Cuándo una HU está hecha</h3><ul class="ticks" style="margin-top:8px">
+        <li>Cumple todos sus criterios de aceptación, no solo el camino feliz.</li>
+        <li>Se probó contra la API real, con un usuario del rol correcto.</li>
+        <li>Maneja 401, 403, 409, 422 y 429 mostrando el mensaje de la API.</li>
+        <li>Tiene estados vacío, cargando y error.</li>
+        <li>No escribe tokens ni datos clínicos en logs.</li>
+        <li>Coincide con el Figma, o el Figma se actualiza en el mismo PR.</li>
+        <li>Otra persona del equipo la revisó.</li></ul></div></div>
+    <div class="card"><h3>Para trabajar de corrido, sin esperar a nadie</h3><ul class="ticks" style="margin-top:8px">
+      <li><b>Cada plataforma tiene su ruta numerada.</b> Quien termina una HU toma la siguiente libre; el orden ya respeta lo que depende de qué dentro de esa plataforma.</li>
+      <li><b>Lo único que va antes de todo</b> es FUN-OPS-1, FUN-OPS-2 y FUN-OPS-3 (levantar la API, estructura del repositorio y configuración). Se hacen una sola vez, y después todas las plataformas avanzan en paralelo.</li>
+      <li><b>La API ya existe.</b> Las apps no esperan a las HU de API; esas solo verifican y completan. Si falta un filtro, la app filtra por su cuenta mientras tanto.</li>
+      <li><b>El Figma no bloquea.</b> Si la pantalla aún no está diseñada, se parte del frame de referencia o de la descripción de la pestaña App terminada, y se ajusta cuando el diseño llegue.</li>
+      <li><b>Se apoya en, sin esperar</b> aparece en una HU cuando conviene mirar otra (un diseño o una HU de API), pero no hay que esperar a que termine.</li>
+      <li>Los documentos (DOC) y las pruebas de integración (QA) sí van al final, porque describen lo que ya se construyó.</li></ul></div>
+    <div><h3 style="margin-bottom:10px">Avance por plataforma</h3><div class="grid g3">${plats}</div></div>
+    <div><h3 style="margin-bottom:10px">Decisiones</h3><div class="grid g2">${dec}</div></div>`;
+}
+
+/* ---------- SÁBADO ---------- */
+function renderSabado(){
+  const obj = [
+    ['1','Login por roles','Mostrar que cada rol inicia sesión y llega a su pantalla.',['AUT-API-1','AUT-AND-1','AUT-IOS-1','AUT-WEB-1'],'Captura de cada login (recepción y médico en Android, médico y paciente en iOS, administrador en web) y de la pantalla a la que entra.'],
+    ['2','Maquetación base en Xcode, Kotlin y Web','Tres proyectos creados que compilan y muestran la navegación principal, aunque las pantallas estén vacías.',['FUN-AND-1','FUN-IOS-1','FUN-WEB-1','FUN-OPS-2','FUN-OPS-3'],'Captura de cada proyecto corriendo (emulador, simulador y navegador) con su navegación y la estructura de carpetas del repositorio.'],
+    ['3','Estructura de datos de habitaciones y turnos','Base de datos con las 17 camas (5 VIP y 12 semiprivadas) y los turnos del personal, consultable por la API.',['FUN-OPS-1','FUN-API-1'],'Migración y seeder, tablas con datos y una llamada real a /habitaciones y a /turnos (ambas piden iniciar sesión; /turnos solo como admin).'],
+    ['4','Documento de la evidencia','El archivo que se entrega, con todo lo anterior y con lo que todavía falta.',['DOC-DOC-1','DIS-DSG-1'],'Mismo formato que la Evidencia 1, con capturas reales y fechas de lo pendiente.']];
+  $('#t-sabado').innerHTML = `
+    <div><h2>Sábado 24 de octubre · Evidencia de avance 2</h2>
+    <p class="lead" style="margin-top:8px">El cronograma del PDF pone aquí la semana 2: «Core de autenticación y Base de Datos: Login por roles, maquetación base en Xcode/Kotlin/Web, estructura de datos para habitaciones y turnos». No es una de las dos entregas con nota del PDF (31 de octubre y 21 de noviembre), pero es la evidencia semanal que ya entregaron la semana pasada.</p></div>
+    <div class="callout"><b>Por confirmar.</b> El PDF no define el formato de las evidencias semanales. Aquí se sigue el de la Evidencia 1. Si el docente pidió algo distinto en el aula virtual, se ajusta DOC-DOC-1.</div>
+    <div class="grid g2">${obj.map(o=>`<div class="card"><div class="line1"><span class="pill exig">${o[0]}</span><h3>${esc(o[1])}</h3></div>
+      <p class="small" style="margin-top:8px">${esc(o[2])}</p>
+      <p class="small muted" style="margin-top:8px"><b>Evidencia:</b> ${esc(o[4])}</p>
+      <div class="flow" style="margin-top:10px">${o[3].map(huChip).join('')}</div></div>`).join('')}</div>
+    <div class="card flat"><h3>Si el tiempo no alcanza, este es el orden</h3><ol class="steps" style="margin-top:12px">
+      <li><span>Todos levantan la API en local (<b>FUN-OPS-1</b>) y una persona verifica las pruebas y los datos (<b>FUN-API-1</b>).</span></li>
+      <li><span>Cada plataforma crea su proyecto base en su carpeta.</span></li>
+      <li><span>El login funciona de punta a punta al menos en una plataforma; las otras muestran la pantalla.</span></li>
+      <li><span>Se redacta el documento con capturas reales y se dice lo que falta.</span></li></ol></div>
+    <div class="callout info"><b>Lo que no entra el sábado:</b> el Figma completo, el CRUD, los dashboards, las citas y el resto del backlog. Eso es para el 31 de octubre en adelante.</div>
+    <div><h3 style="margin-bottom:10px">HU de la entrega del sábado</h3><div class="list" id="list-s2"></div></div>`;
+  $('#list-s2').innerHTML = HU.filter(h=>h.h==='S2').map(huRow).join('');
+}
+
+/* ---------- PLATAFORMAS ---------- */
+const PLAT = {
+ AND:{n:'Android',stack:'Kotlin, Jetpack Compose, MVVM (ui → ViewModel → repository → data/remote), Retrofit y OkHttp, corrutinas y Flow, token cifrado, Reverb con cliente Pusher.',
+  quien:'RECEPCIONISTA (recepción, asistentes, enfermería y paramédicos se distinguen por el cargo) y MEDICO.',
+  nav:[['Recepción y enfermería','Inicio · Admisión · Camas · Ambulancia · Laboratorio. Citas, turnos, inventario y avisos se abren desde las tarjetas del Inicio.'],['Médico','Inicio · Agenda · Pacientes · Perfil.']],
+  flujos:[['Admisión','Login','Inicio','Buscar paciente','Registrar o ver detalle','Código de activación','Ingresar a cama'],
+   ['Citas','Inicio','Citas','Agendar: paciente → médico y fecha → bloque libre → consultorio','Gestionar: llegada · reprogramar · cancelar · confirmar solicitud'],
+   ['Camas','Camas','Mapa planta 2 y 3','Ingresar · Alta · Trasladar'],
+   ['Ambulancia','Ambulancia','Estado en vivo','Despachar','Reportes del traslado','Finalizar'],
+   ['Laboratorio','Laboratorio','Cola por estado','Iniciar','Completar'],
+   ['Médico','Login','Agenda','Abrir consulta','Diagnóstico','Receta u orden de laboratorio','Finalizar','Expediente']],
+  nova:['Triaje Manchester y niveles de gravedad','UCI, telemetría, SpO2, oxígeno','Selector de rol en el login','Valores de exámenes de laboratorio (hasta decidir D1)']},
+ IOS:{n:'iOS',stack:'Swift, SwiftUI, MVVM, async/await, Keychain, Pusher Swift. Se programa con Xcode en la Mac del equipo.',
+  quien:'MEDICO y PACIENTE.',
+  nav:[['Médico','Inicio · Agenda · Pacientes · Perfil. Turnos, laboratorio, ambulancia y pacientes ingresados se abren desde el Inicio.'],['Paciente','Inicio · Citas · Expediente · Laboratorio · Perfil. La información pública y Mi habitación están en el Inicio.']],
+  flujos:[['Paciente','Información pública','Registro (con código si el DUI ya existe)','Inicio','Solicitar atención','Mis citas','Mi expediente','Mi laboratorio','Mi habitación'],
+   ['Médico','Login','Inicio','Agenda','Consulta','Receta u orden de laboratorio','Finalizar','Expediente e historial'],
+   ['Médico · hospitalizados','Inicio','Pacientes ingresados','Habitación y cama','Expediente'],
+   ['Médico · emergencia','Inicio','Ambulancia','Estado y último reporte','Alerta en vivo']],
+  nova:['Reprogramar o cancelar citas desde el paciente (lo hace recepción)','Editar datos de contacto del paciente (lo hace recepción)','Datos de otros pacientes, incluso de la misma habitación','Nombre y dirección de la persona atendida por la ambulancia (médico)']},
+ WEB:{n:'Web',stack:'React + Vite en el puerto 5173 (el que la API ya permite), enrutador, cliente HTTP con token en sessionStorage o memoria, laravel-echo para tiempo real.',
+  quien:'ADMINISTRADOR (administración y jefes de operaciones).',
+  nav:[['Administrador','Dashboard · Camas · Ambulancia · Turnos · Usuarios · Pacientes · Citas · Laboratorio · Inventario · Avisos.']],
+  flujos:[['Acceso','Login','Dashboard con métricas'],
+   ['Personal','Usuarios','Crear o editar','Activar o desactivar'],
+   ['Turnos','Turnos','Grilla semanal','Crear turno (también nocturno)','Aviso de solape'],
+   ['Espacios','Camas','Mapa en vivo','Ingresar · Alta · Trasladar'],
+   ['Ambulancia','Ambulancia','Estado y despacho','Bitácora con filtros','Reportes'],
+   ['Recursos','Inventario','Recurso','Movimiento de entrada o salida'],
+   ['Pacientes','Pacientes','Ficha','Expediente (lectura)']],
+  nova:['Auditoría AES-256, HL7 y referencias a leyes de otro país','Triaje Manchester','Combustible, oxígeno y desfibrilador de la ambulancia','Crear cuentas de pacientes desde el panel']},
+ API:{n:'API (backend)',stack:'Laravel 12, Sanctum, MariaDB, Reverb. Ya implementada en backend/; las reglas de negocio y la privacidad viven aquí, no en los clientes.',
+  quien:'Los cuatro roles: ADMINISTRADOR, MEDICO, RECEPCIONISTA y PACIENTE.',
+  nav:[['Qué falta','Verificar que corre y pasa sus pruebas, filtros en usuarios y citas, grilla de turnos para recepción, Reverb documentado, pruebas de concurrencia y auditoría de privacidad.']],
+  flujos:[['Reglas que no se rompen','Sin sobrecupo','Sin doble cama','Una sola ambulancia','409 ante conflicto','403 sin revelar si existe']],
+  nova:['Guardar valores de exámenes (la API solo guarda estados)']},
+ DSG:{n:'Diseño (Figma)',stack:'Un archivo con páginas Android, iOS, Web y Archivo, un sistema de diseño y prototipo conectado.',
+  quien:'Todo el equipo; cada plataforma valida sus pantallas.',
+  nav:[['Hoy hay 19 pantallas','7 de operación móvil, 8 del médico y 4 de la web. Faltan el paciente, el registro y casi toda la web.']],
+  flujos:[['Orden de trabajo','Auditar','Retirar lo que sobra','Sistema de diseño','Flujos por rol','Prototipo conectado']],
+  nova:['Funciones que la API no tiene (ver la revisión en Referencia)']}
+};
+function renderPlataformas(){
+  const p=PLAT[S.plat], l=HU.filter(h=>h.pl===S.plat);
+  const byEp = {}; l.forEach(h=>(byEp[h.ep]=byEp[h.ep]||[]).push(h));
+  $('#t-plataformas').innerHTML = `
+    <div><h2>Cómo debe quedar cada plataforma</h2><p class="lead" style="margin-top:8px">Quién la usa, cómo se navega, los flujos que debe cubrir y lo que no debe incluir. Las HU de cada módulo están al final.</p></div>
+    <div class="platbar" role="group" aria-label="Plataforma">${Object.keys(PLAT).map(k=>`<button data-plat="${k}" aria-pressed="${k===S.plat}">${esc(PLAT[k].n)}</button>`).join('')}</div>
+    <div class="grid g2">
+      <div class="card"><h3>Quién la usa</h3><p class="small" style="margin-top:6px">${esc(p.quien)}</p><h3 style="margin-top:14px">Tecnología</h3><p class="small" style="margin-top:6px">${esc(p.stack)}</p></div>
+      <div class="card"><h3>Navegación</h3>${p.nav.map(n=>`<p class="small" style="margin-top:8px"><b>${esc(n[0])}.</b> ${esc(n[1])}</p>`).join('')}</div></div>
+    <div class="card"><h3>Flujos que debe cubrir</h3><div class="grid" style="margin-top:10px">${p.flujos.map(f=>`<div><div class="small muted"><b>${esc(f[0])}</b></div><div class="flow">${f.slice(1).map((s,i)=>(i?'<b>→</b>':'')+`<span>${esc(s)}</span>`).join('')}</div></div>`).join('')}</div></div>
+    ${TECH[S.plat]?`<div><h3 style="margin-bottom:8px">Tecnologías</h3><div class="tablewrap"><table><thead><tr><th>Capa</th><th>Tecnología</th><th>Estado</th></tr></thead><tbody>${TECH[S.plat].map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td><span class="pill ${r[2]==='Definido'?'hecha':'dec'}">${r[2]}</span></td></tr>`).join('')}</tbody></table></div></div>`:''}
+    <div class="card flat"><h3>No debe incluir</h3><ul class="ticks" style="margin-top:6px">${p.nova.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></div>
+    <div><h3 style="margin-bottom:4px">Ruta de trabajo de ${esc(p.n)} · ${l.length} HU · ${l.reduce((a,h)=>a+h.pts,0)} puntos</h3>
+    <p class="small muted" style="margin-bottom:10px">Se toman en este orden, de corrido. El número es el lugar de cada HU en la ruta de su plataforma.</p>
+    <div class="list">${l.slice().sort((a,b)=>ORD[a.id]-ORD[b.id]).map(huRow).join('')}</div></div>`;
+}
+
+/* ---------- ENTREGAS ---------- */
+const CRIT = {
+ S2:['Login por roles','Maquetación base en Xcode, Kotlin y Web','Estructura de datos de habitaciones y turnos'],
+ S3:['Diseño UI/UX en Figma al 100%: flujos de todas las pantallas de iOS, Android y Web','Diagrama entidad-relación y endpoints o servicios base operativos','Autenticación funcional con roles (login y registro)','Navegación principal funcional en Xcode y en Android Studio','CRUD básico de pacientes y de personal de salud','Panel web con el dashboard inicial'],
+ S4:['Algoritmo de asignación de habitaciones (planta 2 y 3)','Control del recurso único de la ambulancia','Permisos de privacidad'],
+ S5:['Conexión completa iOS + Android + Web','Pruebas de concurrencia','Corrección de errores y pulido visual'],
+ S6:['Funcionalidad completa en las 3 plataformas (40%)','Calidad de código y arquitectura: MVVM, corrutinas, async/await o Combine (20%)','Defensa técnica en vivo (20%)','Documentación técnica y repositorio (20%)']};
+const NOTA = {S2:'Evidencia semanal, sin nota propia en el PDF.',S3:'Vale el 50% de la nota del período.',S4:'Semana de trabajo; sin entrega con nota propia.',S5:'Semana de trabajo; sin entrega con nota propia.',S6:'Vale el otro 50% de la nota del período.'};
+function renderEntregas(){
+  const bloques = D.hitos.map(h=>{
+    const l=HU.filter(x=>x.h===h.id), ex=l.filter(x=>x.m);
+    const porPl = Object.keys(PL).map(p=>{
+      const q=l.filter(x=>x.pl===p); if(!q.length) return '';
+      return `<div><div class="grouph small muted" style="margin:12px 0 6px">${chipPl(p)}<span>${q.length} HU · ${q.reduce((a,x)=>a+x.pts,0)} puntos</span></div><div class="list">${q.map(huRow).join('')}</div></div>`;}).join('');
+    return `<div class="card" style="padding:18px"><div class="grouph"><h3 style="font-size:1.25rem">${esc(h.fecha)} · ${esc(h.nombre)}</h3><span class="chip mono">${h.id}</span></div>
+      <p class="small muted" style="margin-top:4px">${esc(NOTA[h.id])}</p>
+      <div class="grid g2" style="margin-top:12px">
+        <div><h3>Qué se evalúa o se pide</h3><ul class="ticks small" style="margin-top:6px">${CRIT[h.id].map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>
+        <div><h3>Avance de esta entrega</h3><div style="margin-top:8px">${barra(l)}</div>
+          <p class="small muted" style="margin-top:8px">${ex.length} HU exigidas por el PDF y ${l.length-ex.length} complementarias. Las exigidas son las que no pueden faltar.</p></div></div>
+      ${porPl}</div>`;}).join('');
+  $('#t-entregas').innerHTML = `<div><h2>Qué hay que hacer para cada entrega</h2>
+    <p class="lead" style="margin-top:8px">Cada entrega con lo que pide el PDF y las HU que la cumplen, separadas por plataforma. Cada HU pertenece a una sola entrega.</p></div>${bloques}`;
+}
+
+/* ---------- TECNOLOGÍAS ---------- */
+const TECH = {
+ AND:[['Lenguaje','Kotlin','Definido'],['Interfaz','Jetpack Compose con Material 3','Definido'],['Arquitectura','MVVM: ui → ViewModel → repository → data/remote','Definido'],['Red','Retrofit + OkHttp con interceptor del token Bearer','Definido'],['Asincronía','Corrutinas y Flow','Definido'],['Sesión','Token en DataStore cifrado','Definido'],['Tiempo real','Cliente Pusher compatible con Reverb','Definido'],['Inyección de dependencias','Hilt','Propuesto'],['Pruebas','JUnit, MockK y Turbine','Propuesto']],
+ IOS:[['Lenguaje','Swift','Definido'],['Interfaz','SwiftUI','Definido'],['Arquitectura','MVVM','Definido'],['Asincronía','async/await (el PDF también acepta Combine)','Definido'],['Red','URLSession','Propuesto'],['Sesión','Token en Keychain','Propuesto'],['Tiempo real','Cliente Pusher para Swift','Definido'],['Dependencias','Swift Package Manager','Propuesto'],['Pruebas','XCTest','Propuesto']],
+ WEB:[['Framework','React con Vite, en el puerto 5173 (el que la API ya permite)','Definido'],['Lenguaje','TypeScript','Propuesto'],['Rutas','React Router','Propuesto'],['Datos de la API','TanStack Query con fetch o axios','Propuesto'],['Formularios','React Hook Form con Zod','Propuesto'],['Estilos','Tailwind CSS, o una librería de componentes como MUI','Propuesto'],['Gráficas del dashboard','Recharts','Propuesto'],['Tiempo real','laravel-echo con pusher-js (protocolo Pusher de Reverb)','Definido'],['Fechas','date-fns o Day.js','Propuesto'],['Pruebas','Vitest con Testing Library','Propuesto'],['Entorno','Node.js LTS y npm; variables VITE_API_URL y VITE_REVERB_*','Definido']],
+ API:[['Lenguaje y framework','PHP 8.2+ con Laravel 12','Definido'],['Autenticación','Laravel Sanctum (token Bearer)','Definido'],['Base de datos','MariaDB 10.11+ (InnoDB, utf8mb4)','Definido'],['Tiempo real','Laravel Reverb (WebSockets)','Definido'],['Documentación','Scramble en /docs/api y backend/docs/API.md','Definido'],['Pruebas','PHPUnit (php artisan test)','Definido']],
+ DSG:[['Diseño','Figma, con página de sistema de diseño y prototipo','Definido']]};
+
+/* ---------- APP TERMINADA ---------- */
+const RECORRIDO = [
+ 'Un paciente abre la app de iOS, ve la información pública y crea su cuenta con el código que le dio recepción.',
+ 'Solicita atención con un motivo. En Android, recepción ve la solicitud y la confirma con médico, consultorio, fecha y hora.',
+ 'El paciente llega, recepción registra su llegada y el médico abre la consulta desde iOS o Android.',
+ 'El médico escribe el diagnóstico, receta y pide un examen. El laboratorio lo inicia y lo completa; el paciente ve el estado en su app.',
+ 'Si necesita hospitalización, recepción lo ingresa a una cama. El mapa de camas cambia en Android y en la web al instante, sin sobrecupo.',
+ 'Se despacha la única ambulancia. Su estado cambia en las tres plataformas y el médico recibe los reportes del traslado.',
+ 'El administrador ve todo en el panel web: dashboard, ocupación, turnos, inventario y bitácora de emergencias.',
+ 'Cada persona ve solo lo que su rol permite: un paciente nunca ve a otro y recepción nunca abre un expediente.'];
+const FINAL = [
+ {t:'Android · Recepción y enfermería', pl:'AND', p:[
+  ['Inicio','Camas ocupadas sobre 17, estado de la ambulancia, órdenes de laboratorio pendientes y citas de hoy en espera.','Entrar a Admisión, Citas, Camas, Ambulancia, Laboratorio, Turnos, Inventario y Avisos.','Los números salen de las consultas de cada módulo.'],
+  ['Pacientes','Buscador y lista paginada con nombre, DUI y número de expediente.','Buscar, registrar uno nuevo y abrir la ficha.','No muestra datos clínicos, tipo de sangre ni alergias.'],
+  ['Registrar o editar paciente','Formulario con nombre, fecha de nacimiento, sexo, DUI, teléfono y dirección.','Guardar. Se asigna el número de expediente.','Los errores aparecen junto a cada campo; un DUI repetido se avisa.'],
+  ['Ficha del paciente','Datos de contacto, citas e ingreso actual.','Generar el código de activación, agendar una cita o ingresarlo a una cama.','Un 403 muestra una pantalla de sin acceso, sin datos.'],
+  ['Código de activación','El código de 6 dígitos y cuándo vence (24 horas).','Copiarlo para entregarlo en persona.','Si el paciente ya tiene cuenta, lo avisa y no genera código.'],
+  ['Agendar cita','Médico, fecha, bloques libres y consultorios C-101 a C-104.','Elegir un bloque y confirmar.','Horario ocupado, fecha pasada o fuera del turno: muestra el mensaje de la API.'],
+  ['Citas','Lista del día con estado de cada cita y las solicitudes de pacientes arriba.','Registrar llegada, reprogramar, cancelar con motivo y confirmar solicitudes.','Solo ofrece las acciones que el estado permite.'],
+  ['Mapa de camas','Planta 2 (6 habitaciones de 2 camas) y planta 3 (5 VIP), con cada cama libre u ocupada y su paciente.','Abrir una cama para ingresar o trasladar.','Se actualiza solo cuando otra persona ingresa o da de alta.'],
+  ['Ingresar paciente','Tipo (VIP o semiprivada), médico y motivo; la cama es automática o elegida.','Confirmar el ingreso.','Sin camas, cama ocupada o paciente ya ingresado: mensaje claro. Nunca doble asignación.'],
+  ['Ingreso activo','Paciente, cama, médico y fecha de ingreso.','Dar de alta o trasladar a otra cama libre.','El traslado es una sola operación: si falla, el paciente sigue en su cama.'],
+  ['Ambulancia','Estado en grande (Disponible, En servicio, En mantenimiento), servicio en curso y último reporte.','Despachar con prioridad y finalizar con notas.','Si no está disponible, dice en qué estado está.'],
+  ['Reporte de traslado','Reportes anteriores del servicio.','Enviar estado del paciente, observaciones y minutos para llegar (paramédico o enfermería).','Solo mientras el servicio está en curso.'],
+  ['Laboratorio','Cola de órdenes con filtro por estado.','Iniciar y completar órdenes.','Solo estados y fechas, sin valores de examen.'],
+  ['Mis turnos','Mi horario de la semana y los médicos que están de turno ahora.','Consultar.','Con TUR-API-1, también la grilla completa.'],
+  ['Inventario','Recursos con cantidad y alerta de stock mínimo.','Registrar salidas con motivo.','No ofrece entradas ni borrar.'],
+  ['Avisos y perfil','Avisos vigentes y mis datos.','Cambiar contraseña y cerrar sesión.','Cambiar la contraseña cierra la sesión en todos los dispositivos.']]},
+ {t:'Médico · iOS y Android (mismo contenido en las dos)', pl:'IOS', p:[
+  ['Inicio','Mi turno actual, citas de hoy, órdenes de laboratorio que pedí y estado de la ambulancia.','Ir a Agenda, Pacientes, Laboratorio, Turnos y Ambulancia.','Solo datos reales de la API, sin alertas clínicas.'],
+  ['Agenda','Mis citas del día por hora, con paciente, motivo y estado.','Abrir la consulta de una cita agendada o en espera; agendar un seguimiento.','Solo mis citas. La primera cita de un paciente la agenda recepción.'],
+  ['Consulta','Paciente, motivo, diagnóstico, notas, recetas y órdenes.','Guardar diagnóstico, agregar recetas, pedir examen y finalizar.','Al finalizar queda de solo lectura.'],
+  ['Receta','Medicamento, dosis, frecuencia, duración e indicaciones.','Agregar o eliminar.','Los cuatro primeros campos son obligatorios.'],
+  ['Pedir examen','Catálogo de exámenes y un campo de observaciones.','Crear la orden, que queda Pendiente.','Solo con la consulta abierta.'],
+  ['Mis pacientes','Lista con buscador, solo con pacientes con cita activa o ingreso a mi cargo.','Abrir la ficha y el expediente.','Un paciente que no es mío no aparece.'],
+  ['Expediente','Historial, consultas con recetas, órdenes de laboratorio e ingresos.','Editar antecedentes personales y familiares.','Sin acceso para pacientes que no atiendo.'],
+  ['Laboratorio','Órdenes que pedí, con estado y fechas.','Consultar.','Pestañas Pendiente, En proceso y Completado; sin valores.'],
+  ['Pacientes ingresados','Ingresos activos a mi cargo con habitación y cama.','Abrir el expediente del paciente.','Solo los míos.'],
+  ['Ambulancia','Estado y, si hay servicio, prioridad, hora de salida y último reporte.','Recibir reportes nuevos en vivo.','Sin nombre ni dirección de la persona atendida.'],
+  ['Mis turnos','Mis turnos de la semana, con el actual resaltado.','Consultar.','—'],
+  ['Avisos y perfil','Avisos vigentes y mis datos.','Cambiar contraseña y cerrar sesión.','—']]},
+ {t:'iOS · Paciente', pl:'IOS', p:[
+  ['Información pública','Ocupación general por planta, médicos de turno, avisos y estado de la ambulancia.','Ir a iniciar sesión o crear cuenta.','Se ve sin sesión y nunca muestra pacientes.'],
+  ['Crear cuenta','Nombre, usuario, correo opcional, contraseña, DUI, fecha de nacimiento, sexo, teléfono, dirección y código de activación.','Registrarse.','Si recepción ya registró el DUI, el código es obligatorio.'],
+  ['Inicio','Próxima cita, estado de mis exámenes y mi habitación si estoy ingresado.','Ir a Citas, Expediente y Laboratorio, o solicitar atención.','Solo mis datos.'],
+  ['Solicitar atención','Un campo para el motivo.','Enviar la solicitud.','Queda Pendiente de confirmación hasta que recepción la agende.'],
+  ['Mis citas','Fecha, hora, consultorio, nombre y cargo del médico, y estado.','Consultar.','No se reprograma ni cancela desde aquí; lo hace recepción.'],
+  ['Mi expediente','Historial, consultas con diagnóstico y recetas.','Consultar.','Solo lectura y solo mis datos.'],
+  ['Mi laboratorio','Mis órdenes con examen, estado y fechas.','Consultar.','Pendiente, En proceso o Completado; sin valores.'],
+  ['Mi habitación','Planta, habitación y cama, o un aviso de que no estoy ingresado.','Consultar.','Nunca muestra a otros pacientes de la misma habitación.'],
+  ['Perfil','Mis datos.','Cambiar contraseña y cerrar sesión.','Cambiar la contraseña cierra la sesión.']]},
+ {t:'Web · Administrador', pl:'WEB', p:[
+  ['Dashboard','Ocupación por planta, citas de hoy por estado, laboratorio por estado, recursos bajo el mínimo, ambulancia (estado y servicios del mes), pacientes y personal activo.','Entrar a cada módulo.','Todo sale de /dashboard/metricas.'],
+  ['Usuarios','Lista paginada del personal con rol, cargo y estado.','Crear, editar, activar y desactivar.','No crea pacientes; no puede desactivarse a sí mismo.'],
+  ['Turnos','Grilla semanal por persona y área.','Crear, editar y borrar turnos, también nocturnos.','Un solape de la misma persona se rechaza con aviso.'],
+  ['Pacientes','Buscador y lista con ficha.','Registrar, editar y generar el código de activación.','—'],
+  ['Expediente','Historial, consultas, órdenes e ingresos de un paciente.','Solo leer.','Solo administrador autorizado.'],
+  ['Citas','Lista con filtros por fecha, estado y médico.','Confirmar, reprogramar y cancelar.','Mismas reglas de estado que en Android.'],
+  ['Camas e ingresos','Las 5 VIP de la planta 3 y las 12 camas de la planta 2, con porcentaje de ocupación.','Ingresar, dar de alta y trasladar.','Se actualiza en vivo con lo que hace recepción.'],
+  ['Ambulancia','Estado, servicio en curso y reportes en vivo.','Despachar, finalizar y pasar a mantenimiento.','No pasa a mantenimiento con un servicio en curso.'],
+  ['Bitácora de emergencias','Servicios atendidos con solicitante, dirección, prioridad y horas.','Filtrar por fechas, prioridad y estado.','—'],
+  ['Laboratorio','Cola de órdenes por estado.','Iniciar y completar.','Totales iguales a los del dashboard.'],
+  ['Inventario','Recursos con cantidad, stock mínimo y ubicación.','Crear, editar, borrar y registrar entradas y salidas.','Una salida no puede dejar el stock negativo.'],
+  ['Avisos','Lista de avisos públicos e internos.','Crear, editar y borrar con vigencia.','Los públicos aparecen en la información pública.'],
+  ['Página pública','Ocupación, médicos de turno, avisos y estado de la ambulancia.','Solo leer.','Se ve sin sesión.']]}];
+function renderFinal(){
+  const tabla = k => TECH[k] ? `<div class="tablewrap"><table><thead><tr><th>Capa</th><th>Tecnología</th><th>Estado</th></tr></thead><tbody>${TECH[k].map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td><span class="pill ${r[2]==='Definido'?'hecha':'dec'}">${r[2]}</span></td></tr>`).join('')}</tbody></table></div>` : '';
+  $('#t-final').innerHTML = `
+    <div><h2>Cómo debe quedar cada app terminada</h2>
+    <p class="lead" style="margin-top:8px">Pantalla por pantalla: qué ve cada rol, qué puede hacer y qué reglas se cumplen. Es la meta al 21 de noviembre; las HU del Backlog son los pasos para llegar.</p></div>
+    <div class="card"><h3>El sistema completo, de punta a punta</h3><ol class="steps" style="margin-top:12px">${RECORRIDO.map(r=>`<li><span>${esc(r)}</span></li>`).join('')}</ol></div>
+    ${FINAL.map(g=>`<div><div class="grouph" style="margin-bottom:10px"><h3 style="font-size:1.2rem">${esc(g.t)}</h3><span class="muted small">${g.p.length} pantallas</span></div>
+      <div class="grid g3">${g.p.map(s=>`<div class="card scr"><h4>${esc(s[0])}</h4><dl><dt>Qué ve</dt><dd>${esc(s[1])}</dd><dt>Qué puede hacer</dt><dd>${esc(s[2])}</dd><dt>Reglas</dt><dd>${esc(s[3])}</dd></dl></div>`).join('')}</div></div>`).join('')}
+    <div><h3 style="margin-bottom:10px;font-size:1.2rem">Tecnologías por plataforma</h3>
+      <p class="small muted" style="margin-bottom:10px">Definido sale del PDF, de la Evidencia 1 o del repositorio. Propuesto lo decide quien construye esa plataforma.</p>
+      <div class="grid g2">${['WEB','AND','IOS','API'].map(k=>`<div><div style="margin-bottom:6px">${chipPl(k)}</div>${tabla(k)}</div>`).join('')}</div></div>`;
+}
+
+/* ---------- BACKLOG ---------- */
+function filtrar(){
+  const f=S.f, q=f.q.trim().toLowerCase();
+  return HU.filter(h=>{
+    if(f.ep&&h.ep!==f.ep) return false; if(f.pl&&h.pl!==f.pl) return false; if(f.h&&h.h!==f.h) return false;
+    if(f.estado&&estadoDe(h.id)!==f.estado) return false;
+    if(f.min&&!h.m) return false; if(f.libres&&estadoDe(h.id)!=='libre') return false;
+    if(f.mios&&claim(h.id).dueno!==S.me) return false;
+    if(q&&!(h.id+' '+h.t+' '+h.q+' '+h.api).toLowerCase().includes(q)) return false;
+    return true;}).sort((a,b)=>(+a.h.slice(1))-(+b.h.slice(1))||(a.pl<b.pl?-1:a.pl>b.pl?1:0)||ORD[a.id]-ORD[b.id]);
+}
+function huRow(h){
+  const c=claim(h.id), e=estadoDe(h.id), open=S.open.has(h.id);
+  const dueno = c.dueno ? `<span class="own">${esc(nombre(c.dueno))}</span>` : '';
+  let body='';
+  if(open){
+    const acts = !S.db ? '' : (()=>{
+      if(!puedeEscribir()) return `<p class="small muted">Tienes acceso de lectura. Pide que te den acceso de colaborador para tomar HU.</p>`;
+      const mine = puedeEditar(h.id);
+      const b = S.busy.has(h.id)?' disabled':'';
+      if(e==='libre') return `<div class="actions"><button class="btn" data-act="tomar" data-id="${h.id}"${b}>Tomar esta HU</button></div>`;
+      if(!mine) return `<p class="small muted">La tiene ${esc(nombre(c.dueno))}. Solo esa persona (o quien administra el artefacto) puede cambiarla.</p>`;
+      return `<div class="actions"><label class="small muted" for="e-${h.id}">Estado</label>
+        <select id="e-${h.id}" data-act="estado" data-id="${h.id}"${b}>${['en_curso','revision','hecha'].map(k=>`<option value="${k}"${k===e?' selected':''}>${ESTADOS[k]}</option>`).join('')}</select>
+        <button class="btn sec" data-act="soltar" data-id="${h.id}"${b}>Soltar</button></div>
+        <div class="actions"><label class="small muted" for="n-${h.id}">Nota</label><textarea id="n-${h.id}" data-act="nota" data-id="${h.id}" placeholder="Rama, PR, bloqueos…">${esc(c.nota||'')}</textarea></div>`;
+    })();
+    body = `<div class="body">
+      <p style="margin-top:12px">${esc(h.q)}</p>
+      <div><h4>Criterios de aceptación</h4><ol>${h.ac.map(a=>`<li>${esc(a)}</li>`).join('')}</ol></div>
+      <div class="meta">
+        <div><b>Épica:</b> ${esc(EP[h.ep].n)} · <b>Hito:</b> ${h.h} (${esc(HITO[h.h].fecha)})</div>
+        ${h.api&&h.api!=='—'?`<div><b>API:</b> <code>${esc(h.api)}</code></div>`:''}
+        ${h.fig&&h.fig!=='—'?`<div><b>Figma:</b> ${esc(h.fig)}</div>`:''}
+        ${c.nota&&!puedeEditar(h.id)?`<div><b>Nota:</b> ${esc(c.nota)}</div>`:''}
+        ${h.dep.length?`<div class="dep"><b>Va después de:</b> <span class="flow">${h.dep.map(huChip).join('')}</span></div>`:''}
+        ${h.ref&&h.ref.length?`<div class="dep"><b>Se apoya en, sin esperar:</b> <span class="flow">${h.ref.map(huChip).join('')}</span></div>`:''}
+      </div>${acts}</div>`;
+  }
+  return `<article class="hu" data-id="${h.id}"><button class="head" data-toggle="${h.id}" aria-expanded="${open}">
+    <span class="line1"><span class="id">${h.id}</span><span class="t">${esc(h.t)}</span></span>
+    <span class="line2">${chipPl(h.pl)}<span class="chip mono" title="Orden dentro de la ruta de su plataforma">Ruta #${ORD[h.id]}</span><span class="chip">${h.h} · ${esc(HITO[h.h].fecha)}</span><span class="chip">${h.pts} pts</span><span class="chip">${h.p}</span>
+    ${h.m?`<span class="pill exig" title="${esc(EXIG[h.h]||'')}">Exigida</span>`:''}${pillEstado(e)}${dueno}</span></button>${body}</article>`;
+}
+function renderBacklogShell(){
+  const o=(arr,sel)=>arr.map(([v,t])=>`<option value="${esc(v)}"${v===sel?' selected':''}>${esc(t)}</option>`).join('');
+  $('#t-backlog').innerHTML = `
+    <div><h2>Backlog</h2><p class="lead" style="margin-top:8px">Todas las historias con sus criterios de aceptación. Toca una para abrirla.</p></div>
+    <div class="card"><div class="filters">
+      <label>Buscar<input type="search" id="f-q" value="${esc(S.f.q)}" placeholder="Título, id o endpoint"></label>
+      <label>Plataforma<select id="f-pl">${o([['','Todas'],...Object.keys(PL).map(k=>[k,PL[k][0]])],S.f.pl)}</select></label>
+      <label>Épica<select id="f-ep">${o([['','Todas'],...D.epicas.map(e=>[e.id,e.n])],S.f.ep)}</select></label>
+      <label>Hito<select id="f-h">${o([['','Todos'],...D.hitos.map(h=>[h.id,h.id+' · '+h.fecha])],S.f.h)}</select></label>
+      <label>Estado<select id="f-estado">${o([['','Todos'],...Object.entries(ESTADOS)],S.f.estado)}</select></label></div>
+      <div class="checks" style="margin-top:10px">
+        <label><input type="checkbox" id="f-libres"${S.f.libres?' checked':''}> Solo libres</label>
+        <label><input type="checkbox" id="f-min"${S.f.min?' checked':''}> Solo exigidas por el PDF</label>
+        <label><input type="checkbox" id="f-mios"${S.f.mios?' checked':''}${S.me?'':' disabled'}> Solo las mías</label>
+        <button class="pillbtn" id="f-clear" type="button">Quitar filtros</button></div></div>
+    <div class="small muted" id="f-count"></div><div class="list" id="f-list"></div>`;
+  renderBacklogList();
+}
+function renderBacklogList(){
+  const l=filtrar(), box=$('#f-list'); if(!box) return;
+  $('#f-count').textContent = `${l.length} de ${HU.length} historias · ${l.reduce((a,h)=>a+h.pts,0)} puntos`;
+  box.innerHTML = l.length ? l.map(huRow).join('') : `<div class="empty">Ninguna historia coincide con estos filtros.</div>`;
+}
+
+/* ---------- REFERENCIA ---------- */
+const RBAC = [
+ ['Información pública (ocupación, médicos de turno, avisos públicos, ambulancia)','Sí','Sí','Sí','Sí, sin sesión'],
+ ['Usuarios del personal: crear, editar, activar','Sí','—','—','—'],
+ ['Turnos: crear, editar, borrar','Sí','—','—','—'],
+ ['Turnos: ver','Todos','Los suyos','Los suyos (propuesta TUR-API-1: todos, lectura)','—'],
+ ['Avisos: crear, editar, borrar','Sí','—','—','—'],
+ ['Avisos: leer públicos e internos','Sí','Sí','Sí','Solo públicos'],
+ ['Pacientes: buscar y ver ficha','Sí','Solo sus pacientes','Sí','Solo su cuenta'],
+ ['Pacientes: registrar y editar','Sí','—','Sí','—'],
+ ['Código de activación de cuenta','Sí','—','Sí','—'],
+ ['Expediente completo','Sí','Solo sus pacientes','—','El suyo'],
+ ['Historial: editar antecedentes','Sí','Solo sus pacientes','—','—'],
+ ['Citas: ver','Todas','Las suyas','Todas','Las propias'],
+ ['Citas: agendar','—','Seguimientos a sus pacientes','Sí','Solicita atención'],
+ ['Citas: llegada, reprogramar, cancelar, confirmar','Sí','—','Sí','—'],
+ ['Consulta: abrir, editar, recetas, finalizar','—','Solo la suya','—','—'],
+ ['Consulta: ver','Sí','Si es tratante','—','La suya'],
+ ['Laboratorio: pedir examen','—','Sí','—','—'],
+ ['Laboratorio: ver órdenes','Sí','Las que pidió','Sí','Las propias'],
+ ['Laboratorio: iniciar y completar','Sí','—','Sí','—'],
+ ['Habitaciones y camas: ver mapa','Sí','Sí (el paciente solo si es tratante)','Sí','—'],
+ ['Ingresar, dar de alta, trasladar','Sí','—','Sí','—'],
+ ['Ambulancia: ver estado','Sí','Sí, sin datos de la persona','Sí','Solo estado público'],
+ ['Ambulancia: despachar','Sí','Sí','Sí','—'],
+ ['Ambulancia: finalizar y bitácora','Sí','—','Sí','—'],
+ ['Ambulancia: pasar a mantenimiento','Sí','—','—','—'],
+ ['Ambulancia: reportes del traslado','Sí','Sí','Sí','—'],
+ ['Inventario: ver','Sí','—','Sí','—'],
+ ['Inventario: crear, editar, borrar','Sí','—','—','—'],
+ ['Inventario: movimientos','Entradas y salidas','—','Solo salidas','—'],
+ ['Dashboard de métricas','Sí','—','—','—']];
+const PRIV = [
+ ['Ocupación, médicos de turno, avisos públicos, estado de la ambulancia','Pública','Cualquiera, sin sesión'],
+ ['Nombre, fecha de nacimiento, DUI, teléfono, dirección','Privada','Paciente, médico tratante, administrador y recepción'],
+ ['Tipo de sangre y alergias','Privada','Paciente, médico tratante y administrador (se ocultan al resto, también dentro de citas, ingresos y órdenes)'],
+ ['Diagnósticos, recetas, antecedentes','Privada','Paciente, médico tratante y administrador'],
+ ['Estado de las órdenes de laboratorio','Privada','Paciente, médico, recepción y administrador (el sistema no guarda datos del examen)'],
+ ['Habitación y cama de un paciente','Privada','Paciente, médico tratante, administrador y recepción'],
+ ['Persona atendida por la ambulancia','Privada','Administrador y recepción'],
+ ['Reportes de la ambulancia en camino','Privada','Administrador, médicos y recepción'],
+ ['Usuario, correo y teléfono del personal','Privada','Administrador (el paciente solo ve nombre y cargo de su médico)']];
+const FIGMA = [
+ ['4:655','Login (recepción)','Quitar el selector Recepción, Enfermería y Médico y el turno de ingreso. Pedir usuario, no correo. Quitar HL7 y HIPAA.'],
+ ['4:2','Dashboard operativo','Quitar triaje, «Espera en triaje» y «Llamar Box 1». Conservar las tarjetas de turnos, camas, ambulancia y laboratorio (17 camas coincide con el negocio). Agregar Pacientes y Citas.'],
+ ['4:1065','Admisión','Quitar triaje Manchester, telemetría y brazalete. Cambiar DNI por DUI y +34 por +503. Agregar tipo de ingreso (VIP o semiprivada), médico y motivo. Conservar la asignación de cama y el aviso de privacidad.'],
+ ['8:2','Login (médico)','Quitar «Token dual», «ID Sanitario» y «¿Olvidó su contraseña?» (la API no los tiene). Pedir usuario.'],
+ ['8:100','Inicio del médico','Conservar los accesos (Consulta, Laboratorio, Turnos, Pacientes, Ambulancia, Ubicación). Quitar la alerta de SpO2, «Avisar enfermería» y la fecha de 2024.'],
+ ['8:596','Laboratorio (médico)','Conservar las pestañas Pendiente, En proceso y Completado. Quitar valores de exámenes, «Descargar PDF» y «Adjuntar a historia clínica» salvo que se decida D1.'],
+ ['8:1706','Ubicación del paciente','Conservar planta, habitación y cama. Quitar oxígeno, pulsador, aislamiento, enfermera de turno, «Solicitar cambio de cama» y las leyes citadas.'],
+ ['10:2','Dashboard web','Conservar ocupación de 17 camas, personal, laboratorio, mapas de planta 3 y 2. Quitar HL7, «Privacidad y Ley», auditoría AES-256, triaje, UCI y combustible, oxígeno y desfibrilador de la ambulancia.'],
+ ['4:303 · 4:753 · 4:1311 · 4:1602 · 8:357 · 8:833 · 8:1132 · 8:1464 · 10:762 · 10:1561 · 10:2033','Pantallas sin revisar a detalle','Se revisan en DIS-DSG-1 con el mismo criterio: solo lo que existe en los requisitos y en la API.']];
+function cmd(t){return `<pre class="cmd">${esc(t)}</pre>`}
+function renderReferencia(){
+  $('#t-referencia').innerHTML = `
+    <div><h2>Referencia</h2><p class="lead" style="margin-top:8px">Lo que el equipo consulta mientras trabaja. Sale del PDF de requisitos y de <code>backend/docs/API.md</code>.</p></div>
+    <div class="card"><h3>Correr la API en tu computadora</h3>
+      <p class="small muted" style="margin-top:6px">No hace falta un servidor para el sábado. Necesitas PHP 8.2 o superior, Composer 2 y MariaDB 10.11 o superior (XAMPP incluye MariaDB). Esta guía se escribió leyendo el repositorio; su verificación en otro equipo es la HU FUN-OPS-1.</p>
+      <div class="grid" style="margin-top:12px">
+        ${cmd('cd backend\ncomposer install\ncopy .env.example .env\nphp artisan key:generate')}
+        <p class="small">Inicia MariaDB, crea la base <code>hospital_universitario</code> y revisa <code>DB_*</code> en <code>.env</code> (por defecto usuario root sin contraseña).</p>
+        ${cmd('php artisan migrate:fresh --seed\nphp artisan serve --host=0.0.0.0')}
+        <p class="small">En otra terminal, para el tiempo real:</p>
+        ${cmd('php artisan reverb:start')}
+        <p class="small">Prueba rápida (la contraseña es la de los datos de demostración):</p>
+        ${cmd('curl -X POST http://localhost:8000/api/v1/auth/login -H "Accept: application/json" -H "Content-Type: application/json" -d "{\\"usuario\\":\\"admin\\",\\"password\\":\\"Hospital2026!\\"}"')}
+      </div></div>
+    <div class="grid g2">
+      <div class="card"><h3>URL de la API según dónde corre la app</h3><div class="tablewrap" style="margin-top:10px"><table><tbody>
+        <tr><th>Emulador Android</th><td><code>http://10.0.2.2:8000/api/v1/</code></td></tr>
+        <tr><th>Simulador iOS</th><td><code>http://localhost:8000/api/v1</code></td></tr>
+        <tr><th>Teléfono físico</th><td><code>http://&lt;IP-de-tu-red&gt;:8000/api/v1</code> con <code>--host=0.0.0.0</code></td></tr>
+        <tr><th>Web (Vite)</th><td><code>VITE_API_URL=http://localhost:8000/api/v1</code>, puerto 5173</td></tr>
+        <tr><th>Reverb</th><td><code>ws://&lt;host&gt;:8080/app/&lt;REVERB_APP_KEY&gt;</code></td></tr></tbody></table></div></div>
+      <div class="card"><h3>Usuarios de demostración</h3><p class="small muted" style="margin-top:6px">Se crean con <code>migrate --seed</code>. Contraseña de todos: <code>Hospital2026!</code>. Solo para pruebas locales.</p>
+        <div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>Usuario</th><th>Rol</th><th>Cargo</th></tr></thead><tbody>
+        <tr><td><code>admin</code></td><td>ADMINISTRADOR</td><td>Administración</td></tr>
+        <tr><td><code>medico.general</code></td><td>MEDICO</td><td>Medicina general</td></tr>
+        <tr><td><code>medico.emergencia</code></td><td>MEDICO</td><td>Emergencia</td></tr>
+        <tr><td><code>medico.alergista</code></td><td>MEDICO</td><td>Alergista</td></tr>
+        <tr><td><code>recepcion</code></td><td>RECEPCIONISTA</td><td>Recepcionista</td></tr>
+        <tr><td><code>enfermeria</code></td><td>RECEPCIONISTA</td><td>Enfermera</td></tr>
+        <tr><td><code>paciente.uno</code>, <code>paciente.dos</code></td><td>PACIENTE</td><td>—</td></tr></tbody></table></div></div></div>
+    <div class="card"><h3>Ramas y commits</h3>
+      <p class="small muted" style="margin-top:6px">Una rama por persona, plataforma y semana. Se crea al empezar la semana y se cierra con un pull request al terminar. Así hay pocas ramas y cada una dice de quién es.</p>
+      <div style="margin-top:12px">${cmd('<plataforma>-<persona>-s<N>')}</div>
+      <div class="tablewrap" style="margin-top:12px"><table><tbody>
+        <tr><th>plataforma</th><td><code>android</code>, <code>ios</code>, <code>web</code>, <code>api</code>, <code>docs</code></td></tr>
+        <tr><th>persona</th><td>Nombre corto en minúscula y sin acentos: <code>dennis</code>, <code>mario</code>, <code>luis</code>, <code>rene</code>, <code>kath</code></td></tr>
+        <tr><th>s&lt;N&gt;</th><td>La entrega a la que va el trabajo: <code>s2</code> (24 oct), <code>s3</code> (31 oct), <code>s4</code> (7 nov), <code>s5</code> (14 nov), <code>s6</code> (21 nov). Es el mismo hito que muestra cada HU.</td></tr>
+        <tr><th>ejemplos</th><td><code>ios-kath-s2</code> · <code>web-luis-s3</code> · <code>android-dennis-s3</code></td></tr></tbody></table></div>
+      <ul class="ticks small" style="margin-top:12px">
+        <li>La rama sale de <code>development</code> actualizado. Cada vez que empieces a trabajar, trae lo nuevo: <code>git fetch</code> y <code>git merge origin/development</code>.</li>
+        <li>Cada commit empieza con el id de la HU: <code>AUT-WEB-1: login del administrador</code>.</li>
+        <li>Al terminar la semana abres un pull request a <code>development</code>, con las HU hechas en la descripción y otra persona revisando. Si otra plataforma depende de lo tuyo (por ejemplo el login), abres el pull request antes.</li>
+        <li>Nadie hace push directo a <code>development</code>.</li>
+        <li><b>Las ramas no se borran.</b> Cada semana deja su rama como historial; en GitHub no pulses «Delete branch» al integrar. La semana siguiente nace una nueva desde <code>development</code>, por ejemplo <code>ios-kath-s3</code>.</li>
+        <li>Todo lo que se termina entra a <code>development</code> y todos traen de <code>development</code> antes de empezar y antes de abrir su pull request.</li>
+        <li>Dos personas en la misma plataforma se reparten módulos con el botón Tomar del Backlog, para no editar los mismos archivos.</li>
+        <li>Nunca se suben <code>.env</code>, <code>local.properties</code> ni claves.</li></ul>
+      <div class="callout" style="margin-top:12px"><b>Antes de empezar.</b> <code>development</code> solo tiene el commit inicial y la API vive en <code>feature/hospital-universitario</code>. Esa rama tiene que entrar a <code>development</code> con un pull request para que todas las ramas nuevas salgan ya con el backend. Esto es parte de FUN-OPS-2.</div></div>
+    <div><h3 style="margin-bottom:10px">Infraestructura que el sistema debe respetar</h3>
+      <div class="grid g3">
+        <div class="card"><h3>Planta 3 · VIP</h3><p class="small muted">5 habitaciones individuales, VIP-301 a VIP-305.</p></div>
+        <div class="card"><h3>Planta 2 · Semiprivadas</h3><p class="small muted">6 habitaciones de 2 camas, HAB-201 a HAB-206: 12 camas.</p></div>
+        <div class="card"><h3>Planta 1 · Consulta</h3><p class="small muted">Consultorios C-101 a C-104. No hospitaliza.</p></div>
+        <div class="card"><h3>Ambulancia</h3><p class="small muted">Una sola. Estados Disponible, En servicio y En mantenimiento.</p></div>
+        <div class="card"><h3>Sin sobrecupo</h3><p class="small muted">Nunca dos pacientes en una cama ni un paciente con dos ingresos activos.</p></div>
+        <div class="card"><h3>Laboratorio</h3><p class="small muted">Solo estados: Pendiente, En proceso, Completado.</p></div></div></div>
+    <div><h3 style="margin-bottom:10px">Matriz de control de acceso por rol</h3>
+      <p class="small muted" style="margin-bottom:8px">Borrador tomado de <code>routes/api.php</code>. DOC-DOC-5 lo valida contra las pruebas.</p>
+      <div class="tablewrap"><table><thead><tr><th>Acción</th><th>Administrador</th><th>Médico</th><th>Recepción</th><th>Paciente</th></tr></thead><tbody>
+      ${RBAC.map(r=>`<tr><td>${esc(r[0])}</td>${r.slice(1).map(c=>`<td class="${c==='—'?'no':''}">${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>
+    <div><h3 style="margin-bottom:10px">Datos públicos y privados</h3>
+      <div class="tablewrap"><table><thead><tr><th>Dato</th><th>Tipo</th><th>Quién lo ve</th></tr></thead><tbody>
+      ${PRIV.map(r=>`<tr><td>${esc(r[0])}</td><td><span class="pill ${r[1]==='Pública'?'hecha':'revision'}">${r[1]}</span></td><td>${esc(r[2])}</td></tr>`).join('')}</tbody></table></div>
+      <p class="small muted" style="margin-top:8px">Sin permiso, la API responde 403 sin indicar si el registro existe.</p></div>
+    <div><h3 style="margin-bottom:10px">Estados y transiciones</h3><div class="grid g2">
+      <div class="card"><h3>Cita</h3><div class="flow" style="margin-top:8px"><span>Solicitada</span><b>→ confirmar →</b><span>Agendada</span><b>→ llegada →</b><span>En espera</span><b>→ abrir consulta →</b><span>En atención</span><b>→ finalizar →</b><span>Atendida</span></div>
+        <p class="small muted" style="margin-top:8px">Cancelar desde Solicitada, Agendada o En espera. Reprogramar desde Agendada o En espera. Cualquier otra acción responde 409.</p></div>
+      <div class="card"><h3>Laboratorio, ambulancia y cama</h3>
+        <div class="flow" style="margin-top:8px"><span>Pendiente</span><b>→</b><span>En proceso</span><b>→</b><span>Completado</span></div>
+        <div class="flow" style="margin-top:8px"><span>Disponible</span><b>⇄ despacho ⇄</b><span>En servicio</span><b>·</b><span>Disponible ⇄ En mantenimiento (solo admin, sin servicio en curso)</span></div>
+        <div class="flow" style="margin-top:8px"><span>Cama disponible</span><b>⇄ ingreso y alta ⇄</b><span>Cama ocupada</span></div></div></div></div>
+    <div><h3 style="margin-bottom:10px">Revisión del Figma actual</h3>
+      <p class="small muted" style="margin-bottom:8px">Se revisaron 8 de las 19 pantallas viendo su imagen. Es la base de DIS-DSG-1 y DIS-DSG-2.</p>
+      <div class="tablewrap"><table><thead><tr><th>Frame</th><th>Pantalla</th><th>Qué hacer</th></tr></thead><tbody>
+      ${FIGMA.map(r=>`<tr><td><code>${esc(r[0])}</code></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('')}</tbody></table></div></div>
+    <div class="card flat"><h3>Estado de lo que ya existe</h3><ul class="ticks" style="margin-top:8px">
+      <li><b>API:</b> escrita con pruebas, en la rama <code>feature/hospital-universitario</code>. Aún no se ejecutó por el equipo (FUN-API-1).</li>
+      <li><b>Android:</b> solo existe el README y los lineamientos. No hay proyecto.</li>
+      <li><b>iOS y Web:</b> no existen carpetas.</li>
+      <li><b>Diagrama ER:</b> no coincide del todo con la API. Se corrige después (DOC-DOC-4).</li></ul></div>`;
+}
+
+/* ---------- vista ---------- */
+function setTab(t, push){
+  S.tab=t;
+  document.querySelectorAll('nav.tabs button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===t)));
+  document.querySelectorAll('section.panel').forEach(s=>s.classList.toggle('hidden',s.id!=='t-'+t));
+  if(push){try{history.replaceState(null,'','#'+t)}catch(e){}}
+  window.scrollTo({top:0});
+}
+function refreshAll(){
+  if(document.activeElement && document.activeElement.tagName==='TEXTAREA' && S.tab==='backlog'){ S.pending=true; return; }
+  S.pending=false;
+  renderPlan(); renderSabado(); renderEntregas(); renderPlataformas(); renderFinal();
+  if($('#f-list')) renderBacklogList(); else renderBacklogShell();
+  renderReferencia();
+  const w=$('#who'); w.textContent = S.me && S.names[S.me] ? 'Sesión: '+S.names[S.me] : (S.db?'':'Vista de solo lectura');
+  const b=$('#banner');
+  b.innerHTML = !S.db ? `<div class="callout info small">El seguimiento compartido (tomar y terminar HU) no está disponible en esta vista. Se puede leer todo el plan.</div>` :
+    (S.canWrite===false ? `<div class="callout info small">Puedes ver quién trabaja en qué. Para tomar HU, pide acceso de colaborador al artefacto.</div>` : '');
+}
+
+/* ---------- eventos ---------- */
+function irA(id){
+  const h=BYID[id]; if(!h) return;
+  S.f={q:'',ep:'',pl:'',h:'',estado:'',min:false,libres:false,mios:false}; S.open.add(id);
+  setTab('backlog',true); renderBacklogShell();
+  const el=document.querySelector('#t-backlog article.hu[data-id="'+id+'"]'); if(el) el.scrollIntoView({block:'center'});
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-tab],[data-hito],[data-plat],[data-toggle],[data-goto],[data-act],#f-clear'); if(!t) return;
+  if(t.dataset.tab){ setTab(t.dataset.tab,true); return; }
+  if(t.dataset.hito){ S.f={q:'',ep:'',pl:'',h:t.dataset.hito,estado:'',min:false,libres:false,mios:false}; setTab('backlog',true); renderBacklogShell(); return; }
+  if(t.dataset.plat){ S.plat=t.dataset.plat; renderPlataformas(); return; }
+  if(t.dataset.goto){ irA(t.dataset.goto); return; }
+  if(t.dataset.toggle){ const id=t.dataset.toggle; S.open.has(id)?S.open.delete(id):S.open.add(id);
+    document.querySelectorAll('article.hu[data-id="'+id+'"]').forEach(a=>{a.outerHTML=huRow(BYID[id]);}); return; }
+  if(t.id==='f-clear'){ S.f={q:'',ep:'',pl:'',h:'',estado:'',min:false,libres:false,mios:false}; renderBacklogShell(); return; }
+  if(t.dataset.act==='tomar') escribir(t.dataset.id,'tomar');
+  if(t.dataset.act==='soltar') escribir(t.dataset.id,'soltar');
+});
+document.addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-goto]')){e.preventDefault();irA(e.target.dataset.goto);} });
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.id==='f-q'){ S.f.q=t.value; renderBacklogList(); }
+});
+document.addEventListener('change',e=>{
+  const t=e.target, m={ 'f-pl':'pl','f-ep':'ep','f-h':'h','f-estado':'estado' };
+  if(m[t.id]){ S.f[m[t.id]]=t.value; renderBacklogList(); return; }
+  if(t.id==='f-libres'||t.id==='f-min'||t.id==='f-mios'){ S.f[t.id.slice(2)]=t.checked; renderBacklogList(); return; }
+  if(t.dataset.act==='estado') escribir(t.dataset.id,'estado',t.value);
+});
+document.addEventListener('focusout',e=>{
+  const t=e.target;
+  if(t.dataset && t.dataset.act==='nota'){ escribir(t.dataset.id,'nota',t.value).finally(()=>{ if(S.pending) refreshAll(); }); }
+  else if(S.pending) setTimeout(()=>{ if(document.activeElement.tagName!=='TEXTAREA') refreshAll(); },0);
+});
+
+/* ---------- escritura compartida ---------- */
+async function escribir(id,que,valor){
+  if(!puedeEscribir()||S.busy.has(id)) return;
+  const cur=claim(id), ref=S.db.doc('hu/'+id);
+  let datos;
+  if(que==='tomar'){ if(!S.me||estadoDe(id)!=='libre') return; datos={estado:'en_curso',dueno:S.me,nota:'',ts:Date.now()}; }
+  else if(que==='estado'){ if(!puedeEditar(id)||cur.estado===valor) return; datos={...cur,estado:valor,ts:Date.now()}; }
+  else if(que==='nota'){ if(!puedeEditar(id)||(cur.nota||'')===valor) return; datos={...cur,nota:valor.slice(0,500),ts:Date.now()}; }
+  else if(que==='soltar'){ if(!puedeEditar(id)) return; }
+  S.busy.add(id);
+  try{ que==='soltar' ? await ref.delete() : await ref.set(datos); }
+  catch(err){ const b=$('#banner'); b.innerHTML=`<div class="callout small">No se pudo guardar el cambio en ${esc(id)}${err&&err.code==='invalid_argument'?': tu acceso es de solo lectura.':'. Intenta de nuevo.'}</div>`; if(err&&err.code==='invalid_argument') S.canWrite=false; }
+  finally{ S.busy.delete(id); }
+}
+async function cargarNombres(){
+  const user=S.user; if(!user) return;
+  const ids=[...new Set([...S.claims.values()].map(c=>c.dueno).concat(S.me).filter(Boolean))];
+  if(!ids.length) return;
+  const ps=await user.profiles(ids);
+  let cambio=false; for(const id of ids){ const n=ps[id]&&ps[id].name; if(n&&S.names[id]!==n){S.names[id]=n;cambio=true;} }
+  if(cambio) refreshAll();
+}
+async function iniciarDb(){
+  if(!(window.claude&&window.claude.use)) return;
+  try{
+    const [db,user]=await Promise.all([window.claude.use('db'),window.claude.use('user')]);
+    if(!db) return;
+    S.db=db; S.user=user;
+    if(user){ S.me=await user.id(); S.canWrite=await user.can('data.write'); S.canEdit=await user.canEdit(); }
+    db.collection('hu').onSnapshot(snap=>{
+      const m=new Map(); snap.docs.forEach(d=>{ if(d.exists) m.set(d.id,d.data()); });
+      S.claims=m; S.live=true; refreshAll(); cargarNombres();
+    },err=>{ if(err&&err.code==='revoked'){ S.db=null; refreshAll(); } });
+    refreshAll();
+  }catch(e){ S.db=null; refreshAll(); }
+}
+
+/* ---------- arranque ---------- */
+renderBacklogShell();
+refreshAll();
+const inicial=(location.hash||'').slice(1);
+setTab(['plan','sabado','entregas','plataformas','final','backlog','referencia'].includes(inicial)?inicial:'plan',false);
+iniciarDb();
+})();
+</script>

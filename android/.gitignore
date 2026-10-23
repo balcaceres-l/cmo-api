@@ -1,0 +1,15 @@
+# Android Studio / Gradle
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.iml
+.idea/
+local.properties
+
+# Firmas y secretos: nunca al repositorio
+*.jks
+*.keystore
+keystore.properties
+google-services.json

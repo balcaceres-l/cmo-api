@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+# Scripts de Windows y binarios de Gradle/Android
+*.bat eol=crlf
+*.jar binary
+*.png binary
+*.jpg binary
+*.webp binary
+*.keystore binary
+*.jks binary

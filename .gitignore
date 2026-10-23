@@ -1,0 +1,4 @@
+# Cada proyecto tiene su propio .gitignore (backend/, android/).
+.DS_Store
+Thumbs.db
+.vscode/
