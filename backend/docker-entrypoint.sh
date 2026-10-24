@@ -1,9 +1,14 @@
 #!/bin/bash
 set -e
 
+# Crear database.sqlite de respaldo si no existe
+mkdir -p /var/www/html/database
+touch /var/www/html/database/database.sqlite
+
 # Asegurar permisos en directorios escribibles de Laravel
-chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache /var/www/html/database
+
 
 # Si la variable de entorno RUN_MIGRATIONS es true, correr migraciones
 if [ "$RUN_MIGRATIONS" = "true" ]; then
