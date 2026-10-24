@@ -11,4 +11,13 @@ if [ "$RUN_MIGRATIONS" = "true" ]; then
     php artisan migrate --force --seed || true
 fi
 
+# Iniciar servidor WebSocket Laravel Reverb en segundo plano si ENABLE_REVERB está activo (por defecto true)
+if [ "${ENABLE_REVERB:-true}" = "true" ]; then
+    REVERB_LISTEN_HOST="${REVERB_SERVER_HOST:-0.0.0.0}"
+    REVERB_LISTEN_PORT="${REVERB_PORT:-8080}"
+    echo "Iniciando Laravel Reverb en ${REVERB_LISTEN_HOST}:${REVERB_LISTEN_PORT}..."
+    php artisan reverb:start --host="${REVERB_LISTEN_HOST}" --port="${REVERB_LISTEN_PORT}" &
+fi
+
 exec "$@"
+
