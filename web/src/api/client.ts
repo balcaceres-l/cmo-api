@@ -16,7 +16,7 @@ declare global {
 const BASE_URL =
   window.__ENV__?.VITE_API_URL ||
   import.meta.env.VITE_API_URL ||
-  'https://cmo-api.marioalabi.com/api/v1';
+  'http://localhost:8000/api/v1';
 
 
 

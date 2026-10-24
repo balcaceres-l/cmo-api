@@ -12,7 +12,7 @@ if (localPropertiesFile.exists()) {
     localProperties.load(FileInputStream(localPropertiesFile))
 }
 
-val apiBaseUrl: String = localProperties.getProperty("api.baseUrl", "https://cmo-api.marioalabi.com/api/v1/")
+val apiBaseUrl: String = localProperties.getProperty("api.baseUrl", "http://10.0.2.2:8000/api/v1/")
 
 android {
     namespace = "com.cmo.hospital"

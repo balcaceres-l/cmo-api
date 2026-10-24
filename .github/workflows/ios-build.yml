@@ -3,6 +3,14 @@ name: iOS Build (Manual)
 on:
   workflow_dispatch:
     inputs:
+      build_type:
+        description: 'Tipo de compilación'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
       api_url:
         description: 'URL de la API (Opcional, si se deja vacío usa el Secret API_BASE_URL)'
         required: false
@@ -28,6 +36,9 @@ jobs:
             API_URL="http://localhost:8000/api/v1"
           fi
 
+          # Eliminar slash final si viene incluido para consistencia en xcconfig
+          API_URL="${API_URL%/}"
+
           # En xcconfig, las dos barras // se escapan como /$()/ para que Xcode no las confunda con un comentario
           FORMATTED_URL=$(echo "$API_URL" | sed 's|://|:/$()/|g')
 
@@ -44,19 +55,33 @@ jobs:
           PROJ=$(find . -maxdepth 2 -name "*.xcodeproj" | head -n 1)
           if [ -n "$PROJ" ]; then
             echo "Proyecto encontrado: $PROJ"
+            SCHEME=$(xcodebuild -project "$PROJ" -list | awk '/Schemes:/{flag=1; next} flag && NF {print $1; exit}')
+            if [ -z "$SCHEME" ]; then
+              SCHEME="appcmo"
+            fi
+            echo "Compilando con scheme: $SCHEME"
+
+            BUILD_CONFIG="Debug"
+            if [ "${{ github.event.inputs.build_type }}" = "release" ]; then
+              BUILD_CONFIG="Release"
+            fi
+
             xcodebuild -project "$PROJ" \
-              -scheme "$(xcodebuild -project "$PROJ" -list | grep -A 1 'Schemes:' | tail -n 1 | tr -d ' ')" \
+              -scheme "$SCHEME" \
+              -configuration "$BUILD_CONFIG" \
               -destination 'generic/platform=iOS' \
+              -derivedDataPath build \
               CODE_SIGNING_ALLOWED=NO \
               clean build
           else
-            echo "Aviso: No se encontró archivo .xcodeproj en ios/. El proyecto debe ser inicializado desde Xcode."
+            echo "Error: No se encontró archivo .xcodeproj en ios/."
+            exit 1
           fi
 
       - name: Subir artefactos de compilación
         uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: ios-build-output
+          name: appcmo-${{ github.event.inputs.build_type || 'debug' }}.app
           path: ios/build/**/*.app
-          if-no-files-found: ignore
+          if-no-files-found: warn
