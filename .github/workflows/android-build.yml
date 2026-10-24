@@ -1,7 +1,15 @@
 name: Android APK Build (Manual)
 
 on:
+  push:
+    branches:
+      - 'android-*'
+      - development
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-build.yml'
   workflow_dispatch:
+
     inputs:
       build_type:
         description: 'Tipo de compilación'
@@ -39,7 +47,7 @@ jobs:
             API_URL="${{ secrets.API_BASE_URL }}"
           fi
           if [ -z "$API_URL" ]; then
-            API_URL="http://10.0.2.2:8000/api/v1/"
+            API_URL="https://cmo-api.marioalabi.com/api/v1/"
           fi
 
           # Asegurar que termine en slash /
