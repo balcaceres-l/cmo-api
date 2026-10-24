@@ -5,6 +5,7 @@ on:
     branches:
       - development
       - main
+      - 'web-*'
     paths:
       - 'web/**'
       - '.github/workflows/web-docker.yml'
