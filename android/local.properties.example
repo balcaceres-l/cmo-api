@@ -1,0 +1,8 @@
+## Configuración de ejemplo para Android (copiar a local.properties)
+# URL base de la API REST del backend (10.0.2.2 es el localhost del host desde el emulador Android)
+api.baseUrl=http://10.0.2.2:8000/api/v1/
+
+# Conexión Reverb (WebSockets en tiempo real)
+reverb.appKey=hospital-key
+reverb.host=10.0.2.2
+reverb.port=8080

@@ -1,0 +1,57 @@
+name: Android APK Build (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Tipo de compilación'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Preparar local.properties desde ejemplo
+        run: |
+          cd android
+          if [ ! -f local.properties ]; then
+            cp local.properties.example local.properties
+          fi
+
+      - name: Compilar APK con Gradle
+        run: |
+          cd android
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            if [ "${{ github.event.inputs.build_type }}" = "release" ]; then
+              ./gradlew assembleRelease --no-daemon
+            else
+              ./gradlew assembleDebug --no-daemon
+            fi
+          else
+            echo "Aviso: No se encontró gradlew en android/. El proyecto de Android Studio debe inicializarse."
+          fi
+
+      - name: Subir APK como artefacto
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: app-${{ github.event.inputs.build_type }}.apk
+          path: android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
