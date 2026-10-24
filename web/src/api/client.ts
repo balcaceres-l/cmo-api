@@ -16,7 +16,8 @@ declare global {
 const BASE_URL =
   window.__ENV__?.VITE_API_URL ||
   import.meta.env.VITE_API_URL ||
-  'http://192.168.110.200:8000/api/v1';
+  'https://cmo-api.marioalabi.com/api/v1';
+
 
 
 export class ApiError extends Error {
