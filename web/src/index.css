@@ -1,11 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 :root {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --cmo-primary: #0b5d4b;
+  --cmo-primary-dark: #073f33;
+  --cmo-primary-deep: #052c23;
+  --cmo-primary-light: #158066;
+  --cmo-primary-soft: #eaf5f1;
+  --cmo-accent: #22c55e;
+  --cmo-accent-glow: rgba(34, 197, 94, 0.25);
+  
+  --cmo-sidebar-bg: #0b1c16;
+  --cmo-sidebar-surface: #122820;
+  --cmo-sidebar-border: #183329;
+  --cmo-sidebar-text: #a1b8ae;
+  --cmo-sidebar-active: #194033;
+  --cmo-sidebar-active-text: #5eead4;
+  
+  --cmo-bg: #f4f7f5;
+  --cmo-surface: #ffffff;
+  --cmo-surface-muted: #f8faf9;
+  --cmo-border: #e2ece7;
+  --cmo-border-strong: #cad8d1;
+  
+  --cmo-text: #13221c;
+  --cmo-text-muted: #526b60;
+  --cmo-text-soft: #849a90;
+  
+  /* Triaje y Alertas Clínicas */
+  --triage-critico: #dc2626;
+  --triage-critico-bg: #fef2f2;
+  --triage-critico-border: #fecaca;
+  
+  --triage-urgente: #d97706;
+  --triage-urgente-bg: #fffbeb;
+  --triage-urgente-border: #fde68a;
+  
+  --triage-estable: #059669;
+  --triage-estable-bg: #ecfdf5;
+  --triage-estable-border: #a7f3d0;
+  
+  --triage-observacion: #0284c7;
+  --triage-observacion-bg: #f0f9ff;
+  --triage-observacion-border: #bae6fd;
+
+  --shadow-sm: 0 1px 2px rgba(11, 44, 35, 0.04);
+  --shadow-md: 0 4px 12px -2px rgba(11, 44, 35, 0.06), 0 2px 4px -1px rgba(11, 44, 35, 0.03);
+  --shadow-lg: 0 10px 24px -4px rgba(11, 44, 35, 0.08), 0 4px 8px -2px rgba(11, 44, 35, 0.03);
+  --shadow-xl: 0 20px 35px -8px rgba(11, 44, 35, 0.12), 0 6px 12px -3px rgba(11, 44, 35, 0.05);
+
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color-scheme: light dark;
-  color: #213547;
-  background-color: #ffffff;
+  color: var(--cmo-text);
+  background-color: var(--cmo-bg);
   box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 *, *::before, *::after {
@@ -16,8 +66,94 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--cmo-bg);
+  color: var(--cmo-text);
+  overflow-x: hidden;
 }
 
 #root {
   min-height: 100vh;
 }
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd8d1;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ab4a7;
+}
+
+/* Tabular numbers for clinical tables and metrics */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Animations */
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.15);
+  }
+}
+
+.pulse-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+.pulse-dot-red {
+  background-color: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+.pulse-dot-green {
+  background-color: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+.pulse-dot-amber {
+  background-color: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+/* Sidebar navigation links */
+.cmo-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  color: #a1b8ae;
+  text-decoration: none;
+  font-size: 0.86rem;
+  font-weight: 500;
+  transition: all 0.15s ease-in-out;
+}
+
+.cmo-nav-link:hover {
+  background: rgba(25, 64, 51, 0.5);
+  color: #ffffff;
+}
+
+.cmo-nav-link.active {
+  background: #194033;
+  color: #5eead4;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px rgba(94, 234, 212, 0.2);
+}
+
