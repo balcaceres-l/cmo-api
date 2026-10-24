@@ -1,0 +1,34 @@
+# Xcode
+## User settings & local caches
+*.xcuserstate
+project.xcworkspace/xcuserdata/
+*.xcuserdatad
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
+*.hmap
+*.xccheckout
+DerivedData/
+.build/
+
+## Swift Package Manager
+.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+.swiftpm/configuration/
+
+## Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+## Environment & Secrets (nunca subir al repositorio)
+Config.xcconfig
+*.mobileprovision
+*.cer
+*.p12
+*.p8
+
+## macOS
+.DS_Store

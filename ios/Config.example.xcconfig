@@ -1,0 +1,11 @@
+// Configuración de entorno para la app iOS (Centro Médico de Occidente)
+// Copia este archivo a 'Config.xcconfig' y ajusta las variables según tu entorno.
+// Nota: Las dos barras de la URL se escapan con /$()/ para evitar que Xcode las interprete como comentario.
+
+// URL base de la API REST del backend (localhost para simulador, o IP de tu Mac en red local para dispositivo físico)
+API_BASE_URL = http:/$()/localhost:8000/api/v1
+
+// Conexión Reverb (WebSockets)
+REVERB_APP_KEY = hospital-key
+REVERB_HOST = localhost
+REVERB_PORT = 8080
