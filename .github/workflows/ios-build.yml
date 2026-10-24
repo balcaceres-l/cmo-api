@@ -1,0 +1,62 @@
+name: iOS Build (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'URL de la API (Opcional, si se deja vacío usa el Secret API_BASE_URL)'
+        required: false
+        default: ''
+
+jobs:
+  build:
+    name: Build iOS Project
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Inyectar URL de la API en Config.xcconfig
+        run: |
+          cd ios
+          API_URL="${{ github.event.inputs.api_url }}"
+          if [ -z "$API_URL" ]; then
+            API_URL="${{ secrets.API_BASE_URL }}"
+          fi
+          if [ -z "$API_URL" ]; then
+            API_URL="http://localhost:8000/api/v1"
+          fi
+
+          # En xcconfig, las dos barras // se escapan como /$()/ para que Xcode no las confunda con un comentario
+          FORMATTED_URL=$(echo "$API_URL" | sed 's|://|:/$()/|g')
+
+          echo "Configurando API_BASE_URL = ${FORMATTED_URL}"
+          echo "// Configuración generada por GitHub Actions" > Config.xcconfig
+          echo "API_BASE_URL = ${FORMATTED_URL}" >> Config.xcconfig
+          echo "REVERB_APP_KEY = ${{ secrets.REVERB_APP_KEY || 'hospital-key' }}" >> Config.xcconfig
+          echo "REVERB_HOST = ${{ secrets.REVERB_HOST || 'localhost' }}" >> Config.xcconfig
+          echo "REVERB_PORT = ${{ secrets.REVERB_PORT || '8080' }}" >> Config.xcconfig
+
+      - name: Compilar proyecto Xcode
+        run: |
+          cd ios
+          PROJ=$(find . -maxdepth 2 -name "*.xcodeproj" | head -n 1)
+          if [ -n "$PROJ" ]; then
+            echo "Proyecto encontrado: $PROJ"
+            xcodebuild -project "$PROJ" \
+              -scheme "$(xcodebuild -project "$PROJ" -list | grep -A 1 'Schemes:' | tail -n 1 | tr -d ' ')" \
+              -destination 'generic/platform=iOS' \
+              CODE_SIGNING_ALLOWED=NO \
+              clean build
+          else
+            echo "Aviso: No se encontró archivo .xcodeproj en ios/. El proyecto debe ser inicializado desde Xcode."
+          fi
+
+      - name: Subir artefactos de compilación
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: ios-build-output
+          path: ios/build/**/*.app
+          if-no-files-found: ignore

@@ -7,7 +7,22 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+
+# Argumentos de compilación para inyectar variables de entorno de Vite
+ARG VITE_API_URL=http://localhost:8000/api/v1
+ARG VITE_REVERB_APP_KEY=hospital-key
+ARG VITE_REVERB_HOST=localhost
+ARG VITE_REVERB_PORT=8080
+ARG VITE_REVERB_SCHEME=http
+
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_REVERB_APP_KEY=$VITE_REVERB_APP_KEY
+ENV VITE_REVERB_HOST=$VITE_REVERB_HOST
+ENV VITE_REVERB_PORT=$VITE_REVERB_PORT
+ENV VITE_REVERB_SCHEME=$VITE_REVERB_SCHEME
+
 RUN npm run build
+
 
 # Servidor Nginx ligero para producción
 FROM nginx:alpine

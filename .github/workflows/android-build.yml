@@ -11,6 +11,10 @@ on:
         options:
           - debug
           - release
+      api_url:
+        description: 'URL de la API (Opcional, si se deja vacío usa el Secret API_BASE_URL)'
+        required: false
+        default: ''
 
 jobs:
   build:
@@ -27,12 +31,25 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Preparar local.properties desde ejemplo
+      - name: Inyectar URL de la API en local.properties
         run: |
           cd android
-          if [ ! -f local.properties ]; then
-            cp local.properties.example local.properties
+          API_URL="${{ github.event.inputs.api_url }}"
+          if [ -z "$API_URL" ]; then
+            API_URL="${{ secrets.API_BASE_URL }}"
           fi
+          if [ -z "$API_URL" ]; then
+            API_URL="http://10.0.2.2:8000/api/v1/"
+          fi
+
+          # Asegurar que termine en slash /
+          [[ "${API_URL}" != */ ]] && API_URL="${API_URL}/"
+
+          echo "Configurando api.baseUrl=${API_URL}"
+          echo "api.baseUrl=${API_URL}" > local.properties
+          echo "reverb.appKey=${{ secrets.REVERB_APP_KEY || 'hospital-key' }}" >> local.properties
+          echo "reverb.host=${{ secrets.REVERB_HOST || '10.0.2.2' }}" >> local.properties
+          echo "reverb.port=${{ secrets.REVERB_PORT || '8080' }}" >> local.properties
 
       - name: Compilar APK con Gradle
         run: |
@@ -45,7 +62,7 @@ jobs:
               ./gradlew assembleDebug --no-daemon
             fi
           else
-            echo "Aviso: No se encontró gradlew en android/. El proyecto de Android Studio debe inicializarse."
+            echo "Aviso: No se encontró gradlew en android/. Inicializa el proyecto con Android Studio para generar el wrapper."
           fi
 
       - name: Subir APK como artefacto
