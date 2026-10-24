@@ -19,11 +19,20 @@ on:
 jobs:
   build:
     name: Build iOS Project
-    runs-on: macos-latest
+    runs-on: macos-15
 
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
+
+      - name: Configurar versión de Xcode (Xcode 16+)
+        run: |
+          XCODE_PATH=$(find /Applications -maxdepth 1 -name "Xcode_16*.app" | sort -V | tail -n 1)
+          if [ -n "$XCODE_PATH" ]; then
+            echo "Seleccionando $XCODE_PATH"
+            sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          fi
+          xcodebuild -version
 
       - name: Inyectar URL de la API en Config.xcconfig
         run: |
