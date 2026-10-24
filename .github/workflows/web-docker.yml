@@ -5,6 +5,7 @@ on:
     branches:
       - development
       - main
+      - 'web-*'
     paths:
       - 'web/**'
       - '.github/workflows/web-docker.yml'
@@ -44,7 +45,7 @@ jobs:
             API_URL="${{ secrets.API_BASE_URL }}"
           fi
           if [ -z "$API_URL" ]; then
-            API_URL="http://localhost:8000/api/v1"
+            API_URL="http://192.168.110.200:8000/api/v1"
           fi
           echo "api_url=$API_URL" >> $GITHUB_OUTPUT
 

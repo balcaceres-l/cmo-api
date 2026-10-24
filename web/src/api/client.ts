@@ -1,6 +1,23 @@
 import { ApiResponse } from '../types/auth';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+declare global {
+  interface Window {
+
+    __ENV__?: {
+      VITE_API_URL?: string;
+      VITE_REVERB_HOST?: string;
+      VITE_REVERB_PORT?: string;
+      VITE_REVERB_APP_KEY?: string;
+      VITE_REVERB_SCHEME?: string;
+    };
+  }
+}
+
+const BASE_URL =
+  window.__ENV__?.VITE_API_URL ||
+  import.meta.env.VITE_API_URL ||
+  'http://192.168.110.200:8000/api/v1';
+
 
 export class ApiError extends Error {
   status: number;
