@@ -140,11 +140,6 @@ struct ConsultaView: View {
             Text("Inicio: \(Formato.marcaTiempo(consulta.fechaHoraInicio))")
                 .font(.caption)
                 .foregroundStyle(Color.cmoTintaSuave)
-            if viewModel.cerrada {
-                Label("Finalizada el \(Formato.marcaTiempo(consulta.fechaHoraFin)). Es de solo lectura.", systemImage: "lock.fill")
-                    .font(.caption)
-                    .foregroundStyle(Color.cmoExito)
-            }
         }
         .tarjeta()
     }

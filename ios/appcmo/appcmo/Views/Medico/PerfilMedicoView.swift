@@ -13,13 +13,12 @@ struct PerfilMedicoView: View {
 
     @Environment(SessionStore.self) private var store
     @State private var confirmando = false
-    @State private var avisos = AvisosViewModel()
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    EncabezadoPantalla("Perfil")
+                    EncabezadoPantalla("Perfil") { CampanaAvisos() }
 
                     if let usuario = store.sesion?.usuario {
                         VStack(spacing: 10) {
@@ -60,8 +59,6 @@ struct PerfilMedicoView: View {
                     }
                     .tarjeta(relleno: 0)
 
-                    seccionAvisos
-
                     Text("Seguridad")
                         .font(.headline)
                         .foregroundStyle(Color.cmoTinta)
@@ -99,29 +96,12 @@ struct PerfilMedicoView: View {
                 case .password: CambiarPasswordView(store: store)
                 }
             }
-            .task { await avisos.cargar() }
             .confirmationDialog("¿Cerrar sesión?", isPresented: $confirmando, titleVisibility: .visible) {
                 Button("Cerrar sesión", role: .destructive) {
                     Task { await store.cerrarSesion() }
                 }
                 Button("Cancelar", role: .cancel) {}
             }
-        }
-    }
-
-    @ViewBuilder
-    private var seccionAvisos: some View {
-        if let lista = avisos.carga.valor, !lista.isEmpty {
-            Text("Avisos")
-                .font(.headline)
-                .foregroundStyle(Color.cmoTinta)
-                .padding(.top, 4)
-            VStack(spacing: 10) {
-                ForEach(lista) { aviso in
-                    AvisoTarjeta(aviso: aviso)
-                }
-            }
-            .accessibilityIdentifier("perfil.avisos")
         }
     }
 

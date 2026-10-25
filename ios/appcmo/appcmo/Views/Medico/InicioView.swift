@@ -65,8 +65,8 @@ struct InicioView: View {
                     .accessibilityIdentifier("inicio.nombre")
             }
             Spacer(minLength: 0)
+            CampanaAvisos()
         }
-        .accessibilityElement(children: .combine)
     }
 
     private var resumen: some View {

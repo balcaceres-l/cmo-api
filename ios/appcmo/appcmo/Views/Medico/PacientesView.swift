@@ -42,7 +42,7 @@ struct PacientesView: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 14) {
-                EncabezadoPantalla("Mis pacientes", subtitulo: subtitulo)
+                EncabezadoPantalla("Mis pacientes", subtitulo: subtitulo) { CampanaAvisos() }
                     .padding(.horizontal, 16)
 
                 HStack(spacing: 8) {

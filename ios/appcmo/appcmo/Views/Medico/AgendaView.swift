@@ -16,6 +16,7 @@ struct AgendaView: View {
                     HStack(spacing: 6) {
                         botonSemana("chevron.left", "Semana anterior") { viewModel.moverSemana(-1) }
                         botonSemana("chevron.right", "Semana siguiente") { viewModel.moverSemana(1) }
+                        CampanaAvisos().padding(.leading, 4)
                     }
                 }
                 .padding(.horizontal, 16)
