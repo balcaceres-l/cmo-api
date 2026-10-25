@@ -3,6 +3,7 @@
 //  appcmo
 //
 
+import CryptoKit
 import Foundation
 import Security
 
@@ -10,28 +11,57 @@ nonisolated struct KeychainError: LocalizedError {
     let estado: OSStatus
 
     var errorDescription: String? {
-        "No se pudo guardar la sesión de forma segura en este dispositivo."
+        "No se pudo guardar la información de forma segura en este dispositivo."
     }
 }
 
-/// Guarda el token de sesión en el Keychain del sistema. El token nunca se imprime ni va a UserDefaults.
+/// Guarda en el Keychain del sistema el token de sesión y la llave que cifra los borradores.
+/// Nada de esto se imprime ni va a UserDefaults.
 nonisolated struct KeychainManager: Sendable {
     static let shared = KeychainManager()
 
     private let servicio = Bundle.main.bundleIdentifier ?? "com.catolica.edu.sv.appcmo"
     private let cuentaToken = "auth_token"
+    private let cuentaLlaveBorradores = "borradores_key"
 
-    private var consultaBase: [String: Any] {
+    // MARK: - Token de sesión
+
+    func guardarToken(_ token: String) throws {
+        try guardar(Data(token.utf8), cuenta: cuentaToken)
+    }
+
+    func leerToken() -> String? {
+        leer(cuenta: cuentaToken).flatMap { String(data: $0, encoding: .utf8) }
+    }
+
+    func borrarToken() {
+        borrar(cuenta: cuentaToken)
+    }
+
+    // MARK: - Llave de los borradores
+
+    /// Llave AES de 256 bits que cifra los borradores en disco. Se crea la primera vez y no sale del dispositivo.
+    func llaveBorradores() throws -> SymmetricKey {
+        if let datos = leer(cuenta: cuentaLlaveBorradores) {
+            return SymmetricKey(data: datos)
+        }
+        let llave = SymmetricKey(size: .bits256)
+        try guardar(llave.withUnsafeBytes { Data($0) }, cuenta: cuentaLlaveBorradores)
+        return llave
+    }
+
+    // MARK: - Interno
+
+    private func consulta(cuenta: String) -> [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: servicio,
-            kSecAttrAccount as String: cuentaToken,
+            kSecAttrAccount as String: cuenta,
         ]
     }
 
-    func guardarToken(_ token: String) throws {
-        let datos = Data(token.utf8)
-        var actualizar = consultaBase
+    private func guardar(_ datos: Data, cuenta: String) throws {
+        var actualizar = consulta(cuenta: cuenta)
         let atributos: [String: Any] = [kSecValueData as String: datos]
 
         let estado = SecItemUpdate(actualizar as CFDictionary, atributos as CFDictionary)
@@ -45,18 +75,17 @@ nonisolated struct KeychainManager: Sendable {
         }
     }
 
-    func leerToken() -> String? {
-        var consulta = consultaBase
+    private func leer(cuenta: String) -> Data? {
+        var consulta = consulta(cuenta: cuenta)
         consulta[kSecReturnData as String] = true
         consulta[kSecMatchLimit as String] = kSecMatchLimitOne
 
         var resultado: CFTypeRef?
-        guard SecItemCopyMatching(consulta as CFDictionary, &resultado) == errSecSuccess,
-              let datos = resultado as? Data else { return nil }
-        return String(data: datos, encoding: .utf8)
+        guard SecItemCopyMatching(consulta as CFDictionary, &resultado) == errSecSuccess else { return nil }
+        return resultado as? Data
     }
 
-    func borrarToken() {
-        SecItemDelete(consultaBase as CFDictionary)
+    private func borrar(cuenta: String) {
+        SecItemDelete(consulta(cuenta: cuenta) as CFDictionary)
     }
 }
