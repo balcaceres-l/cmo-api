@@ -30,3 +30,17 @@ nonisolated struct Aviso: Decodable, Sendable, Equatable, Hashable, Identifiable
         case vigenteHasta = "vigente_hasta"
     }
 }
+
+extension Aviso {
+    /// Un aviso de `GET /publico/avisos` (sin id ni bandera: todos son públicos).
+    init(publico aviso: AvisoPublico) {
+        self.init(
+            idAviso: aviso.id,
+            titulo: aviso.titulo,
+            contenido: aviso.contenido,
+            publico: true,
+            vigenteDesde: aviso.vigenteDesde ?? "",
+            vigenteHasta: aviso.vigenteHasta
+        )
+    }
+}

@@ -17,6 +17,17 @@ nonisolated struct CamaResumen: Decodable, Sendable, Equatable, Hashable {
     let codigo: String
     let habitacion: HabitacionResumen?
 
+    /// `HAB-203-B` → `HAB-203`; una VIP (`VIP-301`) ya es el código de la habitación.
+    var codigoHabitacion: String {
+        habitacion?.codigo ?? codigo.split(separator: "-").prefix(2).joined(separator: "-")
+    }
+
+    /// `HAB-203-B` → `Cama B`; las VIP tienen una sola cama.
+    var nombreCama: String {
+        let partes = codigo.split(separator: "-")
+        return partes.count == 3 ? "Cama \(partes[2])" : "Cama única"
+    }
+
     /// `HAB-203-B` → `HAB-203 · Cama B`; una VIP (`VIP-301`) se queda como está.
     var ubicacion: String {
         let partes = codigo.split(separator: "-")

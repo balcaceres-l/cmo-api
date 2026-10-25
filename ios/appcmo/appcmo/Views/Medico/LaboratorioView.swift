@@ -21,8 +21,8 @@ struct LaboratorioView: View {
                         .font(.subheadline)
                         .foregroundStyle(Color.cmoTintaSuave)
 
-                    HStack(spacing: 10) {
-                        ForEach(EstadoOrden.allCases, id: \.self) { estado in
+                    HStack(spacing: 8) {
+                        ForEach(EstadoOrden.filtrables, id: \.self) { estado in
                             resumen(estado)
                         }
                     }
@@ -75,7 +75,7 @@ struct LaboratorioView: View {
                     .font(.caption)
             }
             .foregroundStyle(tono.primerPlano)
-            .padding(12)
+            .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(tono.fondo, in: .rect(cornerRadius: 14))
             .overlay(RoundedRectangle(cornerRadius: 14).stroke(elegido ? tono.primerPlano : .clear, lineWidth: 1.5))

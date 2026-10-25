@@ -69,4 +69,40 @@ class AgendaTest extends TestCase
         $this->agendar(['hora_inicio' => '23:00'])->assertCreated();
         $this->agendar(['hora_inicio' => '23:00'])->assertStatus(409);
     }
+
+    public function test_un_paciente_no_tiene_dos_citas_activas_a_la_misma_hora(): void
+    {
+        $otro = User::factory()->create(['rol' => 'MEDICO']);
+        TurnoPersonal::create(['id_usuario' => $otro->id, 'fecha' => $this->fecha, 'hora_inicio' => '08:00', 'hora_fin' => '10:00', 'area' => 'Consulta general']);
+
+        $primera = $this->agendar()->assertCreated()->json('data.id_cita');
+        // Con otro médico, pero el mismo paciente a la misma hora: 409.
+        $this->agendar(['id_medico' => $otro->id])->assertStatus(409)->assertJsonPath('message', 'El paciente ya tiene una cita a esa hora.');
+        // Un horario que se solapa a medias también choca.
+        $this->agendar(['id_medico' => $otro->id, 'hora_inicio' => '08:15'])->assertStatus(409);
+        // Pegada (sin solaparse) o con otro paciente sí se puede.
+        $this->agendar(['id_medico' => $otro->id, 'hora_inicio' => '08:30'])->assertCreated();
+        $distinto = Paciente::create(['numero_expediente' => 'EXP-2026-000902', 'nombre_completo' => 'Q', 'fecha_nacimiento' => '1991-01-01', 'sexo' => 'M', 'fecha_registro' => now()]);
+        $this->agendar(['id_medico' => $otro->id, 'id_paciente' => $distinto->id_paciente])->assertCreated();
+
+        // Una cita cancelada libera la hora del paciente.
+        $this->patchJson("/api/v1/citas/{$primera}/cancelar", ['motivo_cancelacion' => 'No puede asistir'])->assertOk();
+        $this->agendar(['id_medico' => $otro->id, 'hora_inicio' => '09:00'])->assertCreated();
+        $this->agendar(['hora_inicio' => '09:00'])->assertStatus(409);
+    }
+
+    public function test_confirmar_y_reprogramar_tambien_respetan_las_citas_del_paciente(): void
+    {
+        $otro = User::factory()->create(['rol' => 'MEDICO']);
+        TurnoPersonal::create(['id_usuario' => $otro->id, 'fecha' => $this->fecha, 'hora_inicio' => '08:00', 'hora_fin' => '10:00', 'area' => 'Consulta general']);
+        $this->agendar()->assertCreated();
+
+        $solicitud = Cita::create(['id_paciente' => $this->paciente->id_paciente, 'motivo' => 'Dolor', 'estado' => 'SOLICITADA', 'id_creado_por' => $this->medico->id]);
+        $this->patchJson("/api/v1/citas/{$solicitud->id_cita}/confirmar", ['id_medico' => $otro->id, 'fecha' => $this->fecha, 'hora_inicio' => '08:00'])->assertStatus(409);
+        $this->patchJson("/api/v1/citas/{$solicitud->id_cita}/confirmar", ['id_medico' => $otro->id, 'fecha' => $this->fecha, 'hora_inicio' => '09:00'])->assertOk()->assertJsonPath('data.estado', 'AGENDADA');
+
+        // Reprogramar la de las 09:00 a las 08:00 con el otro médico choca con la primera del mismo paciente.
+        $this->patchJson("/api/v1/citas/{$solicitud->id_cita}/reprogramar", ['id_medico' => $otro->id, 'fecha' => $this->fecha, 'hora_inicio' => '08:00'])->assertStatus(409);
+        $this->patchJson("/api/v1/citas/{$solicitud->id_cita}/reprogramar", ['id_medico' => $otro->id, 'fecha' => $this->fecha, 'hora_inicio' => '09:30'])->assertOk();
+    }
 }

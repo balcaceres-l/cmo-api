@@ -30,6 +30,9 @@ nonisolated enum EstadoOrden: String, Decodable, Sendable, CaseIterable {
     /// Los estados del avance del laboratorio (los que cuenta y filtra la pantalla de Laboratorio).
     static var allCases: [EstadoOrden] { [.pendiente, .enProceso, .completado] }
 
+    /// Los avances del laboratorio y las canceladas: las tarjetas que cuentan y filtran las pantallas de Laboratorio.
+    static var filtrables: [EstadoOrden] { [.pendiente, .enProceso, .completado, .cancelada] }
+
     init(from decoder: Decoder) throws {
         let texto = try decoder.singleValueContainer().decode(String.self)
         self = EstadoOrden(rawValue: texto) ?? .desconocido

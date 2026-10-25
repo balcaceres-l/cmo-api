@@ -75,4 +75,22 @@ class EstadosCitaTest extends TestCase
         $this->assertSame(1, Consulta::count());
         $this->assertSame('EN_ATENCION', $enEspera->refresh()->estado);
     }
+
+    public function test_la_llegada_solo_se_registra_el_dia_de_la_cita(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['rol' => 'RECEPCIONISTA']));
+        $hoy = $this->cita('AGENDADA');
+        $manana = $this->cita('AGENDADA');
+        $manana->update(['fecha' => today()->addDay(), 'hora_inicio' => '09:00', 'hora_fin' => '09:30']);
+        $ayer = $this->cita('AGENDADA');
+        $ayer->update(['fecha' => today()->subDay(), 'hora_inicio' => '10:00', 'hora_fin' => '10:30']);
+
+        $this->patchJson("/api/v1/citas/{$manana->id_cita}/llegada")->assertStatus(409)->assertJsonPath('message', 'La llegada solo se registra el día de la cita.');
+        $this->patchJson("/api/v1/citas/{$ayer->id_cita}/llegada")->assertStatus(409);
+        $this->assertSame('AGENDADA', $manana->refresh()->estado);
+        $this->assertNull($manana->hora_llegada);
+
+        $this->patchJson("/api/v1/citas/{$hoy->id_cita}/llegada")->assertOk()->assertJsonPath('data.estado', 'EN_ESPERA');
+        $this->assertNotNull($hoy->refresh()->hora_llegada);
+    }
 }

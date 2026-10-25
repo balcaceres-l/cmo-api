@@ -43,6 +43,8 @@ nonisolated struct CitaExpediente: Decodable, Sendable, Equatable, Identifiable 
     let motivo: String
     let estado: EstadoCita
     let consulta: ConsultaExpediente?
+    /// Solo en `GET /mi/expediente`: nombre y cargo del médico (nada más).
+    let medico: MedicoResumen?
 
     var id: String { idCita }
 
@@ -50,7 +52,7 @@ nonisolated struct CitaExpediente: Decodable, Sendable, Equatable, Identifiable 
         case idCita = "id_cita"
         case fecha
         case horaInicio = "hora_inicio"
-        case motivo, estado, consulta
+        case motivo, estado, consulta, medico
     }
 }
 
@@ -60,6 +62,8 @@ nonisolated struct IngresoExpediente: Decodable, Sendable, Equatable, Identifiab
     let fechaAlta: String?
     let motivo: String?
     let cama: CamaResumen?
+    /// Solo en `GET /mi/expediente`: médico tratante (nombre y cargo).
+    let medico: MedicoResumen?
 
     var id: String { idIngreso }
     var activo: Bool { fechaAlta == nil }
@@ -68,7 +72,7 @@ nonisolated struct IngresoExpediente: Decodable, Sendable, Equatable, Identifiab
         case idIngreso = "id_ingreso"
         case fechaIngreso = "fecha_ingreso"
         case fechaAlta = "fecha_alta"
-        case motivo, cama
+        case motivo, cama, medico
     }
 }
 

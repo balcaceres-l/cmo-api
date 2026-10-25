@@ -17,8 +17,8 @@ struct RegistroView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Crea tu cuenta de paciente para consultar tus citas y pedir atención.")
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Solo para pacientes")
                         .font(.subheadline)
                         .foregroundStyle(Color.cmoTintaSuave)
 
@@ -38,22 +38,48 @@ struct RegistroView: View {
                             .autocorrectionDisabled()
                             .accessibilityIdentifier("registro.usuario")
                     }
-                    CampoFormulario(titulo: "DUI", error: viewModel.errores[.dui]) {
-                        TextField("Ej. 01234567-8", text: $viewModel.dui)
-                            .keyboardType(.numbersAndPunctuation)
-                            .accessibilityIdentifier("registro.dui")
+                    CampoFormulario(titulo: "Correo electrónico (opcional)", error: viewModel.errores[.email]) {
+                        TextField("nombre@correo.com", text: $viewModel.email)
+                            .textContentType(.emailAddress)
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
                     }
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Fecha de nacimiento")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(Color.cmoTintaSuave)
-                        DatePicker("Fecha de nacimiento", selection: $viewModel.fechaNacimiento, in: ...Date(), displayedComponents: .date)
-                            .labelsHidden()
-                            .environment(\.locale, Locale(identifier: "es"))
-                            .environment(\.timeZone, Formato.zona)
-                        if let error = viewModel.errores[.fechaNacimiento] {
-                            Text(error).font(.footnote).foregroundStyle(Color.cmoError)
+                    HStack(alignment: .top, spacing: 10) {
+                        CampoFormulario(titulo: "Contraseña", error: viewModel.errores[.password]) {
+                            SecureField("Mínimo 8", text: $viewModel.password)
+                                .textContentType(.newPassword)
+                                .accessibilityIdentifier("registro.password")
+                        }
+                        CampoFormulario(titulo: "Confirmar", error: viewModel.errores[.confirmacion]) {
+                            SecureField("Repítela", text: $viewModel.confirmacion)
+                                .textContentType(.newPassword)
+                                .accessibilityIdentifier("registro.confirmacion")
+                        }
+                    }
+
+                    HStack(alignment: .top, spacing: 10) {
+                        CampoFormulario(titulo: "DUI", error: viewModel.errores[.dui]) {
+                            TextField("01234567-8", text: $viewModel.dui)
+                                .keyboardType(.numbersAndPunctuation)
+                                .accessibilityIdentifier("registro.dui")
+                        }
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Fecha de nacimiento")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(Color.cmoTintaSuave)
+                            DatePicker("Fecha de nacimiento", selection: $viewModel.fechaNacimiento, in: ...Date(), displayedComponents: .date)
+                                .labelsHidden()
+                                .environment(\.locale, Locale(identifier: "es"))
+                                .environment(\.timeZone, Formato.zona)
+                                .frame(maxWidth: .infinity, minHeight: 46, alignment: .leading)
+                                .padding(.horizontal, 8)
+                                .background(Color.cmoFondo, in: .rect(cornerRadius: 10))
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(viewModel.errores[.fechaNacimiento] == nil ? Color.cmoLinea : Color.cmoError))
+                            if let error = viewModel.errores[.fechaNacimiento] {
+                                Text(error).font(.footnote).foregroundStyle(Color.cmoError)
+                            }
                         }
                     }
 
@@ -68,41 +94,26 @@ struct RegistroView: View {
                         .pickerStyle(.segmented)
                     }
 
-                    CampoFormulario(titulo: "Correo (opcional)", error: viewModel.errores[.email]) {
-                        TextField("correo@ejemplo.com", text: $viewModel.email)
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                    }
                     CampoFormulario(titulo: "Teléfono (opcional)", error: viewModel.errores[.telefono]) {
-                        TextField("Ej. 7000-0000", text: $viewModel.telefono)
+                        TextField("7000 0000", text: $viewModel.telefono)
                             .textContentType(.telephoneNumber)
                             .keyboardType(.phonePad)
                     }
                     CampoFormulario(titulo: "Dirección (opcional)", error: viewModel.errores[.direccion]) {
-                        TextField("Dirección", text: $viewModel.direccion)
+                        TextField("Colonia, calle y número", text: $viewModel.direccion)
                             .textContentType(.fullStreetAddress)
                     }
 
-                    CampoFormulario(titulo: "Contraseña", error: viewModel.errores[.password]) {
-                        SecureField("Mínimo 8 caracteres", text: $viewModel.password)
-                            .textContentType(.newPassword)
-                            .accessibilityIdentifier("registro.password")
-                    }
-                    CampoFormulario(titulo: "Confirmar contraseña", error: viewModel.errores[.confirmacion]) {
-                        SecureField("Repite la contraseña", text: $viewModel.confirmacion)
-                            .textContentType(.newPassword)
-                            .accessibilityIdentifier("registro.confirmacion")
-                    }
-
                     VStack(alignment: .leading, spacing: 6) {
-                        CampoFormulario(titulo: "Código de activación (opcional)", error: viewModel.errores[.codigoActivacion]) {
-                            TextField("6 dígitos", text: $viewModel.codigoActivacion)
-                                .keyboardType(.numberPad)
-                                .accessibilityIdentifier("registro.codigo")
+                        CampoFormulario(titulo: "Código de activación", error: viewModel.errores[.codigoActivacion]) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "lock").foregroundStyle(Color.cmoTintaSuave).accessibilityHidden(true)
+                                TextField("6 dígitos", text: $viewModel.codigoActivacion)
+                                    .keyboardType(.numberPad)
+                                    .accessibilityIdentifier("registro.codigo")
+                            }
                         }
-                        Text("Si recepción ya te registró, pide ahí tu código de 6 dígitos para vincular tu cuenta a tu expediente.")
+                        Text("Solo si recepción ya te registró. Te lo entregan en persona y vence en 24 horas.")
                             .font(.footnote)
                             .foregroundStyle(Color.cmoTintaSuave)
                     }
@@ -112,6 +123,11 @@ struct RegistroView: View {
                     }
                     .accessibilityIdentifier("registro.crear")
                     .padding(.top, 4)
+
+                    Button("¿Ya tienes cuenta? Inicia sesión") { cerrar() }
+                        .font(.footnote.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .accessibilityIdentifier("registro.iniciarSesion")
                 }
                 .padding(20)
                 .frame(maxWidth: 520)

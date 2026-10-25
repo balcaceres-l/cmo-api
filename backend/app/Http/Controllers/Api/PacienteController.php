@@ -78,7 +78,8 @@ class PacienteController extends ApiController
     public function miExpediente(Request $r)
     {
         $p = $r->user()->paciente()->firstOrFail();
-        $p->load(['historial', 'citas.consulta.recetas', 'ordenesLaboratorio.examen', 'ingresos.cama.habitacion']);
+        // De cada médico solo el nombre y el cargo: nada de usuario de acceso, correo ni teléfono del personal.
+        $p->load(['historial', 'citas.medico:id,nombre_completo,cargo', 'citas.consulta.recetas', 'ordenesLaboratorio.examen', 'ingresos.cama.habitacion', 'ingresos.medico:id,nombre_completo,cargo']);
 
         return $this->success($p);
     }

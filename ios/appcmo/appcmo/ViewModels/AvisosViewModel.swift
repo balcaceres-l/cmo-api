@@ -14,11 +14,18 @@ final class AvisosViewModel {
     private(set) var vistos: Set<String> = []
 
     @ObservationIgnored private var idUsuario = ""
-    @ObservationIgnored private let repositorio: AvisosRepository
+    @ObservationIgnored private let fuente: @Sendable () async throws -> [Aviso]
     @ObservationIgnored private let defaults: UserDefaults
 
+    /// El personal recibe los avisos públicos e internos (`GET /avisos`).
     init(repositorio: AvisosRepository = AvisosRepository(), defaults: UserDefaults = .standard) {
-        self.repositorio = repositorio
+        self.fuente = { try await repositorio.todos() }
+        self.defaults = defaults
+    }
+
+    /// El paciente solo recibe los avisos públicos (`GET /publico/avisos`).
+    init(publico repositorio: PublicoRepository, defaults: UserDefaults = .standard) {
+        self.fuente = { try await repositorio.avisos().map(Aviso.init(publico:)) }
         self.defaults = defaults
     }
 
@@ -49,7 +56,7 @@ final class AvisosViewModel {
         carga = carga.alRecargar
         do {
             let ahora = Date()
-            let vigentes = try await repositorio.todos().filter { $0.estaVigente(en: ahora) }
+            let vigentes = try await fuente().filter { $0.estaVigente(en: ahora) }
             // Primero los internos (solo para el personal), luego por fecha de inicio, el más reciente arriba.
             carga = .listo(vigentes.sorted {
                 if $0.publico != $1.publico { return !$0.publico }

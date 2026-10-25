@@ -94,6 +94,47 @@ nonisolated enum Formato {
         return hora(inicio) <= String(ahora.prefix(5)) && String(ahora.prefix(5)) <= hora(fin)
     }
 
+    /// Marca de tiempo de la API → `12 oct` (el día en la hora del hospital, no en UTC).
+    static func fechaCortaDeMarca(_ marca: String?) -> String {
+        guard let fecha = instante(marca) else { return "" }
+        return formateador("d MMM").string(from: fecha).replacingOccurrences(of: ".", with: "")
+    }
+
+    /// Marca de tiempo de la API → `2026-10-12` (el día en la hora del hospital), para comparar con `fecha`.
+    static func diaDeMarca(_ marca: String?) -> String? {
+        instante(marca).map { fechaAPI($0) }
+    }
+
+    /// Marca de tiempo de la API → `12 oct 2026`.
+    static func fechaDeMarca(_ marca: String?) -> String {
+        guard let fecha = instante(marca) else { return "" }
+        return formateador("d MMM yyyy").string(from: fecha).replacingOccurrences(of: ".", with: "")
+    }
+
+    /// `2026-10-29` → `Jue 29 oct`.
+    static func diaYMes(_ texto: String?) -> String {
+        guard let fecha = fecha(desdeAPI: texto) else { return texto ?? "" }
+        return mayuscula(formateador("EEE d MMM").string(from: fecha).replacingOccurrences(of: ".", with: ""))
+    }
+
+    /// `2026-10-29` → `29` y `OCT`: para la insignia de fecha de una cita.
+    static func numeroDelDia(_ texto: String?) -> String {
+        guard let fecha = fecha(desdeAPI: texto) else { return "" }
+        return formateador("d").string(from: fecha)
+    }
+
+    static func mesAbreviado(_ texto: String?) -> String {
+        guard let fecha = fecha(desdeAPI: texto) else { return "" }
+        return formateador("MMM").string(from: fecha).replacingOccurrences(of: ".", with: "").uppercased()
+    }
+
+    /// Marca de tiempo de la API → `hoy · 08:12` si es de hoy, `el 15 oct` si es de otro día.
+    static func enviada(_ marca: String?) -> String {
+        guard let fecha = instante(marca) else { return "" }
+        if calendario.isDateInToday(fecha) { return "hoy · \(formateador("HH:mm").string(from: fecha))" }
+        return "el \(formateador("d MMM").string(from: fecha).replacingOccurrences(of: ".", with: ""))"
+    }
+
     /// `2026-10-19` → `Lun 19`.
     static func diaCorto(_ texto: String?) -> String {
         guard let fecha = fecha(desdeAPI: texto) else { return texto ?? "" }

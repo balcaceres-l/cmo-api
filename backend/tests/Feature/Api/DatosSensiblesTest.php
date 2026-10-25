@@ -52,6 +52,11 @@ class DatosSensiblesTest extends TestCase
             $this->getJson("/api/v1/pacientes/{$id}")->assertOk()->assertJsonPath('data.alergias', 'Penicilina');
         }
         Sanctum::actingAs($this->paciente->usuario);
-        $this->getJson('/api/v1/mi/expediente')->assertOk()->assertJsonPath('data.tipo_sangre', 'O+');
+        $this->getJson('/api/v1/mi/expediente')->assertOk()->assertJsonPath('data.tipo_sangre', 'O+')
+            // Del médico, el paciente solo ve nombre y cargo.
+            ->assertJsonPath('data.citas.0.medico.nombre_completo', $this->medico->nombre_completo)
+            ->assertJsonMissingPath('data.citas.0.medico.email')
+            ->assertJsonMissingPath('data.citas.0.medico.usuario')
+            ->assertJsonMissingPath('data.citas.0.medico.telefono');
     }
 }

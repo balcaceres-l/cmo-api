@@ -47,7 +47,10 @@ struct LoginView: View {
                 RegistroView(store: store)
             case .publico:
                 NavigationStack {
-                    InfoPublicaView()
+                    InfoPublicaView(acciones: .init(
+                        iniciarSesion: { self.hoja = nil },
+                        crearCuenta: { self.hoja = .registro }
+                    ))
                         .toolbar {
                             ToolbarItem(placement: .cancellationAction) {
                                 Button("Cerrar") { self.hoja = nil }
