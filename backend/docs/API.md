@@ -249,7 +249,7 @@ Reglas:
 **Campos de paciente:** `nombre_completo` (req., máx. 150), `fecha_nacimiento` (req., anterior a hoy), `sexo` (req., `M`/`F`), `dui` (opcional, máx. 12, único), `telefono`, `direccion`, `tipo_sangre` (máx. 5), `alergias`.
 
 - Al crear un paciente se genera `numero_expediente` con el formato `EXP-2026-000001` y su historial clínico vacío.
-- **El expediente** incluye `historial`, `citas[].consulta.recetas`, `ordenes_laboratorio[].examen` e `ingresos[].cama.habitacion`.
+- **El expediente** incluye `historial`, `citas[].consulta.recetas`, `ordenes_laboratorio[].examen` e `ingresos[].cama.habitacion`. En `GET /mi/expediente` (el del propio paciente) las citas y los ingresos traen además `medico` con solo `id`, `nombre_completo` y `cargo`.
 
 ---
 
@@ -261,7 +261,7 @@ Reglas:
 | POST | `/citas` | MEDICO, RECEPCIONISTA | Agenda una cita |
 | GET | `/agenda/disponibilidad?id_medico=&fecha=` | ADMINISTRADOR, MEDICO, RECEPCIONISTA | Bloques libres del médico ese día |
 | GET | `/consultorios` | ADMINISTRADOR, MEDICO, RECEPCIONISTA | Consultorios de consulta general de la planta 1 (`C-101` a `C-104`) |
-| PATCH | `/citas/{id}/llegada` | ADMINISTRADOR, RECEPCIONISTA | Registra la llegada del paciente |
+| PATCH | `/citas/{id}/llegada` | ADMINISTRADOR, RECEPCIONISTA | Registra la llegada del paciente (`AGENDADA` → `EN_ESPERA`). Solo el día de la cita: otro día responde 409 `La llegada solo se registra el día de la cita.` |
 | PATCH | `/citas/{id}/reprogramar` | ADMINISTRADOR, RECEPCIONISTA | Cambia médico, fecha u hora |
 | PATCH | `/citas/{id}/cancelar` | ADMINISTRADOR, RECEPCIONISTA | `{ "motivo_cancelacion": "…" }` |
 | PATCH | `/citas/{id}/confirmar` | ADMINISTRADOR, RECEPCIONISTA | Convierte una solicitud en cita |
@@ -286,7 +286,7 @@ Reglas:
 
 Errores:
 - 422 si la fecha ya pasó, si la cita cruzaría la medianoche o si la hora queda fuera de un turno del médico.
-- 409 `El horario solicitado ya está ocupado.` (el médico ya tiene cita a esa hora) o `El consultorio ya está ocupado a esa hora.`
+- 409 `El horario solicitado ya está ocupado.` (el médico ya tiene cita a esa hora), `El consultorio ya está ocupado a esa hora.` o `El paciente ya tiene una cita a esa hora.` (un paciente no puede tener dos citas activas que se solapen, aunque sean con médicos distintos; agendar, confirmar y reprogramar aplican la misma regla; una cita cancelada, no asistida o solo solicitada no cuenta).
 - 403 si un MEDICO intenta agendar a un paciente del que no es tratante. El médico solo agenda seguimientos; la primera cita la agenda recepción.
 
 **Reprogramar:** mismos campos salvo `id_paciente`, que no se permite (422): reprogramar mueve la cita, no la cambia de paciente. Si no se envía `id_consultorio`, conserva el que tenía.
@@ -301,7 +301,7 @@ Errores:
 
 | Método | Ruta | Roles | Descripción |
 | --- | --- | --- | --- |
-| POST | `/citas/{id}/consulta` | MEDICO (el de la cita) | Abre la consulta; la cita pasa a `EN_ATENCION` |
+| POST | `/citas/{id}/consulta` | MEDICO (el de la cita) | Abre la consulta (solo el día de la cita); la cita pasa a `EN_ATENCION` |
 | GET | `/consultas/{id}` | ADMINISTRADOR, MEDICO tratante, PACIENTE (la suya) | Consulta con paciente, recetas y órdenes |
 | PUT | `/consultas/{id}` | MEDICO (el de la consulta) | `{ "diagnostico", "motivo", "notas" }` |
 | POST | `/consultas/{id}/recetas` | MEDICO | Agrega una receta |
@@ -312,7 +312,7 @@ Errores:
 **Receta:** `medicamento`, `dosis`, `frecuencia` y `duracion` (requeridos), más `indicaciones` (opcional).
 
 Reglas:
-- La consulta solo se abre sobre una cita `AGENDADA` o `EN_ESPERA`. Una segunda apertura responde 409 `La cita ya tiene una consulta.`
+- La consulta solo se abre sobre una cita `AGENDADA` o `EN_ESPERA` y solo el día de la cita (otro día responde 409 `La consulta solo se inicia el día de la cita.`). Una segunda apertura responde 409 `La cita ya tiene una consulta.`
 - Una consulta cerrada es de solo lectura: editarla, agregar recetas u órdenes responde 409 `La consulta ya está cerrada.`
 - Un médico que no es el de la consulta recibe 403.
 - **Abandonar** borra la consulta con sus recetas y sus órdenes de laboratorio `PENDIENTE` o `CANCELADA`, y la cita vuelve a `AGENDADA` (o `EN_ESPERA` si tiene `hora_llegada`), por lo que se puede volver a iniciar. Solo vale para consultas abiertas; si el laboratorio ya trabaja una orden (`EN_PROCESO` o `COMPLETADO`) o la consulta está cerrada responde 409 (hay que finalizarla).
@@ -493,8 +493,8 @@ SOLICITADA ──confirmar──▶ AGENDADA ──llegada──▶ EN_ESPERA �
 
 - `cancelar`: desde `SOLICITADA`, `AGENDADA` o `EN_ESPERA`.
 - `reprogramar`: desde `AGENDADA` o `EN_ESPERA` (vuelve a `AGENDADA`).
-- `llegada`: solo desde `AGENDADA`.
-- Abrir consulta: desde `AGENDADA` o `EN_ESPERA`.
+- `llegada`: solo desde `AGENDADA` y solo el día de la cita.
+- Abrir consulta: desde `AGENDADA` o `EN_ESPERA`, y solo el día de la cita.
 - Cualquier otra acción responde 409 `No se puede <acción> una cita en estado <estado>.`
 
 **Orden de laboratorio:** `PENDIENTE` → `EN_PROCESO` → `COMPLETADO`; `PENDIENTE` → `CANCELADA` (el médico que la pidió).

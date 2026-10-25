@@ -7,6 +7,7 @@ use App\Models\ExamenCatalogo;
 use App\Models\HistorialClinico;
 use App\Models\Paciente;
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -114,5 +115,25 @@ class ConsultaTest extends TestCase
         $this->patchJson("/api/v1/consultas/{$id}/finalizar")->assertOk();
         $this->patchJson("/api/v1/consultas/{$id}/abandonar")->assertStatus(409);
         $this->assertSame('ATENDIDA', $cita->refresh()->estado);
+    }
+
+    public function test_la_consulta_solo_se_inicia_el_dia_de_la_cita(): void
+    {
+        $medico = User::factory()->create(['rol' => 'MEDICO']);
+        $p = Paciente::create(['numero_expediente' => 'EXP-2026-001004', 'nombre_completo' => 'P', 'fecha_nacimiento' => '1990-01-01', 'sexo' => 'M', 'fecha_registro' => now()]);
+        HistorialClinico::create(['id_paciente' => $p->id_paciente]);
+        $en = fn (CarbonInterface $dia, string $hora) => Cita::create(['id_paciente' => $p->id_paciente, 'id_medico' => $medico->id, 'fecha' => $dia, 'hora_inicio' => $hora, 'hora_fin' => '23:59', 'motivo' => 'Control', 'estado' => 'AGENDADA', 'id_creado_por' => $medico->id]);
+        $manana = $en(today()->addDay(), '08:00');
+        $ayer = $en(today()->subDay(), '08:00');
+        $hoy = $en(today(), '08:00');
+
+        Sanctum::actingAs($medico);
+        $this->postJson("/api/v1/citas/{$manana->id_cita}/consulta")->assertStatus(409)->assertJsonPath('message', 'La consulta solo se inicia el día de la cita.');
+        $this->postJson("/api/v1/citas/{$ayer->id_cita}/consulta")->assertStatus(409);
+        $this->assertSame('AGENDADA', $manana->refresh()->estado);
+        $this->assertDatabaseCount('consulta', 0);
+
+        $this->postJson("/api/v1/citas/{$hoy->id_cita}/consulta")->assertCreated();
+        $this->assertSame('EN_ATENCION', $hoy->refresh()->estado);
     }
 }

@@ -19,6 +19,9 @@ class ConsultaController extends ApiController
         return DB::transaction(function () use ($cita, $r) {
             $cita = Cita::lockForUpdate()->findOrFail($cita->getKey());
             $cita->exigirEstado(['AGENDADA', 'EN_ESPERA'], 'iniciar la consulta de');
+            if (! $cita->fecha->isToday()) {
+                throw new ConflictoException('La consulta solo se inicia el día de la cita.');
+            }
             try {
                 $c = Consulta::create(['id_cita' => $cita->getKey(), 'id_medico' => $r->user()->id, 'fecha_hora_inicio' => now(), 'motivo' => $cita->motivo]);
             } catch (UniqueConstraintViolationException) {
