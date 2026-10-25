@@ -56,11 +56,10 @@ struct InfoPublicaView: View {
 
     private var encabezado: some View {
         HStack(spacing: 12) {
-            Image(systemName: "cross.case.fill")
-                .font(.system(size: 22))
-                .foregroundStyle(Color.cmoSobreMarca)
-                .frame(width: 46, height: 46)
-                .background(Color.cmoMarca, in: .rect(cornerRadius: 13))
+            Image("Logo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 52, height: 52)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
                 Text("Centro Médico de Occidente").font(.headline).foregroundStyle(Color.cmoTinta)
