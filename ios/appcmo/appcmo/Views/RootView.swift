@@ -32,9 +32,9 @@ struct RootView: View {
     private func inicio(para sesion: Sesion) -> some View {
         switch sesion.usuario.rol {
         case .medico:
-            MedicoHomeView(sesion: sesion)
+            MedicoTabView()
         case .paciente:
-            PacienteHomeView(sesion: sesion)
+            PacienteTabView()
         case .administrador, .recepcionista:
             // No debería ocurrir: el store rechaza estos roles antes de guardar la sesión.
             LoginView(store: store)

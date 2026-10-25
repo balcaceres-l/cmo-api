@@ -10,11 +10,19 @@ struct LoginView: View {
         case usuario, password
     }
 
+    private enum Hoja: String, Identifiable {
+        case registro, publico
+        var id: String { rawValue }
+    }
+
+    private let store: SessionStore
     @State private var viewModel: LoginViewModel
     @State private var verPassword = false
+    @State private var hoja: Hoja?
     @FocusState private var foco: Campo?
 
     init(store: SessionStore) {
+        self.store = store
         _viewModel = State(initialValue: LoginViewModel(store: store))
     }
 
@@ -23,6 +31,7 @@ struct LoginView: View {
             VStack(spacing: 28) {
                 encabezado
                 formulario
+                otrasOpciones
             }
             .frame(maxWidth: 440)
             .padding(.horizontal, 20)
@@ -32,23 +41,41 @@ struct LoginView: View {
         .scrollDismissesKeyboard(.interactively)
         .background(Color.cmoFondo.ignoresSafeArea())
         .onSubmit { avanzar() }
+        .sheet(item: $hoja) { hoja in
+            switch hoja {
+            case .registro:
+                RegistroView(store: store)
+            case .publico:
+                NavigationStack {
+                    InfoPublicaView()
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Cerrar") { self.hoja = nil }
+                            }
+                        }
+                }
+            }
+        }
     }
 
     // MARK: - Secciones
 
     private var encabezado: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             Image(systemName: "cross.case.fill")
                 .font(.system(size: 34))
                 .foregroundStyle(Color.cmoSobreMarca)
                 .frame(width: 72, height: 72)
                 .background(Color.cmoMarca, in: .rect(cornerRadius: 20))
                 .accessibilityHidden(true)
-            Text("Centro Médico de Occidente")
+            Text("CMO")
+                .font(.title.bold())
+                .foregroundStyle(Color.cmoMarca)
+                .padding(.bottom, 8)
+            Text("Iniciar sesión")
                 .font(.title2.bold())
-                .multilineTextAlignment(.center)
                 .foregroundStyle(Color.cmoTinta)
-            Text("Inicia sesión con tu usuario y contraseña")
+            Text("Escribe tu usuario y tu contraseña. La app reconoce tu rol automáticamente.")
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Color.cmoTintaSuave)
@@ -61,7 +88,7 @@ struct LoginView: View {
                 AvisoBanner(aviso: aviso)
             }
 
-            campo(titulo: "Usuario", error: viewModel.errorUsuario) {
+            campo(titulo: "Usuario", sistema: "person", error: viewModel.errorUsuario) {
                 TextField("Ej. medico.general", text: $viewModel.usuario)
                     .textContentType(.username)
                     .textInputAutocapitalization(.never)
@@ -71,7 +98,7 @@ struct LoginView: View {
                     .accessibilityIdentifier("login.usuario")
             }
 
-            campo(titulo: "Contraseña", error: viewModel.errorPassword) {
+            campo(titulo: "Contraseña", sistema: "lock", error: viewModel.errorPassword) {
                 HStack {
                     Group {
                         if verPassword {
@@ -100,9 +127,19 @@ struct LoginView: View {
             botonEntrar
                 .padding(.top, 4)
         }
-        .padding(20)
-        .background(Color.cmoSuperficie, in: .rect(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.cmoLinea))
+    }
+
+    private var otrasOpciones: some View {
+        VStack(spacing: 12) {
+            Text("¿Eres paciente y aún no tienes cuenta?")
+                .font(.footnote)
+                .foregroundStyle(Color.cmoTintaSuave)
+            BotonSecundario(titulo: "Crear cuenta") { hoja = .registro }
+                .accessibilityIdentifier("login.registro")
+            Button("Información del hospital") { hoja = .publico }
+                .font(.subheadline.weight(.semibold))
+                .accessibilityIdentifier("login.publico")
+        }
     }
 
     private var botonEntrar: some View {
@@ -127,17 +164,20 @@ struct LoginView: View {
     }
 
     private func campo<Contenido: View>(
-        titulo: String, error: String?, @ViewBuilder contenido: () -> Contenido
+        titulo: String, sistema: String, error: String?, @ViewBuilder contenido: () -> Contenido
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(titulo)
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Color.cmoTintaSuave)
-            contenido()
-                .padding(.horizontal, 12)
-                .frame(minHeight: 46)
-                .background(Color.cmoFondo, in: .rect(cornerRadius: 10))
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(error == nil ? Color.cmoLinea : Color.cmoError))
+            HStack(spacing: 10) {
+                Image(systemName: sistema).foregroundStyle(Color.cmoTintaSuave).accessibilityHidden(true)
+                contenido()
+            }
+            .padding(.horizontal, 12)
+            .frame(minHeight: 48)
+            .background(Color.cmoSuperficie, in: .rect(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(error == nil ? Color.cmoLinea : Color.cmoError))
             if let error {
                 Text(error)
                     .font(.footnote)

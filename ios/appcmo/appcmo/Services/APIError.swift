@@ -12,6 +12,7 @@ nonisolated enum APIError: LocalizedError, Equatable {
     case tiempoAgotado
     case noAutorizado(String)                          // 401
     case prohibido(String)                             // 403
+    case noEncontrado(String)                          // 404
     case conflicto(String)                             // 409
     case validacion(String, [String: [String]])        // 422
     case demasiadosIntentos(segundos: Int?)            // 429
@@ -24,7 +25,7 @@ nonisolated enum APIError: LocalizedError, Equatable {
             "No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo."
         case .tiempoAgotado:
             "El servidor tardó demasiado en responder. Inténtalo de nuevo."
-        case .noAutorizado(let mensaje), .prohibido(let mensaje), .conflicto(let mensaje), .servidor(let mensaje):
+        case .noAutorizado(let mensaje), .prohibido(let mensaje), .noEncontrado(let mensaje), .conflicto(let mensaje), .servidor(let mensaje):
             mensaje
         case .validacion(let mensaje, _):
             mensaje

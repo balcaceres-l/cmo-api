@@ -8,16 +8,7 @@ import Observation
 
 @Observable
 final class LoginViewModel {
-    enum Aviso: Equatable {
-        case error(String)
-        case informacion(String)
-
-        var texto: String {
-            switch self {
-            case .error(let texto), .informacion(let texto): texto
-            }
-        }
-    }
+    typealias Aviso = AvisoMensaje
 
     var usuario = ""
     var password = ""
