@@ -65,12 +65,11 @@ struct LoginView: View {
 
     private var encabezado: some View {
         VStack(spacing: 10) {
-            Image(systemName: "cross.case.fill")
-                .font(.system(size: 34))
-                .foregroundStyle(Color.cmoSobreMarca)
-                .frame(width: 72, height: 72)
-                .background(Color.cmoMarca, in: .rect(cornerRadius: 20))
-                .accessibilityHidden(true)
+            Image("Logo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 112, height: 112)
+                .accessibilityLabel("Centro Médico de Occidente")
             Text("CMO")
                 .font(.title.bold())
                 .foregroundStyle(Color.cmoMarca)
