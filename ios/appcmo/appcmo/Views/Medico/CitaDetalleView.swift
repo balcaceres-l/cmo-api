@@ -73,6 +73,7 @@ struct CitaDetalleView: View {
         .background(Color.cmoFondo)
         .navigationTitle("Cita")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { Task { await viewModel.recargar() } }
         .alertasDeConsulta(
             destino: $viewModel.consultaDestino,
             enAtencion: $viewModel.enAtencion,

@@ -34,11 +34,15 @@ struct MedicoTabView: View {
         }
         .environment(avisos)
         .task {
+            BorradorStore().limpiarVencidos()
             avisos.configurar(idUsuario: store.sesion?.usuario.id ?? "")
             await avisos.cargar()
         }
         .onChange(of: fase) {
-            if fase == .active { Task { await avisos.cargar() } }
+            if fase == .active {
+                BorradorStore().limpiarVencidos()
+                Task { await avisos.cargar() }
+            }
         }
         .accessibilityIdentifier("inicio.medico")
     }

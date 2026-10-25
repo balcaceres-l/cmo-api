@@ -8,7 +8,7 @@ import Observation
 
 @Observable
 final class CitaDetalleViewModel {
-    let cita: Cita
+    private(set) var cita: Cita
     /// Id de la consulta a la que se navega.
     var consultaDestino: String?
     private(set) var trabajando = false
@@ -23,6 +23,12 @@ final class CitaDetalleViewModel {
         self.cita = cita
         self.citas = citas
         self.consultas = consultas
+    }
+
+    /// Vuelve a pedir la cita: cambia de estado cuando se finaliza o se abandona su consulta.
+    func recargar() async {
+        guard let actual = try? await citas.delMedico().first(where: { $0.id == cita.id }) else { return }
+        cita = actual
     }
 
     /// Abre la consulta de una cita AGENDADA o EN_ESPERA; la cita pasa a EN_ATENCION.

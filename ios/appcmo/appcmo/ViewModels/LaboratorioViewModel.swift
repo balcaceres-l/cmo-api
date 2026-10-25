@@ -12,6 +12,7 @@ import Observation
 final class LaboratorioViewModel {
     var filtro: EstadoOrden?
     private(set) var carga: Carga<[OrdenLaboratorio]> = .inicial
+    var error: String?
 
     @ObservationIgnored private let repositorio: LaboratorioRepository
 
@@ -44,5 +45,16 @@ final class LaboratorioViewModel {
             guard let mensaje = mensajeDeError(error) else { return }
             carga = .fallo(mensaje)
         }
+    }
+
+    /// Cancela una orden PENDIENTE. Si el laboratorio ya la inició, la API responde 409 y se vuelve a pedir la lista.
+    func cancelar(_ orden: OrdenLaboratorio) async {
+        error = nil
+        do {
+            _ = try await repositorio.cancelar(idOrden: orden.idOrden)
+        } catch {
+            self.error = mensajeDeError(error)
+        }
+        await cargar()
     }
 }

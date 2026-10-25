@@ -17,7 +17,9 @@ struct ConsultaView: View {
     @State private var viewModel: ConsultaViewModel
     @State private var hoja: Hoja?
     @State private var confirmandoFin = false
-    @State private var confirmandoDescarte = false
+    @State private var confirmandoAbandono = false
+    @State private var ordenPorCancelar: OrdenLaboratorio?
+    @Environment(\.dismiss) private var cerrar
 
     init(idConsulta: String, idUsuario: String) {
         _viewModel = State(initialValue: ConsultaViewModel(idConsulta: idConsulta, idUsuario: idUsuario))
@@ -30,6 +32,35 @@ struct ConsultaView: View {
         .background(Color.cmoFondo)
         .navigationTitle("Consulta")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            if viewModel.sePuedeAbandonar {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button("Abandonar consulta", systemImage: "trash", role: .destructive) { confirmandoAbandono = true }
+                            .accessibilityIdentifier("consulta.abandonar")
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .disabled(viewModel.ocupado)
+                    .accessibilityLabel("Más opciones")
+                    .accessibilityIdentifier("consulta.masOpciones")
+                }
+            }
+        }
+        .onChange(of: viewModel.abandonada) { if viewModel.abandonada { cerrar() } }
+        .confirmationDialog("¿Abandonar la consulta?", isPresented: $confirmandoAbandono, titleVisibility: .visible) {
+            Button("Abandonar consulta", role: .destructive) { Task { await viewModel.abandonar() } }
+            Button("Seguir en la consulta", role: .cancel) {}
+        } message: {
+            Text("Úsalo si la abriste por error. Se descarta lo que escribiste, las recetas y los exámenes que el laboratorio no haya empezado, y la cita vuelve a la agenda como estaba.")
+        }
+        .confirmationDialog("¿Cancelar este examen?", isPresented: Binding(get: { ordenPorCancelar != nil }, set: { if !$0 { ordenPorCancelar = nil } }), titleVisibility: .visible, presenting: ordenPorCancelar) { orden in
+            Button("Cancelar examen", role: .destructive) { Task { await viewModel.cancelarOrden(orden) } }
+            Button("Conservar", role: .cancel) {}
+        } message: { orden in
+            Text("\(orden.examen?.nombre ?? "El examen") dejará de estar en la cola del laboratorio.")
+        }
         .task {
             // Solo la primera vez: volver a cargar pisaría lo que el médico está escribiendo.
             if viewModel.carga.valor == nil { await viewModel.cargar() }
@@ -54,12 +85,6 @@ struct ConsultaView: View {
             Button("Cancelar", role: .cancel) {}
         } message: {
             Text(mensajeDeFinalizar)
-        }
-        .confirmationDialog("¿Descartar el borrador?", isPresented: $confirmandoDescarte, titleVisibility: .visible) {
-            Button("Descartar borrador", role: .destructive) { viewModel.descartarBorrador() }
-            Button("Cancelar", role: .cancel) {}
-        } message: {
-            Text("Se borra lo que escribiste en este iPhone y no enviaste todavía. Lo que ya esté en el servidor no cambia.")
         }
     }
 
@@ -95,31 +120,34 @@ struct ConsultaView: View {
 
                 recetas
                 examenes
-
-                if !viewModel.cerrada {
-                    HStack(spacing: 10) {
-                        BotonSecundario(titulo: "Receta", sistema: "plus") { hoja = .receta }
-                            .accessibilityIdentifier("consulta.agregarReceta")
-                        BotonSecundario(titulo: "Examen", sistema: "plus") { hoja = .examen }
-                            .accessibilityIdentifier("consulta.solicitarExamen")
-                    }
-                    BotonPrincipal(titulo: "Finalizar consulta", cargando: viewModel.ocupado) {
-                        confirmandoFin = true
-                    }
-                    .accessibilityIdentifier("consulta.finalizar")
-                    if viewModel.hayBorrador {
-                        Button("Descartar borrador") { confirmandoDescarte = true }
-                            .font(.subheadline)
-                            .foregroundStyle(Color.cmoTintaSuave)
-                            .frame(maxWidth: .infinity)
-                            .disabled(viewModel.ocupado)
-                            .accessibilityIdentifier("consulta.descartar")
-                    }
-                }
             }
             .padding(16)
         }
         .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if !viewModel.cerrada { acciones }
+        }
+    }
+
+    /// Receta, examen y finalizar quedan fijos al pie (sin la barra de pestañas encima) mientras la consulta está abierta.
+    private var acciones: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                BotonSecundario(titulo: "Receta", sistema: "plus") { hoja = .receta }
+                    .accessibilityIdentifier("consulta.agregarReceta")
+                BotonSecundario(titulo: "Examen", sistema: "plus") { hoja = .examen }
+                    .accessibilityIdentifier("consulta.solicitarExamen")
+            }
+            BotonPrincipal(titulo: "Finalizar consulta", cargando: viewModel.ocupado) {
+                confirmandoFin = true
+            }
+            .accessibilityIdentifier("consulta.finalizar")
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .background(Color.cmoFondo)
+        .overlay(alignment: .top) { Divider() }
     }
 
     private func paciente(_ consulta: Consulta) -> some View {
@@ -170,7 +198,9 @@ struct ConsultaView: View {
                 vacio("Aún no hay exámenes solicitados.")
             }
             ForEach(viewModel.ordenes) { orden in
-                OrdenFila(orden: orden).tarjeta()
+                OrdenFila(orden: orden, cancelar: { ordenPorCancelar = orden })
+                    .tarjeta()
+                    .opacity(orden.estado == .cancelada ? 0.6 : 1)
             }
             ForEach(viewModel.examenesBorrador) { examen in
                 HStack(spacing: 12) {
