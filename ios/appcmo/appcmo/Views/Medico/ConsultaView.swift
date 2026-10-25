@@ -249,7 +249,8 @@ struct ConsultaView: View {
     }
 }
 
-/// Formulario de una receta: medicamento, dosis, frecuencia y duración son obligatorios.
+/// Formulario de recetas: medicamento, dosis, frecuencia y duración son obligatorios.
+/// Se pueden dejar listos varios medicamentos y agregarlos todos de una vez.
 struct RecetaFormView: View {
     @Environment(\.dismiss) private var cerrar
     let agregar: (SolicitudReceta) -> Bool
@@ -259,22 +260,68 @@ struct RecetaFormView: View {
     @State private var frecuencia = ""
     @State private var duracion = ""
     @State private var indicaciones = ""
+    @State private var listos: [SolicitudReceta] = []
 
     private var completo: Bool {
         ![medicamento, dosis, frecuencia, duracion].contains { $0.trimmingCharacters(in: .whitespaces).isEmpty }
     }
 
+    private var actual: SolicitudReceta {
+        let limpias = indicaciones.trimmingCharacters(in: .whitespacesAndNewlines)
+        return SolicitudReceta(
+            medicamento: medicamento.trimmingCharacters(in: .whitespaces),
+            dosis: dosis.trimmingCharacters(in: .whitespaces),
+            frecuencia: frecuencia.trimmingCharacters(in: .whitespaces),
+            duracion: duracion.trimmingCharacters(in: .whitespaces),
+            indicaciones: limpias.isEmpty ? nil : limpias
+        )
+    }
+
+    private var total: Int { listos.count + (completo ? 1 : 0) }
+
+    private func limpiar() {
+        medicamento = ""; dosis = ""; frecuencia = ""; duracion = ""; indicaciones = ""
+    }
+
     var body: some View {
         NavigationStack {
             Form {
-                Section {
+                if !listos.isEmpty {
+                    Section("Medicamentos de esta receta") {
+                        ForEach(Array(listos.enumerated()), id: \.offset) { posicion, receta in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(receta.medicamento).font(.subheadline.weight(.semibold))
+                                    Text("\(receta.dosis) · \(receta.frecuencia) · \(receta.duracion)")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.cmoTintaSuave)
+                                }
+                                Spacer()
+                                Button { listos.remove(at: posicion) } label: {
+                                    Image(systemName: "xmark").font(.footnote.weight(.semibold)).foregroundStyle(Color.cmoTintaSuave)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Quitar \(receta.medicamento)")
+                            }
+                        }
+                    }
+                }
+                Section(listos.isEmpty ? "Medicamento" : "Otro medicamento") {
                     TextField("Medicamento", text: $medicamento).accessibilityIdentifier("receta.medicamento")
                     TextField("Dosis (ej. 500 mg)", text: $dosis).accessibilityIdentifier("receta.dosis")
                     TextField("Frecuencia (ej. cada 8 horas)", text: $frecuencia).accessibilityIdentifier("receta.frecuencia")
                     TextField("Duración (ej. 7 días)", text: $duracion).accessibilityIdentifier("receta.duracion")
+                    TextField("Indicaciones (opcional)", text: $indicaciones, axis: .vertical).lineLimit(1...4)
                 }
-                Section("Indicaciones (opcional)") {
-                    TextField("Indicaciones", text: $indicaciones, axis: .vertical).lineLimit(2...5)
+                Section {
+                    Button {
+                        listos.append(actual)
+                        limpiar()
+                    } label: {
+                        Label("Agregar otro medicamento", systemImage: "plus")
+                    }
+                    .disabled(!completo)
+                    .accessibilityIdentifier("receta.otro")
                 }
             }
             .navigationTitle("Nueva receta")
@@ -282,18 +329,12 @@ struct RecetaFormView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { cerrar() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Agregar") {
-                        let limpias = indicaciones.trimmingCharacters(in: .whitespacesAndNewlines)
-                        let receta = SolicitudReceta(
-                            medicamento: medicamento.trimmingCharacters(in: .whitespaces),
-                            dosis: dosis.trimmingCharacters(in: .whitespaces),
-                            frecuencia: frecuencia.trimmingCharacters(in: .whitespaces),
-                            duracion: duracion.trimmingCharacters(in: .whitespaces),
-                            indicaciones: limpias.isEmpty ? nil : limpias
-                        )
-                        if agregar(receta) { cerrar() }
+                    Button(total > 1 ? "Agregar (\(total))" : "Agregar") {
+                        let todas = listos + (completo ? [actual] : [])
+                        for receta in todas { _ = agregar(receta) }
+                        cerrar()
                     }
-                    .disabled(!completo)
+                    .disabled(total == 0)
                     .accessibilityIdentifier("receta.agregar")
                 }
             }
@@ -302,7 +343,7 @@ struct RecetaFormView: View {
     }
 }
 
-/// Elegir un examen del catálogo; queda como borrador hasta finalizar la consulta.
+/// Elegir uno o varios exámenes del catálogo; quedan como borrador hasta finalizar la consulta.
 struct OrdenFormView: View {
     @Environment(\.dismiss) private var cerrar
     let cargarExamenes: () async -> [Examen]
@@ -310,13 +351,13 @@ struct OrdenFormView: View {
 
     @State private var examenes: [Examen] = []
     @State private var cargando = true
-    @State private var elegido: Examen?
+    @State private var elegidos: [Examen] = []
     @State private var observaciones = ""
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Examen") {
+                Section("Exámenes") {
                     if cargando {
                         ProgressView()
                     } else if examenes.isEmpty {
@@ -324,12 +365,16 @@ struct OrdenFormView: View {
                     }
                     ForEach(examenes) { examen in
                         Button {
-                            elegido = examen
+                            if let posicion = elegidos.firstIndex(of: examen) {
+                                elegidos.remove(at: posicion)
+                            } else {
+                                elegidos.append(examen)
+                            }
                         } label: {
                             HStack {
                                 Text(examen.nombre).foregroundStyle(Color.cmoTinta)
                                 Spacer()
-                                if elegido == examen {
+                                if elegidos.contains(examen) {
                                     Image(systemName: "checkmark").foregroundStyle(Color.cmoMarca)
                                 }
                             }
@@ -341,16 +386,16 @@ struct OrdenFormView: View {
                     TextField("Indicaciones para el laboratorio", text: $observaciones, axis: .vertical).lineLimit(2...5)
                 }
             }
-            .navigationTitle("Solicitar examen")
+            .navigationTitle("Pedir examen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { cerrar() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Agregar") {
-                        guard let elegido else { return }
-                        if solicitar(elegido, observaciones) { cerrar() }
+                    Button(elegidos.count > 1 ? "Agregar (\(elegidos.count))" : "Agregar") {
+                        for examen in elegidos { _ = solicitar(examen, observaciones) }
+                        cerrar()
                     }
-                    .disabled(elegido == nil)
+                    .disabled(elegidos.isEmpty)
                     .accessibilityIdentifier("examen.solicitar")
                 }
             }
