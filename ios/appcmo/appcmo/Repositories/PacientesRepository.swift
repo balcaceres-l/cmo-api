@@ -29,4 +29,9 @@ nonisolated struct PacientesRepository: Sendable {
     func guardarHistorial(id: String, cambios: CambiosHistorial) async throws -> HistorialClinico {
         try await cliente.request(.put, "pacientes/\(id)/historial", cuerpo: cambios)
     }
+
+    /// El expediente del propio paciente (solo de lectura).
+    func miExpediente() async throws -> Expediente {
+        try await cliente.request(.get, "mi/expediente")
+    }
 }

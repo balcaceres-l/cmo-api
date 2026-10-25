@@ -33,4 +33,10 @@ nonisolated struct LaboratorioRepository: Sendable {
     func cancelar(idOrden: String, motivo: String? = nil) async throws -> OrdenLaboratorio {
         try await cliente.request(.patch, "ordenes-laboratorio/\(idOrden)/cancelar", cuerpo: CancelacionOrden(motivoCancelacion: motivo))
     }
+
+    /// Órdenes del propio paciente, con su estado.
+    func mias() async throws -> [OrdenLaboratorio] {
+        let pagina: Pagina<OrdenLaboratorio> = try await cliente.request(.get, "mi/laboratorio", consulta: [URLQueryItem(name: "per_page", value: "100")])
+        return pagina.data
+    }
 }

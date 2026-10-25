@@ -55,6 +55,31 @@ nonisolated enum EstadoCita: String, Decodable, Sendable {
         }
     }
 
+    /// Texto del estado para el paciente. "En espera" solo tiene sentido el mismo día de la cita (recepción registró
+    /// que ya llegó); cualquier otro día se muestra como una cita agendada.
+    func nombrePaciente(esHoy: Bool) -> String {
+        switch self {
+        case .solicitada: "Pendiente"
+        case .agendada: "Agendada"
+        case .enEspera: esHoy ? "En sala de espera" : "Agendada"
+        case .enAtencion: "En consulta"
+        case .atendida: "Atendida"
+        case .cancelada: "Cancelada"
+        case .noAsistio: "No asististe"
+        case .desconocido: "Sin estado"
+        }
+    }
+
+    var tonoPaciente: TonoEstado {
+        switch self {
+        case .solicitada: .advertencia
+        case .agendada, .enEspera, .enAtencion: .info
+        case .atendida: .exito
+        case .cancelada, .noAsistio: .error
+        case .desconocido: .neutro
+        }
+    }
+
     var tonoMedico: TonoEstado {
         switch self {
         case .agendada, .solicitada: .advertencia
@@ -106,6 +131,8 @@ nonisolated struct Cita: Decodable, Sendable, Equatable, Hashable, Identifiable 
     let paciente: Paciente?
     let medico: MedicoResumen?
     let consultorio: Consultorio?
+    /// Cuándo se creó (para mostrar "Enviada hoy" en una solicitud).
+    let createdAt: String?
 
     var id: String { idCita }
 
@@ -119,6 +146,7 @@ nonisolated struct Cita: Decodable, Sendable, Equatable, Hashable, Identifiable 
         case motivo, estado
         case motivoCancelacion = "motivo_cancelacion"
         case paciente, medico, consultorio
+        case createdAt = "created_at"
     }
 }
 

@@ -25,6 +25,9 @@ final class CitaDetalleViewModel {
         self.consultas = consultas
     }
 
+    /// La consulta solo se inicia el día de la cita (la API también lo exige).
+    var esDeHoy: Bool { cita.fecha == Formato.hoyAPI }
+
     /// Vuelve a pedir la cita: cambia de estado cuando se finaliza o se abandona su consulta.
     func recargar() async {
         guard let actual = try? await citas.delMedico().first(where: { $0.id == cita.id }) else { return }
@@ -35,6 +38,10 @@ final class CitaDetalleViewModel {
     /// Un médico no atiende a dos pacientes a la vez: antes de abrirla se mira su agenda actual y, si ya tiene
     /// otra consulta en atención, no se inicia. (La API todavía no lo valida; esta revisión es solo de la app.)
     func iniciarConsulta() async {
+        guard esDeHoy else {
+            error = "La consulta solo se inicia el día de la cita."
+            return
+        }
         trabajando = true
         error = nil
         enAtencion = nil
@@ -46,7 +53,7 @@ final class CitaDetalleViewModel {
                 return
             }
             consultaDestino = try await citas.abrirConsulta(idCita: cita.idCita).idConsulta
-        } catch APIError.conflicto {
+        } catch APIError.conflicto(let mensaje) where mensaje.contains("ya tiene una consulta") {
             // Ya tenía consulta (por ejemplo, se abrió desde otro equipo): se continúa esa.
             await abrirExistente(de: cita)
         } catch {

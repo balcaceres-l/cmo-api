@@ -50,10 +50,16 @@ struct CitaDetalleView: View {
                 .tarjeta(relleno: 0)
 
                 if cita.estado.sePuedeAtender {
-                    BotonPrincipal(titulo: "Iniciar consulta", cargando: viewModel.trabajando) {
+                    BotonPrincipal(titulo: "Iniciar consulta", cargando: viewModel.trabajando, deshabilitado: !viewModel.esDeHoy) {
                         Task { await viewModel.iniciarConsulta() }
                     }
                     .accessibilityIdentifier("cita.iniciarConsulta")
+                    if !viewModel.esDeHoy {
+                        Text("Podrás iniciarla el día de la cita.")
+                            .font(.footnote)
+                            .foregroundStyle(Color.cmoTintaSuave)
+                            .frame(maxWidth: .infinity)
+                    }
                 }
                 if cita.estado.tieneConsulta {
                     BotonPrincipal(titulo: cita.estado == .enAtencion ? "Continuar consulta" : "Ver consulta", cargando: viewModel.trabajando) {
