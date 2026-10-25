@@ -307,6 +307,7 @@ Errores:
 | POST | `/consultas/{id}/recetas` | MEDICO | Agrega una receta |
 | DELETE | `/recetas/{id}` | MEDICO | Elimina una receta |
 | PATCH | `/consultas/{id}/finalizar` | MEDICO | Cierra la consulta; la cita pasa a `ATENDIDA` |
+| PATCH | `/consultas/{id}/abandonar` | MEDICO (el de la consulta) | Sin cuerpo; descarta una consulta abierta por error (con sus recetas y órdenes sin iniciar) y devuelve la cita a `AGENDADA` (o `EN_ESPERA` si el paciente ya había llegado). Responde la cita |
 
 **Receta:** `medicamento`, `dosis`, `frecuencia` y `duracion` (requeridos), más `indicaciones` (opcional).
 
@@ -314,6 +315,7 @@ Reglas:
 - La consulta solo se abre sobre una cita `AGENDADA` o `EN_ESPERA`. Una segunda apertura responde 409 `La cita ya tiene una consulta.`
 - Una consulta cerrada es de solo lectura: editarla, agregar recetas u órdenes responde 409 `La consulta ya está cerrada.`
 - Un médico que no es el de la consulta recibe 403.
+- **Abandonar** borra la consulta con sus recetas y sus órdenes de laboratorio `PENDIENTE` o `CANCELADA`, y la cita vuelve a `AGENDADA` (o `EN_ESPERA` si tiene `hora_llegada`), por lo que se puede volver a iniciar. Solo vale para consultas abiertas; si el laboratorio ya trabaja una orden (`EN_PROCESO` o `COMPLETADO`) o la consulta está cerrada responde 409 (hay que finalizarla).
 
 ---
 
@@ -326,10 +328,12 @@ Reglas:
 | GET | `/ordenes-laboratorio?estado=&paciente=` | ADMINISTRADOR, RECEPCIONISTA, MEDICO | Cola de órdenes; el MEDICO ve las que él solicitó |
 | PATCH | `/ordenes-laboratorio/{id}/iniciar` | ADMINISTRADOR, RECEPCIONISTA | `PENDIENTE` → `EN_PROCESO` |
 | PATCH | `/ordenes-laboratorio/{id}/completar` | ADMINISTRADOR, RECEPCIONISTA | Sin cuerpo; `EN_PROCESO` → `COMPLETADO` |
+| PATCH | `/ordenes-laboratorio/{id}/cancelar` | MEDICO (el que la pidió) | `{ "motivo_cancelacion" }` (opcional); `PENDIENTE` → `CANCELADA` |
 | GET | `/mi/laboratorio` | PACIENTE | Órdenes propias con su estado |
 
-- **El laboratorio solo informa estados** (`PENDIENTE`, `EN_PROCESO`, `COMPLETADO`) con sus fechas (`fecha_solicitud`, `fecha_inicio`, `fecha_resultado`). Los datos del examen no se registran ni se devuelven en ningún endpoint.
+- **El laboratorio solo informa estados** (`PENDIENTE`, `EN_PROCESO`, `COMPLETADO`, y `CANCELADA` si el médico la anuló) con sus fechas (`fecha_solicitud`, `fecha_inicio`, `fecha_resultado`). Los datos del examen no se registran ni se devuelven en ningún endpoint.
 - Las transiciones solo avanzan; cualquier otra responde 409.
+- **Cancelar:** solo el médico que pidió la orden y solo mientras sigue `PENDIENTE` (aunque la consulta ya esté finalizada). La orden no se borra: queda `CANCELADA` con `fecha_cancelacion` y `motivo_cancelacion`, y el laboratorio ya no puede iniciarla ni completarla (409). Otro médico, recepción o el paciente reciben 403; una orden `EN_PROCESO` o `COMPLETADO` responde 409.
 
 ---
 
@@ -493,7 +497,7 @@ SOLICITADA ──confirmar──▶ AGENDADA ──llegada──▶ EN_ESPERA �
 - Abrir consulta: desde `AGENDADA` o `EN_ESPERA`.
 - Cualquier otra acción responde 409 `No se puede <acción> una cita en estado <estado>.`
 
-**Orden de laboratorio:** `PENDIENTE` → `EN_PROCESO` → `COMPLETADO`.
+**Orden de laboratorio:** `PENDIENTE` → `EN_PROCESO` → `COMPLETADO`; `PENDIENTE` → `CANCELADA` (el médico que la pidió).
 
 **Ambulancia:** `DISPONIBLE` → `EN_SERVICIO` (despacho) → `DISPONIBLE` (finalizar). `DISPONIBLE` ↔ `EN_MANTENIMIENTO` solo lo hace el administrador y sin servicio en curso.
 

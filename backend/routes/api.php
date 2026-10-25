@@ -74,7 +74,9 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
         Route::patch('consultas/{consulta}/finalizar', [ConsultaController::class, 'finalizar']);
         Route::post('consultas/{consulta}/recetas', [ConsultaController::class, 'receta']);
         Route::delete('recetas/{receta}', [ConsultaController::class, 'eliminarReceta']);
+        Route::patch('consultas/{consulta}/abandonar', [ConsultaController::class, 'abandonar']);
         Route::post('consultas/{consulta}/ordenes-laboratorio', [LaboratorioController::class, 'crear']);
+        Route::patch('ordenes-laboratorio/{orden}/cancelar', [LaboratorioController::class, 'cancelar']);
     });
 
     Route::get('examenes', [LaboratorioController::class, 'examenes'])->middleware('role:ADMINISTRADOR,MEDICO,RECEPCIONISTA');
