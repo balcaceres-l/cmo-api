@@ -8,6 +8,7 @@ import SwiftUI
 /// Aviso del hospital. Los internos (solo para el personal) se distinguen con otro color y la etiqueta "Interno".
 struct AvisoTarjeta: View {
     let aviso: Aviso
+    var nuevo = false
 
     private var tono: TonoEstado { aviso.publico ? .info : .advertencia }
 
@@ -20,6 +21,9 @@ struct AvisoTarjeta: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.cmoTinta)
                     Spacer(minLength: 8)
+                    if nuevo {
+                        EstadoChip(texto: "Nuevo", tono: .error)
+                    }
                     if !aviso.publico {
                         EstadoChip(texto: "Interno", tono: .advertencia)
                     }
