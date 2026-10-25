@@ -12,7 +12,7 @@ class OrdenLaboratorio extends HospitalModel
 
     protected function casts(): array
     {
-        return ['fecha_solicitud' => 'datetime', 'fecha_inicio' => 'datetime', 'fecha_resultado' => 'datetime'];
+        return ['fecha_solicitud' => 'datetime', 'fecha_inicio' => 'datetime', 'fecha_resultado' => 'datetime', 'fecha_cancelacion' => 'datetime'];
     }
 
     public function paciente(): BelongsTo

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * El laboratorio solo informa estados: PENDIENTE → EN_PROCESO → COMPLETADO.
+ * El médico puede cancelar (CANCELADA) una orden que sigue PENDIENTE.
  * Los datos del examen no pasan por el sistema.
  */
 class LaboratorioController extends ApiController
@@ -48,6 +49,23 @@ class LaboratorioController extends ApiController
     public function completar(Request $r, OrdenLaboratorio $orden)
     {
         return $this->avanzar($orden, 'EN_PROCESO', ['estado' => 'COMPLETADO', 'fecha_resultado' => now(), 'id_registrado_por' => $r->user()->id], 'Orden completada.');
+    }
+
+    /** El médico que la pidió puede cancelarla mientras el laboratorio no la haya iniciado. */
+    public function cancelar(Request $r, OrdenLaboratorio $orden)
+    {
+        abort_unless($orden->id_medico === $r->user()->id, 403);
+        $d = $r->validate(['motivo_cancelacion' => 'nullable|string']);
+
+        return DB::transaction(function () use ($orden, $d) {
+            $orden = OrdenLaboratorio::lockForUpdate()->findOrFail($orden->getKey());
+            if ($orden->estado !== 'PENDIENTE') {
+                throw new ConflictoException("La orden solo puede cancelarse mientras está PENDIENTE; estado actual: {$orden->estado}.");
+            }
+            $orden->update($d + ['estado' => 'CANCELADA', 'fecha_cancelacion' => now()]);
+
+            return $this->success($orden->refresh(), 'Orden cancelada.');
+        });
     }
 
     public function mias(Request $r)

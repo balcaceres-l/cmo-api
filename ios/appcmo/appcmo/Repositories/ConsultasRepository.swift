@@ -33,6 +33,11 @@ nonisolated struct ConsultasRepository: Sendable {
         try await cliente.request(.patch, "consultas/\(id)/finalizar")
     }
 
+    /// Descarta una consulta abierta por error; la cita vuelve a Agendada o En espera.
+    func abandonar(id: String) async throws -> Cita {
+        try await cliente.request(.patch, "consultas/\(id)/abandonar")
+    }
+
     /// La lista de citas no trae el id de la consulta; el expediente sí (`citas[].consulta`).
     func idDeConsulta(cita: Cita) async throws -> String? {
         let expediente: ExpedienteResumen = try await cliente.request(.get, "pacientes/\(cita.idPaciente)/expediente")

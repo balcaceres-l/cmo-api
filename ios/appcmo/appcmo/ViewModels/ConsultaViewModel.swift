@@ -9,7 +9,7 @@ import Observation
 /// Consulta general: diagnóstico, recetas y exámenes de laboratorio (HU-40 y HU-47).
 ///
 /// Lo que el médico escribe (motivo, diagnóstico, notas, recetas y exámenes) es un **borrador** que se guarda
-/// cifrado en este iPhone y se restaura si sale de la consulta. Recién al finalizar se envía a la API, en este
+/// cifrado en este iPhone y se restaura si sale de la consulta (se elimina solo si pasa una hora sin editarlo). Recién al finalizar se envía a la API, en este
 /// orden: datos de la consulta, recetas, exámenes y cierre. Así un examen pedido por error se puede quitar antes
 /// de que llegue al laboratorio (la API no permite cancelar una orden).
 @Observable
@@ -29,6 +29,8 @@ final class ConsultaViewModel {
     private(set) var examenesBorrador: [ExamenBorrador] = []
     private(set) var cerrada = false
     private(set) var ocupado = false
+    /// La consulta se abandonó: la pantalla se cierra.
+    private(set) var abandonada = false
     var aviso: AvisoMensaje?
 
     @ObservationIgnored private var servidor = (diagnostico: "", motivo: "", notas: "")
@@ -142,17 +144,6 @@ final class ConsultaViewModel {
         persistir()
     }
 
-    /// Tira lo escrito en este iPhone y vuelve a lo que hay en el servidor.
-    func descartarBorrador() {
-        almacen.borrar(usuario: idUsuario, consulta: idConsulta)
-        diagnostico = servidor.diagnostico
-        motivo = servidor.motivo
-        notas = servidor.notas
-        recetasBorrador = []
-        examenesBorrador = []
-        aviso = .informacion("Borrador descartado.")
-    }
-
     // MARK: - API
 
     /// Una receta que ya está en el servidor (la API sí permite borrarla mientras la consulta esté abierta).
@@ -161,6 +152,39 @@ final class ConsultaViewModel {
         do {
             try await consultas.eliminarReceta(id: receta.idReceta)
             recetas.removeAll { $0.idReceta == receta.idReceta }
+        } catch {
+            aviso = mensajeDeError(error).map(AvisoMensaje.error)
+        }
+    }
+
+    /// Cancela un examen que ya llegó al laboratorio y sigue pendiente (por ejemplo, tras un envío que se cortó).
+    func cancelarOrden(_ orden: OrdenLaboratorio) async {
+        aviso = nil
+        do {
+            let cancelada = try await laboratorio.cancelar(idOrden: orden.idOrden)
+            if let posicion = ordenes.firstIndex(where: { $0.idOrden == orden.idOrden }) {
+                ordenes[posicion] = OrdenLaboratorio(copiando: ordenes[posicion], estado: cancelada.estado, motivo: cancelada.motivoCancelacion, fecha: cancelada.fechaCancelacion)
+            }
+        } catch {
+            aviso = mensajeDeError(error).map(AvisoMensaje.error)
+        }
+    }
+
+    /// Se puede abandonar una consulta abierta mientras el laboratorio no haya trabajado ninguno de sus exámenes
+    /// (los pendientes o cancelados se descartan con la consulta).
+    var sePuedeAbandonar: Bool {
+        !cerrada && ordenes.allSatisfy { $0.estado == .pendiente || $0.estado == .cancelada }
+    }
+
+    /// Descarta la consulta abierta por error (también el borrador de este iPhone); la cita vuelve a la agenda como estaba.
+    func abandonar() async {
+        ocupado = true
+        aviso = nil
+        defer { ocupado = false }
+        do {
+            _ = try await consultas.abandonar(id: idConsulta)
+            almacen.borrar(usuario: idUsuario, consulta: idConsulta)
+            abandonada = true
         } catch {
             aviso = mensajeDeError(error).map(AvisoMensaje.error)
         }

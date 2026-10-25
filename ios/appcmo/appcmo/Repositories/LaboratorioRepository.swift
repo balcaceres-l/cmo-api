@@ -28,4 +28,9 @@ nonisolated struct LaboratorioRepository: Sendable {
         let pagina: Pagina<OrdenLaboratorio> = try await cliente.request(.get, "ordenes-laboratorio", consulta: consulta)
         return pagina.data
     }
+
+    /// Cancela una orden que sigue PENDIENTE (solo el médico que la pidió).
+    func cancelar(idOrden: String, motivo: String? = nil) async throws -> OrdenLaboratorio {
+        try await cliente.request(.patch, "ordenes-laboratorio/\(idOrden)/cancelar", cuerpo: CancelacionOrden(motivoCancelacion: motivo))
+    }
 }

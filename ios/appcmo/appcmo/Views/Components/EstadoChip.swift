@@ -66,7 +66,7 @@ extension EstadoOrden {
         case .pendiente: .advertencia
         case .enProceso: .info
         case .completado: .exito
-        case .desconocido: .neutro
+        case .cancelada, .desconocido: .neutro
         }
     }
 }

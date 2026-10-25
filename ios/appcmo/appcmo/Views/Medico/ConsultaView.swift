@@ -17,7 +17,9 @@ struct ConsultaView: View {
     @State private var viewModel: ConsultaViewModel
     @State private var hoja: Hoja?
     @State private var confirmandoFin = false
-    @State private var confirmandoDescarte = false
+    @State private var confirmandoAbandono = false
+    @State private var ordenPorCancelar: OrdenLaboratorio?
+    @Environment(\.dismiss) private var cerrar
 
     init(idConsulta: String, idUsuario: String) {
         _viewModel = State(initialValue: ConsultaViewModel(idConsulta: idConsulta, idUsuario: idUsuario))
@@ -30,6 +32,35 @@ struct ConsultaView: View {
         .background(Color.cmoFondo)
         .navigationTitle("Consulta")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            if viewModel.sePuedeAbandonar {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button("Abandonar consulta", systemImage: "trash", role: .destructive) { confirmandoAbandono = true }
+                            .accessibilityIdentifier("consulta.abandonar")
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .disabled(viewModel.ocupado)
+                    .accessibilityLabel("Más opciones")
+                    .accessibilityIdentifier("consulta.masOpciones")
+                }
+            }
+        }
+        .onChange(of: viewModel.abandonada) { if viewModel.abandonada { cerrar() } }
+        .confirmationDialog("¿Abandonar la consulta?", isPresented: $confirmandoAbandono, titleVisibility: .visible) {
+            Button("Abandonar consulta", role: .destructive) { Task { await viewModel.abandonar() } }
+            Button("Seguir en la consulta", role: .cancel) {}
+        } message: {
+            Text("Úsalo si la abriste por error. Se descarta lo que escribiste, las recetas y los exámenes que el laboratorio no haya empezado, y la cita vuelve a la agenda como estaba.")
+        }
+        .confirmationDialog("¿Cancelar este examen?", isPresented: Binding(get: { ordenPorCancelar != nil }, set: { if !$0 { ordenPorCancelar = nil } }), titleVisibility: .visible, presenting: ordenPorCancelar) { orden in
+            Button("Cancelar examen", role: .destructive) { Task { await viewModel.cancelarOrden(orden) } }
+            Button("Conservar", role: .cancel) {}
+        } message: { orden in
+            Text("\(orden.examen?.nombre ?? "El examen") dejará de estar en la cola del laboratorio.")
+        }
         .task {
             // Solo la primera vez: volver a cargar pisaría lo que el médico está escribiendo.
             if viewModel.carga.valor == nil { await viewModel.cargar() }
@@ -54,12 +85,6 @@ struct ConsultaView: View {
             Button("Cancelar", role: .cancel) {}
         } message: {
             Text(mensajeDeFinalizar)
-        }
-        .confirmationDialog("¿Descartar el borrador?", isPresented: $confirmandoDescarte, titleVisibility: .visible) {
-            Button("Descartar borrador", role: .destructive) { viewModel.descartarBorrador() }
-            Button("Cancelar", role: .cancel) {}
-        } message: {
-            Text("Se borra lo que escribiste en este iPhone y no enviaste todavía. Lo que ya esté en el servidor no cambia.")
         }
     }
 
@@ -95,31 +120,34 @@ struct ConsultaView: View {
 
                 recetas
                 examenes
-
-                if !viewModel.cerrada {
-                    HStack(spacing: 10) {
-                        BotonSecundario(titulo: "Receta", sistema: "plus") { hoja = .receta }
-                            .accessibilityIdentifier("consulta.agregarReceta")
-                        BotonSecundario(titulo: "Examen", sistema: "plus") { hoja = .examen }
-                            .accessibilityIdentifier("consulta.solicitarExamen")
-                    }
-                    BotonPrincipal(titulo: "Finalizar consulta", cargando: viewModel.ocupado) {
-                        confirmandoFin = true
-                    }
-                    .accessibilityIdentifier("consulta.finalizar")
-                    if viewModel.hayBorrador {
-                        Button("Descartar borrador") { confirmandoDescarte = true }
-                            .font(.subheadline)
-                            .foregroundStyle(Color.cmoTintaSuave)
-                            .frame(maxWidth: .infinity)
-                            .disabled(viewModel.ocupado)
-                            .accessibilityIdentifier("consulta.descartar")
-                    }
-                }
             }
             .padding(16)
         }
         .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if !viewModel.cerrada { acciones }
+        }
+    }
+
+    /// Receta, examen y finalizar quedan fijos al pie (sin la barra de pestañas encima) mientras la consulta está abierta.
+    private var acciones: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                BotonSecundario(titulo: "Receta", sistema: "plus") { hoja = .receta }
+                    .accessibilityIdentifier("consulta.agregarReceta")
+                BotonSecundario(titulo: "Examen", sistema: "plus") { hoja = .examen }
+                    .accessibilityIdentifier("consulta.solicitarExamen")
+            }
+            BotonPrincipal(titulo: "Finalizar consulta", cargando: viewModel.ocupado) {
+                confirmandoFin = true
+            }
+            .accessibilityIdentifier("consulta.finalizar")
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .background(Color.cmoFondo)
+        .overlay(alignment: .top) { Divider() }
     }
 
     private func paciente(_ consulta: Consulta) -> some View {
@@ -140,11 +168,6 @@ struct ConsultaView: View {
             Text("Inicio: \(Formato.marcaTiempo(consulta.fechaHoraInicio))")
                 .font(.caption)
                 .foregroundStyle(Color.cmoTintaSuave)
-            if viewModel.cerrada {
-                Label("Finalizada el \(Formato.marcaTiempo(consulta.fechaHoraFin)). Es de solo lectura.", systemImage: "lock.fill")
-                    .font(.caption)
-                    .foregroundStyle(Color.cmoExito)
-            }
         }
         .tarjeta()
     }
@@ -175,7 +198,9 @@ struct ConsultaView: View {
                 vacio("Aún no hay exámenes solicitados.")
             }
             ForEach(viewModel.ordenes) { orden in
-                OrdenFila(orden: orden).tarjeta()
+                OrdenFila(orden: orden, cancelar: { ordenPorCancelar = orden })
+                    .tarjeta()
+                    .opacity(orden.estado == .cancelada ? 0.6 : 1)
             }
             ForEach(viewModel.examenesBorrador) { examen in
                 HStack(spacing: 12) {
@@ -249,7 +274,8 @@ struct ConsultaView: View {
     }
 }
 
-/// Formulario de una receta: medicamento, dosis, frecuencia y duración son obligatorios.
+/// Formulario de recetas: medicamento, dosis, frecuencia y duración son obligatorios.
+/// Se pueden dejar listos varios medicamentos y agregarlos todos de una vez.
 struct RecetaFormView: View {
     @Environment(\.dismiss) private var cerrar
     let agregar: (SolicitudReceta) -> Bool
@@ -259,22 +285,68 @@ struct RecetaFormView: View {
     @State private var frecuencia = ""
     @State private var duracion = ""
     @State private var indicaciones = ""
+    @State private var listos: [SolicitudReceta] = []
 
     private var completo: Bool {
         ![medicamento, dosis, frecuencia, duracion].contains { $0.trimmingCharacters(in: .whitespaces).isEmpty }
     }
 
+    private var actual: SolicitudReceta {
+        let limpias = indicaciones.trimmingCharacters(in: .whitespacesAndNewlines)
+        return SolicitudReceta(
+            medicamento: medicamento.trimmingCharacters(in: .whitespaces),
+            dosis: dosis.trimmingCharacters(in: .whitespaces),
+            frecuencia: frecuencia.trimmingCharacters(in: .whitespaces),
+            duracion: duracion.trimmingCharacters(in: .whitespaces),
+            indicaciones: limpias.isEmpty ? nil : limpias
+        )
+    }
+
+    private var total: Int { listos.count + (completo ? 1 : 0) }
+
+    private func limpiar() {
+        medicamento = ""; dosis = ""; frecuencia = ""; duracion = ""; indicaciones = ""
+    }
+
     var body: some View {
         NavigationStack {
             Form {
-                Section {
+                if !listos.isEmpty {
+                    Section("Medicamentos de esta receta") {
+                        ForEach(Array(listos.enumerated()), id: \.offset) { posicion, receta in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(receta.medicamento).font(.subheadline.weight(.semibold))
+                                    Text("\(receta.dosis) · \(receta.frecuencia) · \(receta.duracion)")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.cmoTintaSuave)
+                                }
+                                Spacer()
+                                Button { listos.remove(at: posicion) } label: {
+                                    Image(systemName: "xmark").font(.footnote.weight(.semibold)).foregroundStyle(Color.cmoTintaSuave)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Quitar \(receta.medicamento)")
+                            }
+                        }
+                    }
+                }
+                Section(listos.isEmpty ? "Medicamento" : "Otro medicamento") {
                     TextField("Medicamento", text: $medicamento).accessibilityIdentifier("receta.medicamento")
                     TextField("Dosis (ej. 500 mg)", text: $dosis).accessibilityIdentifier("receta.dosis")
                     TextField("Frecuencia (ej. cada 8 horas)", text: $frecuencia).accessibilityIdentifier("receta.frecuencia")
                     TextField("Duración (ej. 7 días)", text: $duracion).accessibilityIdentifier("receta.duracion")
+                    TextField("Indicaciones (opcional)", text: $indicaciones, axis: .vertical).lineLimit(1...4)
                 }
-                Section("Indicaciones (opcional)") {
-                    TextField("Indicaciones", text: $indicaciones, axis: .vertical).lineLimit(2...5)
+                Section {
+                    Button {
+                        listos.append(actual)
+                        limpiar()
+                    } label: {
+                        Label("Agregar otro medicamento", systemImage: "plus")
+                    }
+                    .disabled(!completo)
+                    .accessibilityIdentifier("receta.otro")
                 }
             }
             .navigationTitle("Nueva receta")
@@ -282,18 +354,12 @@ struct RecetaFormView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { cerrar() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Agregar") {
-                        let limpias = indicaciones.trimmingCharacters(in: .whitespacesAndNewlines)
-                        let receta = SolicitudReceta(
-                            medicamento: medicamento.trimmingCharacters(in: .whitespaces),
-                            dosis: dosis.trimmingCharacters(in: .whitespaces),
-                            frecuencia: frecuencia.trimmingCharacters(in: .whitespaces),
-                            duracion: duracion.trimmingCharacters(in: .whitespaces),
-                            indicaciones: limpias.isEmpty ? nil : limpias
-                        )
-                        if agregar(receta) { cerrar() }
+                    Button(total > 1 ? "Agregar (\(total))" : "Agregar") {
+                        let todas = listos + (completo ? [actual] : [])
+                        for receta in todas { _ = agregar(receta) }
+                        cerrar()
                     }
-                    .disabled(!completo)
+                    .disabled(total == 0)
                     .accessibilityIdentifier("receta.agregar")
                 }
             }
@@ -302,7 +368,7 @@ struct RecetaFormView: View {
     }
 }
 
-/// Elegir un examen del catálogo; queda como borrador hasta finalizar la consulta.
+/// Elegir uno o varios exámenes del catálogo; quedan como borrador hasta finalizar la consulta.
 struct OrdenFormView: View {
     @Environment(\.dismiss) private var cerrar
     let cargarExamenes: () async -> [Examen]
@@ -310,13 +376,13 @@ struct OrdenFormView: View {
 
     @State private var examenes: [Examen] = []
     @State private var cargando = true
-    @State private var elegido: Examen?
+    @State private var elegidos: [Examen] = []
     @State private var observaciones = ""
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Examen") {
+                Section("Exámenes") {
                     if cargando {
                         ProgressView()
                     } else if examenes.isEmpty {
@@ -324,12 +390,16 @@ struct OrdenFormView: View {
                     }
                     ForEach(examenes) { examen in
                         Button {
-                            elegido = examen
+                            if let posicion = elegidos.firstIndex(of: examen) {
+                                elegidos.remove(at: posicion)
+                            } else {
+                                elegidos.append(examen)
+                            }
                         } label: {
                             HStack {
                                 Text(examen.nombre).foregroundStyle(Color.cmoTinta)
                                 Spacer()
-                                if elegido == examen {
+                                if elegidos.contains(examen) {
                                     Image(systemName: "checkmark").foregroundStyle(Color.cmoMarca)
                                 }
                             }
@@ -341,16 +411,16 @@ struct OrdenFormView: View {
                     TextField("Indicaciones para el laboratorio", text: $observaciones, axis: .vertical).lineLimit(2...5)
                 }
             }
-            .navigationTitle("Solicitar examen")
+            .navigationTitle("Pedir examen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancelar") { cerrar() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Agregar") {
-                        guard let elegido else { return }
-                        if solicitar(elegido, observaciones) { cerrar() }
+                    Button(elegidos.count > 1 ? "Agregar (\(elegidos.count))" : "Agregar") {
+                        for examen in elegidos { _ = solicitar(examen, observaciones) }
+                        cerrar()
                     }
-                    .disabled(elegido == nil)
+                    .disabled(elegidos.isEmpty)
                     .accessibilityIdentifier("examen.solicitar")
                 }
             }
