@@ -655,6 +655,19 @@ fun DoctorExpedientesTab(
     var searchQ by remember { mutableStateOf("") }
     var seleccionado by remember { mutableStateOf(expedientes.firstOrNull()) }
 
+    val filtrados = expedientes.filter {
+        searchQ.isBlank() ||
+        it.paciente.nombreCompleto.contains(searchQ, ignoreCase = true) ||
+        (it.paciente.dui?.contains(searchQ, ignoreCase = true) == true) ||
+        (it.paciente.numeroExpediente?.contains(searchQ, ignoreCase = true) == true)
+    }
+
+    LaunchedEffect(filtrados) {
+        if (seleccionado == null || filtrados.none { it.paciente.id == seleccionado?.paciente?.id }) {
+            seleccionado = filtrados.firstOrNull()
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -685,12 +698,37 @@ fun DoctorExpedientesTab(
             OutlinedTextField(
                 value = searchQ,
                 onValueChange = { searchQ = it },
-                label = { Text("Buscar por DNI, Ficha (#89410) o Nombre...") },
+                label = { Text("Buscar por DNI, Ficha o Nombre...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = CmoPrimary) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
+        }
+
+        // Selector rápido de pacientes filtrados
+        if (filtrados.isNotEmpty()) {
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(filtrados) { exp ->
+                        val isSel = exp.paciente.id == seleccionado?.paciente?.id
+                        FilterChip(
+                            selected = isSel,
+                            onClick = { seleccionado = exp },
+                            label = {
+                                Text(
+                                    text = exp.paciente.nombreCompleto.split(" ").take(2).joinToString(" "),
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            leadingIcon = if (isSel) {
+                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            } else null
+                        )
+                    }
+                }
+            }
         }
 
         // Paciente seleccionado
@@ -741,6 +779,22 @@ fun DoctorExpedientesTab(
                         if (exp.comorbilidades.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text("Comorbilidades: " + exp.comorbilidades.joinToString(" · "), fontSize = 11.sp, color = CmoTextMuted)
+                        }
+
+                        // Signos Vitales Basales del Expediente
+                        if (exp.signosVitales.hasAnyData) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("Últimos Signos Vitales Basales:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CmoTextSoft)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                VitalsChip(label = "PA", value = exp.signosVitales.presionTexto, unit = "", color = CmoPrimary, modifier = Modifier.weight(1f))
+                                VitalsChip(label = "PULSO", value = "${exp.signosVitales.frecuenciaCardiaca ?: "--"}", unit = "lpm", color = StatusGreen, modifier = Modifier.weight(1f))
+                                VitalsChip(label = "TEMP", value = "${exp.signosVitales.temperaturaC ?: "--"}", unit = "°C", color = StatusAmber, modifier = Modifier.weight(1f))
+                                VitalsChip(label = "SPO2", value = "${exp.signosVitales.saturacionOxigeno ?: "--"}", unit = "%", color = CmoPrimary, modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }
