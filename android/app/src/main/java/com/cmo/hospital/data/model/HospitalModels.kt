@@ -88,6 +88,31 @@ data class Paciente(
             0
         }
     }
+
+    companion object {
+        fun extraerIniciales(nombreCompleto: String): String {
+            val tokens = nombreCompleto.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
+            if (tokens.isEmpty()) return "XX"
+            val ini1 = tokens[0].firstOrNull()?.uppercaseChar() ?: 'X'
+            val ini2 = if (tokens.size >= 2) {
+                tokens[1].firstOrNull()?.uppercaseChar() ?: 'X'
+            } else if (tokens[0].length >= 2) {
+                tokens[0][1].uppercaseChar()
+            } else {
+                ini1
+            }
+            return "$ini1$ini2"
+        }
+
+        /**
+         * Formato de expediente clínico: (LB-2026-001)
+         * Primera letra del primer nombre + primera letra del primer apellido + año + correlativo
+         */
+        fun generarNumeroExpediente(nombreCompleto: String, year: Int = 2026, correlativo: Int = 1): String {
+            val iniciales = extraerIniciales(nombreCompleto)
+            return String.format(java.util.Locale.US, "%s-%d-%03d", iniciales, year, correlativo)
+        }
+    }
 }
 
 /**
@@ -143,15 +168,29 @@ data class RecetaItem(
  */
 data class OrdenLaboratorioItem(
     val id: String = java.util.UUID.randomUUID().toString(),
+    @SerializedName("id_paciente") val pacienteId: String? = null,
+    @SerializedName("paciente_nombre") val pacienteNombre: String? = null,
+    @SerializedName("numero_expediente") val numeroExpediente: String? = null,
     @SerializedName("id_examen") val idExamen: String? = null,
     @SerializedName("examen_nombre") val examenNombre: String,
     @SerializedName("tipo_tubo") val tipoTubo: String? = "Tubo EDTA",
     val prioridad: String = "RUTINA", // STAT, RUTINA
-    val estado: String = "PENDIENTE", // PENDIENTE, EN_PROCESO, COMPLETADO
+    val estado: String = "En Espera", // En Espera, Agendado, En Proceso, Realizado, Cancelado
     @SerializedName("fecha_solicitud") val fechaSolicitud: String? = null,
     @SerializedName("fecha_resultado") val fechaResultado: String? = null,
-    val observaciones: String? = null
-)
+    val observaciones: String? = null,
+    @SerializedName("medico_solicitante") val medicoSolicitante: String? = "Dr. Alejandro Restrepo"
+) {
+    companion object {
+        val ESTADOS_VALIDOS = listOf(
+            "En Espera",
+            "Agendado",
+            "En Proceso",
+            "Realizado",
+            "Cancelado"
+        )
+    }
+}
 
 /**
  * Estado de semáforo para el tiempo de consulta médica de 30 minutos.

@@ -103,4 +103,36 @@ class HospitalBusinessLogicTest {
         assertEquals(EstadoSemaforo.ROJO, calcularSemaforo(26))
         assertEquals(EstadoSemaforo.ROJO, calcularSemaforo(35))
     }
+
+    @Test
+    fun testFormatoNumeroExpedienteIniciales() {
+        // Formato (LB-2026-001): Primera letra del primer nombre + primera letra del primer apellido + año + correlativo
+        assertEquals("LB-2026-001", Paciente.generarNumeroExpediente("Luis Barillas", 2026, 1))
+        assertEquals("CM-2026-002", Paciente.generarNumeroExpediente("Carlos Mendoza", 2026, 2))
+        assertEquals("MS-2026-003", Paciente.generarNumeroExpediente("Mariana Silva Rivas", 2026, 3))
+        assertEquals("LM-2026-004", Paciente.generarNumeroExpediente("Lucía Morales Castillo", 2026, 4))
+    }
+
+    @Test
+    fun testEstadosLaboratorioPermitidosYTransicion() {
+        val estadosEsperados = listOf("En Espera", "Agendado", "En Proceso", "Realizado", "Cancelado")
+        assertEquals(estadosEsperados, OrdenLaboratorioItem.ESTADOS_VALIDOS)
+
+        val orden = OrdenLaboratorioItem(
+            examenNombre = "Troponina I",
+            pacienteNombre = "Luis Barillas",
+            numeroExpediente = "LB-2026-001",
+            estado = "En Espera"
+        )
+        assertEquals("En Espera", orden.estado)
+
+        // El Doctor cambia el estado a Realizado
+        val ordenRealizada = orden.copy(estado = "Realizado", fechaResultado = "Hoy, 10:45")
+        assertEquals("Realizado", ordenRealizada.estado)
+        assertEquals("Hoy, 10:45", ordenRealizada.fechaResultado)
+
+        // O a Cancelado
+        val ordenCancelada = orden.copy(estado = "Cancelado")
+        assertEquals("Cancelado", ordenCancelada.estado)
+    }
 }

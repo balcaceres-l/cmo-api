@@ -97,10 +97,27 @@ class DoctorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun emitirOrdenLab(examenes: List<String>, prioridad: String, obs: String) {
+    fun emitirOrdenLab(
+        examenes: List<String>,
+        prioridad: String,
+        obs: String,
+        paciente: Paciente? = null,
+        estadoInicial: String = "En Espera"
+    ) {
         viewModelScope.launch {
-            val res = clinicalRepository.emitirOrdenLaboratorio(examenes, prioridad, obs)
-            _uiState.value = _uiState.value.copy(userMessage = "Orden LIS enviada con prioridad $prioridad.")
+            val res = clinicalRepository.emitirOrdenLaboratorio(examenes, prioridad, obs, paciente, estadoInicial)
+            _uiState.value = _uiState.value.copy(userMessage = "✅ Exámenes indicados guardados en el expediente y enviados al laboratorio.")
+        }
+    }
+
+    /**
+     * El Doctor es el encargado de cambiar el estado de los laboratorios
+     * (En Espera, Agendado, En Proceso, Realizado, Cancelado).
+     */
+    fun cambiarEstadoLaboratorio(ordenId: String, nuevoEstado: String) {
+        viewModelScope.launch {
+            val res = clinicalRepository.cambiarEstadoLaboratorio(ordenId, nuevoEstado)
+            _uiState.value = _uiState.value.copy(userMessage = "Estado actualizado a: $nuevoEstado")
         }
     }
 

@@ -62,7 +62,7 @@ class RecepcionistaRepository(private val context: Context) {
             paciente = PacienteInfo(
                 id = "p-" + System.currentTimeMillis().toString().takeLast(4),
                 nombreCompleto = pacienteNombre,
-                numeroExpediente = "EXP-2026-" + (100 + (1..899).random()),
+                numeroExpediente = Paciente.generarNumeroExpediente(pacienteNombre, 2026, (10..99).random()),
                 dui = dui,
                 sexo = "M",
                 fechaNacimiento = fechaNacimiento
@@ -152,7 +152,7 @@ class RecepcionistaRepository(private val context: Context) {
                         paciente = PacienteInfo(
                             id = paciente.id,
                             nombreCompleto = paciente.nombreCompleto,
-                            numeroExpediente = paciente.numeroExpediente ?: "EXP-2026-00042",
+                            numeroExpediente = paciente.numeroExpediente ?: Paciente.generarNumeroExpediente(paciente.nombreCompleto),
                             dui = paciente.dui,
                             sexo = paciente.sexo,
                             fechaNacimiento = paciente.fechaNacimiento
@@ -174,7 +174,7 @@ class RecepcionistaRepository(private val context: Context) {
                 paciente = PacienteInfo(
                     id = paciente.id,
                     nombreCompleto = paciente.nombreCompleto,
-                    numeroExpediente = paciente.numeroExpediente ?: "EXP-2026-EME",
+                    numeroExpediente = paciente.numeroExpediente ?: Paciente.generarNumeroExpediente(paciente.nombreCompleto),
                     dui = paciente.dui,
                     sexo = paciente.sexo,
                     fechaNacimiento = paciente.fechaNacimiento
@@ -262,7 +262,7 @@ class RecepcionistaRepository(private val context: Context) {
                 horaFin = "09:00",
                 estado = "EN_ATENCION",
                 motivo = "Control de hipertensión y dolor torácico leve",
-                paciente = PacienteInfo("p-1", "Carlos Mendoza", "EXP-2026-000104", "14.891.203-K", "M", "1981-05-14"),
+                paciente = PacienteInfo("p-1", "Carlos Mendoza", "CM-2026-001", "14.891.203-K", "M", "1981-05-14"),
                 consultorio = ConsultorioInfo("cs-1", "Medicina Interna", "Box 03"),
                 signosVitales = SignosVitales(
                     presionSistolica = 120,
@@ -283,7 +283,7 @@ class RecepcionistaRepository(private val context: Context) {
                 horaFin = "09:45",
                 estado = "EN_ESPERA",
                 motivo = "Cefalea persistente y mareos matutinos",
-                paciente = PacienteInfo("p-2", "Lucía Morales Castillo", "EXP-2026-000108", "16.782.341-8", "F", "1992-08-20"),
+                paciente = PacienteInfo("p-2", "Lucía Morales Castillo", "LM-2026-002", "16.782.341-8", "F", "1992-08-20"),
                 consultorio = ConsultorioInfo("cs-1", "Medicina General", "Box 03"),
                 signosVitales = SignosVitales(
                     presionSistolica = 110,
@@ -299,7 +299,7 @@ class RecepcionistaRepository(private val context: Context) {
                 horaFin = "10:30",
                 estado = "AGENDADA",
                 motivo = "Evaluación de dermatitis y rinitis alérgica",
-                paciente = PacienteInfo("p-3", "Rodrigo Valenzuela", "EXP-2026-000115", "05192834-9", "M", "2001-11-03"),
+                paciente = PacienteInfo("p-3", "Rodrigo Valenzuela", "RV-2026-003", "05192834-9", "M", "2001-11-03"),
                 consultorio = ConsultorioInfo("cs-1", "Alergología", "Box 02")
             ),
             Cita(
@@ -309,7 +309,7 @@ class RecepcionistaRepository(private val context: Context) {
                 horaFin = "08:00",
                 estado = "ATENDIDA",
                 motivo = "Seguimiento post-alta bronquitis aguda",
-                paciente = PacienteInfo("p-4", "Elena Beatriz Campos", "EXP-2026-000092", "01928374-1", "F", "1975-02-17"),
+                paciente = PacienteInfo("p-4", "Elena Beatriz Campos", "EC-2026-004", "01928374-1", "F", "1975-02-17"),
                 consultorio = ConsultorioInfo("cs-1", "Medicina Interna", "Box 03")
             )
         )

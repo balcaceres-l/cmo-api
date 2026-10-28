@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,39 +55,27 @@ fun DoctorMainScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(CmoPrimaryContainer),
-                            contentAlignment = Alignment.Center
+                        Surface(
+                            shape = CircleShape,
+                            color = CmoPrimary,
+                            modifier = Modifier.size(36.dp)
                         ) {
-                            Icon(Icons.Default.LocalHospital, contentDescription = null, tint = CmoPrimaryFixed, modifier = Modifier.size(24.dp))
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "HUC CMO",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Surface(shape = RoundedCornerShape(4.dp), color = CmoPrimary) {
-                                    Text(
-                                        text = "MÉDICO",
-                                        color = CmoPrimaryFixed,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
+                            Box(contentAlignment = Alignment.Center) {
+                                Text("👨‍⚕️", fontSize = 18.sp)
                             }
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
                             Text(
-                                text = "${uiState.currentUser?.nombreCompleto ?: consulta.medicoNombre} · ${consulta.box}",
+                                text = "Hospital CMO · Portal Médico",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = CmoSurface
+                            )
+                            Text(
+                                text = "${uiState.currentUser?.nombreCompleto ?: "Dr. Alejandro Restrepo"} · ${uiState.currentUser?.cargo ?: "Medicina Interna"}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CmoTeal
+                                color = CmoTextMuted
                             )
                         }
                     }
@@ -95,8 +84,8 @@ fun DoctorMainScreen(
                     IconButton(onClick = { viewModel.logout(onLogout) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = "Cerrar sesión",
-                            tint = Color(0xFFF08A8C)
+                            contentDescription = "Cerrar Sesión",
+                            tint = Color.White
                         )
                     }
                 },
@@ -159,15 +148,27 @@ fun DoctorMainScreen(
                     onGuardarAnamnesis = { viewModel.guardarAnamnesis(it) },
                     onAgregarReceta = { viewModel.agregarReceta(it) },
                     onEliminarReceta = { viewModel.eliminarReceta(it) },
+                    onEmitirLab = { examenes, prio, obs, pac, st ->
+                        viewModel.emitirOrdenLab(examenes, prio, obs, pac, st)
+                    },
+                    onCambiarEstadoLab = { id, st -> viewModel.cambiarEstadoLaboratorio(id, st) },
                     onFinalizar = { viewModel.finalizarConsulta {} },
                     onIrALab = { viewModel.setTab(2) }
                 )
                 1 -> DoctorExpedientesTab(
-                    expedientes = expedientes
+                    expedientes = expedientes,
+                    onEmitirLab = { examenes, prio, obs, pac, st ->
+                        viewModel.emitirOrdenLab(examenes, prio, obs, pac, st)
+                    },
+                    onCambiarEstadoLab = { id, st -> viewModel.cambiarEstadoLaboratorio(id, st) }
                 )
                 2 -> DoctorLaboratorioTab(
                     ordenes = ordenesLab,
-                    onEmitir = { examenes, prio, obs -> viewModel.emitirOrdenLab(examenes, prio, obs) }
+                    pacientesDisponibles = expedientes.map { it.paciente },
+                    onEmitir = { examenes, prio, obs, pac, st ->
+                        viewModel.emitirOrdenLab(examenes, prio, obs, pac, st)
+                    },
+                    onCambiarEstado = { id, st -> viewModel.cambiarEstadoLaboratorio(id, st) }
                 )
             }
         }
@@ -188,18 +189,21 @@ fun DoctorConsultaTab(
     onGuardarAnamnesis: (String) -> Unit,
     onAgregarReceta: (RecetaItem) -> Unit,
     onEliminarReceta: (String) -> Unit,
+    onEmitirLab: (List<String>, String, String, Paciente?, String) -> Unit,
+    onCambiarEstadoLab: (String, String) -> Unit,
     onFinalizar: () -> Unit,
     onIrALab: () -> Unit
 ) {
     var mostrarDialogoVitals by remember { mutableStateOf(false) }
     var mostrarDialogoCie10 by remember { mutableStateOf(false) }
     var mostrarDialogoReceta by remember { mutableStateOf(false) }
+    var mostrarDialogoLabConsulta by remember { mutableStateOf(false) }
 
     var anamnesisText by remember(consulta.anamnesis) { mutableStateOf(consulta.anamnesis) }
 
     val min = consulta.segundosTranscurridos / 60
     val seg = consulta.segundosTranscurridos % 60
-    val tiempoFormateado = String.format("%02d:%02d", min, seg)
+    val tiempoFormateado = String.format(java.util.Locale.US, "%02d:%02d", min, seg)
 
     LazyColumn(
         modifier = Modifier
@@ -209,146 +213,178 @@ fun DoctorConsultaTab(
     ) {
         item {
             Spacer(modifier = Modifier.height(4.dp))
-            // Box & Turn Header Card
+            // Banner Cronómetro y Semáforo de Consulta (30 minutos)
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = CmoSurface)
+                colors = CardDefaults.cardColors(
+                    containerColor = when (consulta.estadoSemaforo) {
+                        EstadoSemaforo.VERDE -> StatusGreenBg
+                        EstadoSemaforo.AMBAR -> StatusAmberBg
+                        EstadoSemaforo.ROJO -> StatusRedBg
+                    }
+                ),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.5.dp,
+                    when (consulta.estadoSemaforo) {
+                        EstadoSemaforo.VERDE -> StatusGreen
+                        EstadoSemaforo.AMBAR -> StatusAmber
+                        EstadoSemaforo.ROJO -> StatusRed
+                    }
+                )
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(CmoPrimarySoft),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.MeetingRoom, contentDescription = null, tint = CmoPrimary, modifier = Modifier.size(20.dp))
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(consulta.box, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CmoPrimaryDark)
-                                Text("${consulta.especialidad} · Urgencias", fontSize = 11.sp, color = CmoTextSoft)
-                            }
+                            Surface(
+                                shape = CircleShape,
+                                color = when (consulta.estadoSemaforo) {
+                                    EstadoSemaforo.VERDE -> StatusGreen
+                                    EstadoSemaforo.AMBAR -> StatusAmber
+                                    EstadoSemaforo.ROJO -> StatusRed
+                                },
+                                modifier = Modifier.size(12.dp)
+                            ) {}
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = when (consulta.estadoSemaforo) {
+                                    EstadoSemaforo.VERDE -> "🟢 EN TIEMPO ÓPTIMO"
+                                    EstadoSemaforo.AMBAR -> "🟡 PRÓXIMO A CONCLUIR (5 MIN)"
+                                    EstadoSemaforo.ROJO -> "🔴 TIEMPO AGOTADO (30 MIN)"
+                                },
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = when (consulta.estadoSemaforo) {
+                                    EstadoSemaforo.VERDE -> StatusGreen
+                                    EstadoSemaforo.AMBAR -> StatusAmber
+                                    EstadoSemaforo.ROJO -> StatusRed
+                                }
+                            )
                         }
 
-                        Surface(shape = RoundedCornerShape(99.dp), color = CmoPrimarySoft) {
-                            Text("Mañana 07:00 - 15:00", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CmoPrimary, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                        // Pausa / Reanudar cronómetro
+                        IconButton(onClick = onToggleCronometro, modifier = Modifier.size(28.dp)) {
+                            Icon(
+                                imageVector = if (isCronometroCorriendo) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
+                                contentDescription = "Pausa",
+                                tint = CmoText
+                            )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                    // Medidor de avance de citas
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Column {
+                            Text(
+                                text = tiempoFormateado,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Black,
+                                color = CmoText
+                            )
+                            Text(
+                                text = "Bloque de 30 min · ${consulta.minutosRestantes}m restantes",
+                                fontSize = 11.sp,
+                                color = CmoTextSoft
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = CmoSurface,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        ) {
+                            Text(
+                                text = consulta.box,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CmoPrimary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Ficha del Paciente en Box
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CmoSurface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Agenda de Turno: 8 Citas", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CmoText)
-                        Text("3 Atendidas · 1 En Box · 4 En Espera", fontSize = 11.sp, color = CmoTextSoft)
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(99.dp))
-                    ) {
-                        Box(modifier = Modifier.weight(3f).fillMaxHeight().background(CmoPrimary))
-                        Box(modifier = Modifier.weight(1f).fillMaxHeight().background(StatusAmber))
-                        Box(modifier = Modifier.weight(4f).fillMaxHeight().background(CmoSurfaceContainerHigh))
-                    }
-                }
-            }
-        }
-
-        // SEMÁFORO DE TIEMPO DE CONSULTA (30 MINUTOS)
-        item {
-            val colorSemaforo = when (consulta.estadoSemaforo) {
-                EstadoSemaforo.VERDE -> StatusGreen
-                EstadoSemaforo.AMBAR -> StatusAmber
-                EstadoSemaforo.ROJO -> StatusRed
-            }
-            val colorSemaforoBg = when (consulta.estadoSemaforo) {
-                EstadoSemaforo.VERDE -> StatusGreenBg
-                EstadoSemaforo.AMBAR -> StatusAmberBg
-                EstadoSemaforo.ROJO -> StatusRedBg
-            }
-            val textoSemaforo = when (consulta.estadoSemaforo) {
-                EstadoSemaforo.VERDE -> "🟢 Consulta en tiempo regular (< 20 min)"
-                EstadoSemaforo.AMBAR -> "🟡 Atención por concluir · 5 min restantes"
-                EstadoSemaforo.ROJO -> "🔴 Tiempo de consulta agotado (> 25 min) · Sobretiempo"
-            }
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = colorSemaforoBg),
-                border = androidx.compose.foundation.BorderStroke(1.dp, colorSemaforo.copy(alpha = 0.5f))
-            ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .clip(CircleShape)
-                                    .background(colorSemaforo)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
+                        Column {
                             Text(
-                                text = "CRONÓMETRO DE CONSULTA (30 MIN)",
+                                text = consulta.paciente.nombreCompleto,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = CmoText
+                            )
+                            Text(
+                                text = "Edad: ${consulta.paciente.edad} años (${consulta.paciente.fechaNacimiento ?: "N/D"}) · DNI: ${consulta.paciente.dui ?: "N/D"}",
+                                fontSize = 11.sp,
+                                color = CmoTextSoft
+                            )
+                            Text(
+                                text = "Expediente: ${consulta.paciente.numeroExpediente ?: "N/D"}",
+                                fontSize = 11.sp,
+                                color = CmoPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = CmoPrimarySoft
+                        ) {
+                            Text(
+                                text = consulta.paciente.prevision ?: "Fonasa",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = colorSemaforo
+                                color = CmoPrimary,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = tiempoFormateado,
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = colorSemaforo
-                        )
-                        Text(
-                            text = textoSemaforo,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = colorSemaforo
-                        )
                     }
 
-                    Column(horizontalAlignment = Alignment.End) {
-                        IconButton(onClick = onToggleCronometro) {
-                            Icon(
-                                imageVector = if (isCronometroCorriendo) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
-                                contentDescription = null,
-                                tint = colorSemaforo,
-                                modifier = Modifier.size(36.dp)
-                            )
+                    // Alergias
+                    consulta.paciente.alergias?.let { alergias ->
+                        if (alergias.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = StatusRedBg
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.Warning, contentDescription = null, tint = StatusRed, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Alergias: $alergias", fontSize = 11.sp, color = StatusRed, fontWeight = FontWeight.SemiBold)
+                                }
+                            }
                         }
-                        Text(
-                            text = if (isCronometroCorriendo) "Pausar" else "Reanudar",
-                            fontSize = 10.sp,
-                            color = colorSemaforo,
-                            fontWeight = FontWeight.Bold
-                        )
                     }
                 }
             }
         }
 
-        // Paciente en Box
+        // Triaje y Signos Vitales (con botón para que el Doctor los tome directamente)
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -361,63 +397,97 @@ fun DoctorConsultaTab(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
-                            Text(consulta.paciente.nombreCompleto, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CmoText)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "Edad: ${consulta.paciente.edad} años (${consulta.paciente.fechaNacimiento ?: "N/D"}) · DNI: ${consulta.paciente.dui ?: "N/D"}",
-                                fontSize = 11.sp,
-                                color = CmoTextSoft
+                                text = "Signos Vitales del Triaje",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = CmoText
                             )
-                            Text("Ficha: ${consulta.paciente.numeroExpediente ?: "N/D"} · Cobertura: ${consulta.paciente.prevision ?: "Fonasa"}", fontSize = 11.sp, color = CmoPrimary)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            if (!consulta.signosVitales.hasAnyData) {
+                                Surface(shape = RoundedCornerShape(4.dp), color = StatusAmberBg) {
+                                    Text("Pase de Emergencia", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = StatusAmber, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp))
+                                }
+                            }
                         }
-                        Surface(shape = RoundedCornerShape(99.dp), color = StatusAmberBg) {
-                            Text("En Atención", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = StatusAmber, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+
+                        TextButton(onClick = { mostrarDialogoVitals = true }) {
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Tomar / Ajustar", fontSize = 11.sp, color = CmoPrimary)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    // Signos Vitales del Triaje (con botón de tomar/editar si es emergencia)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Signos Vitales Clínicos", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = CmoText)
-                        TextButton(onClick = { mostrarDialogoVitals = true }) {
-                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Tomar / Editar Signos", fontSize = 11.sp, color = CmoPrimary)
-                        }
-                    }
-
-                    val sv = consulta.signosVitales
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        VitalsChip(label = "Presión", value = sv.presionTexto, unit = "", color = StatusBlue, modifier = Modifier.weight(1f))
-                        VitalsChip(label = "FC", value = sv.frecuenciaCardiaca?.toString() ?: "--", unit = "lpm", color = StatusRed, modifier = Modifier.weight(1f))
-                        VitalsChip(label = "Temp", value = sv.temperaturaC?.toString() ?: "--", unit = "°C", color = StatusAmber, modifier = Modifier.weight(1f))
-                        VitalsChip(label = "SpO2", value = sv.saturacionOxigeno?.toString() ?: "--", unit = "%", color = CmoPrimary, modifier = Modifier.weight(1f))
-                    }
-
-                    sv.imc?.let { imc ->
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Antropometría: ${sv.pesoKg ?: "--"} kg · ${sv.tallaCm ?: "--"} cm ➔ IMC: $imc (${sv.imcClasificacion})",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = CmoTextSoft
+                        VitalsChip(
+                            label = "PA",
+                            value = consulta.signosVitales.presionTexto,
+                            unit = "",
+                            color = CmoPrimary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        VitalsChip(
+                            label = "PULSO",
+                            value = "${consulta.signosVitales.frecuenciaCardiaca ?: "--"}",
+                            unit = "lpm",
+                            color = StatusGreen,
+                            modifier = Modifier.weight(1f)
+                        )
+                        VitalsChip(
+                            label = "TEMP",
+                            value = "${consulta.signosVitales.temperaturaC ?: "--"}",
+                            unit = "°C",
+                            color = StatusAmber,
+                            modifier = Modifier.weight(1f)
+                        )
+                        VitalsChip(
+                            label = "SPO2",
+                            value = "${consulta.signosVitales.saturacionOxigeno ?: "--"}",
+                            unit = "%",
+                            color = CmoPrimary,
+                            modifier = Modifier.weight(1f)
                         )
                     }
 
-                    sv.observaciones?.let { obs ->
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("Obs de triaje: $obs", fontSize = 11.sp, color = CmoTextMuted)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        VitalsChip(
+                            label = "PESO",
+                            value = "${consulta.signosVitales.pesoKg ?: "--"}",
+                            unit = "kg",
+                            color = CmoText,
+                            modifier = Modifier.weight(1f)
+                        )
+                        VitalsChip(
+                            label = "TALLA",
+                            value = "${consulta.signosVitales.tallaCm ?: "--"}",
+                            unit = "cm",
+                            color = CmoText,
+                            modifier = Modifier.weight(1f)
+                        )
+                        VitalsChip(
+                            label = "IMC",
+                            value = "${consulta.signosVitales.imc ?: "--"}",
+                            unit = consulta.signosVitales.imcClasificacion,
+                            color = CmoPrimaryDark,
+                            modifier = Modifier.weight(1.2f)
+                        )
                     }
                 }
             }
         }
 
-        // Hipótesis Diagnóstica (CIE-10)
+        // Diagnóstico CIE-10
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -501,15 +571,15 @@ fun DoctorConsultaTab(
                             onGuardarAnamnesis(it)
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Describa motivo de consulta, examen físico y plan terapéutico...") },
-                        minLines = 4,
-                        maxLines = 8
+                        minLines = 3,
+                        maxLines = 6,
+                        placeholder = { Text("Registrar motivo de consulta, examen físico, hallazgos...") }
                     )
                 }
             }
         }
 
-        // Receta Médica Digital
+        // Recetario Digital
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -522,15 +592,15 @@ fun DoctorConsultaTab(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Receta Médica Digital", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CmoText)
+                        Text("Prescripciones Farmacológicas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CmoText)
                         TextButton(onClick = { mostrarDialogoReceta = true }) {
-                            Icon(Icons.Default.AddCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Añadir Fármaco", fontSize = 11.sp, color = CmoPrimary)
+                            Text("Prescribir", fontSize = 11.sp, color = CmoPrimary)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     if (consulta.recetas.isEmpty()) {
                         Text("No hay medicamentos prescritos en esta consulta.", fontSize = 12.sp, color = CmoTextSoft)
@@ -566,6 +636,48 @@ fun DoctorConsultaTab(
             }
         }
 
+        // Exámenes de Laboratorio Indicados en Consulta
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CmoSurface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Exámenes de Laboratorio Indicados", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CmoText)
+                            Text("Registrados en expediente del paciente y LIS", fontSize = 11.sp, color = CmoTextSoft)
+                        }
+                        TextButton(onClick = { mostrarDialogoLabConsulta = true }) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Indicar Examen", fontSize = 11.sp, color = CmoPrimary)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    if (consulta.ordenesLaboratorio.isEmpty()) {
+                        Text("No se han indicado exámenes de laboratorio para esta consulta.", fontSize = 12.sp, color = CmoTextSoft)
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            consulta.ordenesLaboratorio.forEach { ord ->
+                                TarjetaOrdenLaboratorioDoctor(
+                                    orden = ord,
+                                    onCambiarEstado = { nuevoEstado -> onCambiarEstadoLab(ord.id, nuevoEstado) }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Acciones Finales de Consulta
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -576,7 +688,7 @@ fun DoctorConsultaTab(
                 ) {
                     Icon(Icons.Default.Science, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Emitir Orden de Laboratorio / LIS", fontWeight = FontWeight.SemiBold)
+                    Text("Ir al Módulo de Laboratorio / LIS", fontWeight = FontWeight.SemiBold)
                 }
 
                 Button(
@@ -595,7 +707,7 @@ fun DoctorConsultaTab(
         item { Spacer(modifier = Modifier.height(24.dp)) }
     }
 
-    // Diálogo para que el Doctor tome/edite signos vitales
+    // Diálogo editar signos
     if (mostrarDialogoVitals) {
         DialogoEditarSignos(
             signosActuales = consulta.signosVitales,
@@ -628,6 +740,18 @@ fun DoctorConsultaTab(
             }
         )
     }
+
+    // Diálogo Indicar Examen de Laboratorio desde Consulta
+    if (mostrarDialogoLabConsulta) {
+        DialogoIndicarExamenesLaboratorio(
+            paciente = consulta.paciente,
+            onDismiss = { mostrarDialogoLabConsulta = false },
+            onConfirmar = { examenes, prioridad, obs, estadoInicial ->
+                onEmitirLab(examenes, prioridad, obs, consulta.paciente, estadoInicial)
+                mostrarDialogoLabConsulta = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -646,14 +770,17 @@ fun VitalsChip(label: String, value: String, unit: String, color: Color, modifie
 }
 
 // =================================================================
-// TAB 2: EXPEDIENTES CLÍNICOS & HISTORIAL (AUDITADO & LEY PRIVACIDAD)
+// TAB 2: EXPEDIENTES CLÍNICOS & HISTORIAL (FORMATO LB-2026-001)
 // =================================================================
 @Composable
 fun DoctorExpedientesTab(
-    expedientes: List<com.cmo.hospital.repository.DoctorClinicalRepository.ExpedienteDetalle>
+    expedientes: List<com.cmo.hospital.repository.DoctorClinicalRepository.ExpedienteDetalle>,
+    onEmitirLab: (List<String>, String, String, Paciente?, String) -> Unit,
+    onCambiarEstadoLab: (String, String) -> Unit
 ) {
     var searchQ by remember { mutableStateOf("") }
     var seleccionado by remember { mutableStateOf(expedientes.firstOrNull()) }
+    var mostrarDialogoLabExp by remember { mutableStateOf(false) }
 
     val filtrados = expedientes.filter {
         searchQ.isBlank() ||
@@ -698,7 +825,7 @@ fun DoctorExpedientesTab(
             OutlinedTextField(
                 value = searchQ,
                 onValueChange = { searchQ = it },
-                label = { Text("Buscar por DNI, Ficha o Nombre...") },
+                label = { Text("Buscar por DNI, Expediente (LB-2026-001) o Nombre...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = CmoPrimary) },
                 modifier = Modifier.fillMaxWidth(),
@@ -717,8 +844,8 @@ fun DoctorExpedientesTab(
                             onClick = { seleccionado = exp },
                             label = {
                                 Text(
-                                    text = exp.paciente.nombreCompleto.split(" ").take(2).joinToString(" "),
-                                    fontSize = 12.sp,
+                                    text = "${exp.paciente.nombreCompleto.split(" ").take(2).joinToString(" ")} (${exp.paciente.numeroExpediente ?: "N/D"})",
+                                    fontSize = 11.sp,
                                     fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal
                                 )
                             },
@@ -747,7 +874,7 @@ fun DoctorExpedientesTab(
                             Column {
                                 Text(exp.paciente.nombreCompleto, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CmoText)
                                 Text("Edad: ${exp.paciente.edad} años (${exp.paciente.fechaNacimiento ?: "N/D"}) · DNI: ${exp.paciente.dui ?: "N/D"}", fontSize = 11.sp, color = CmoTextSoft)
-                                Text("Expediente: ${exp.paciente.numeroExpediente ?: "N/D"}", fontSize = 11.sp, color = CmoPrimary, fontWeight = FontWeight.Bold)
+                                Text("Expediente: ${exp.paciente.numeroExpediente ?: "N/D"}", fontSize = 12.sp, color = CmoPrimary, fontWeight = FontWeight.ExtraBold)
                             }
                             exp.cama?.let {
                                 Surface(shape = RoundedCornerShape(6.dp), color = CmoPrimarySoft) {
@@ -784,7 +911,7 @@ fun DoctorExpedientesTab(
                         // Signos Vitales Basales del Expediente
                         if (exp.signosVitales.hasAnyData) {
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text("Últimos Signos Vitales Basales:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CmoTextSoft)
+                            Text("Últimos Signos Vitales Registrados:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CmoTextSoft)
                             Spacer(modifier = Modifier.height(6.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -800,8 +927,57 @@ fun DoctorExpedientesTab(
                 }
             }
 
+            // Exámenes de Laboratorio en el Expediente
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            "Exámenes de Laboratorio en Expediente (${exp.ordenesLaboratorio.size})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = CmoText
+                        )
+                        Text("Historial y estado de análisis clínicos", fontSize = 11.sp, color = CmoTextSoft)
+                    }
+                    TextButton(onClick = { mostrarDialogoLabExp = true }) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Indicar Examen", fontSize = 11.sp, color = CmoPrimary)
+                    }
+                }
+            }
+
+            if (exp.ordenesLaboratorio.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = CmoSurface)
+                    ) {
+                        Text(
+                            "No hay exámenes de laboratorio registrados en este expediente.",
+                            fontSize = 12.sp,
+                            color = CmoTextSoft,
+                            modifier = Modifier.padding(14.dp)
+                        )
+                    }
+                }
+            } else {
+                items(exp.ordenesLaboratorio) { ord ->
+                    TarjetaOrdenLaboratorioDoctor(
+                        orden = ord,
+                        onCambiarEstado = { nuevoEstado -> onCambiarEstadoLab(ord.id, nuevoEstado) }
+                    )
+                }
+            }
+
             // Cronología de Atenciones
             item {
+                Spacer(modifier = Modifier.height(6.dp))
                 Text("Cronología de Atenciones Médicas", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CmoText)
             }
 
@@ -831,27 +1007,40 @@ fun DoctorExpedientesTab(
 
         item { Spacer(modifier = Modifier.height(20.dp)) }
     }
+
+    if (mostrarDialogoLabExp) {
+        seleccionado?.let { exp ->
+            DialogoIndicarExamenesLaboratorio(
+                paciente = exp.paciente,
+                onDismiss = { mostrarDialogoLabExp = false },
+                onConfirmar = { examenes, prioridad, obs, estadoInicial ->
+                    onEmitirLab(examenes, prioridad, obs, exp.paciente, estadoInicial)
+                    mostrarDialogoLabExp = false
+                }
+            )
+        }
+    }
 }
 
 // =================================================================
-// TAB 3: LABORATORIO CLÍNICO LIS (STAT < 30 MIN VS RUTINARIO)
+// TAB 3: LABORATORIO CLÍNICO LIS (EL DOCTOR GESTIONA Y CAMBIA ESTADOS)
 // =================================================================
 @Composable
 fun DoctorLaboratorioTab(
     ordenes: List<OrdenLaboratorioItem>,
-    onEmitir: (List<String>, String, String) -> Unit
+    pacientesDisponibles: List<Paciente>,
+    onEmitir: (List<String>, String, String, Paciente?, String) -> Unit,
+    onCambiarEstado: (String, String) -> Unit
 ) {
-    var prioridad by remember { mutableStateOf("STAT") } // STAT o RUTINA
-    var obs by remember { mutableStateOf("") }
+    var filtroEstado by remember { mutableStateOf("Todos") }
+    var mostrarDialogoCrear by remember { mutableStateOf(false) }
 
-    val catalogo = listOf(
-        "Hemograma Completo + Plaquetas" to "Tubo EDTA",
-        "Troponina I Alta Sensibilidad (hs-cTnI)" to "Protocolo SCA",
-        "Gasometría Arterial y Electrolitos" to "Heparina Li",
-        "Perfil Bioquímico & Renal" to "Suero Seco",
-        "Dímero D Cuantitativo" to "Citrato"
-    )
-    val seleccionados = remember { mutableStateListOf("Hemograma Completo + Plaquetas", "Troponina I Alta Sensibilidad (hs-cTnI)") }
+    val estadosFiltro = listOf("Todos", "En Espera", "Agendado", "En Proceso", "Realizado", "Cancelado")
+    val ordenesFiltradas = if (filtroEstado == "Todos") {
+        ordenes
+    } else {
+        ordenes.filter { it.estado.equals(filtroEstado, ignoreCase = true) }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -861,7 +1050,7 @@ fun DoctorLaboratorioTab(
     ) {
         item {
             Spacer(modifier = Modifier.height(4.dp))
-            // Card Emisión de Orden
+            // Cabecera institucional LIS
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -877,163 +1066,444 @@ fun DoctorLaboratorioTab(
                             Icon(Icons.Default.Biotech, contentDescription = null, tint = CmoPrimary)
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
-                                Text("Emisión de Orden al LIS", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CmoText)
-                                Text("Laboratorio Clínico Central", fontSize = 11.sp, color = CmoTextSoft)
+                                Text("Módulo de Laboratorio Clínico", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CmoText)
+                                Text("Gestión y control de estados de órdenes", fontSize = 11.sp, color = CmoTextSoft)
                             }
                         }
-                        Surface(shape = RoundedCornerShape(99.dp), color = CmoPrimarySoft) {
-                            Text("LIS Conectado", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = CmoPrimary, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Selector de Prioridad Obligatorio
-                    Text("PRIORIDAD ANALÍTICA (OBLIGATORIA)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CmoTextSoft)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Surface(
-                            shape = RoundedCornerShape(99.dp),
-                            color = if (prioridad == "RUTINA") CmoPrimary else CmoSurfaceContainerLow,
-                            modifier = Modifier.weight(1f).clickable { prioridad = "RUTINA" }
-                        ) {
-                            Text("Rutinario (Turno)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (prioridad == "RUTINA") Color.White else CmoText, modifier = Modifier.padding(vertical = 8.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(99.dp),
-                            color = if (prioridad == "STAT") StatusRed else CmoSurfaceContainerLow,
-                            modifier = Modifier.weight(1f).clickable { prioridad = "STAT" }
-                        ) {
-                            Text("⚡ Urgente / STAT (< 30m)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (prioridad == "STAT") Color.White else CmoText, modifier = Modifier.padding(vertical = 8.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                        }
-                    }
-
-                    if (prioridad == "STAT") {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text("⚠️ Alerta prioritaria activa: Tiempos de respuesta reducidos a 30 min en LIS.", fontSize = 11.sp, color = StatusRed, fontWeight = FontWeight.SemiBold)
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Lista de determinaciones
-                    Text("Determinaciones Bioquímicas (${seleccionados.size} elegidas)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CmoText)
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    catalogo.forEach { (nombre, tubo) ->
-                        val isChecked = seleccionados.contains(nombre)
-                        Surface(
+                        Button(
+                            onClick = { mostrarDialogoCrear = true },
                             shape = RoundedCornerShape(8.dp),
-                            color = CmoSurfaceContainerLow,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 3.dp)
-                                .clickable {
-                                    if (isChecked) seleccionados.remove(nombre) else seleccionados.add(nombre)
-                                }
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(10.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                    Checkbox(checked = isChecked, onCheckedChange = {
-                                        if (it) seleccionados.add(nombre) else seleccionados.remove(nombre)
-                                    })
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(nombre, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = CmoText)
-                                }
-                                Surface(shape = RoundedCornerShape(4.dp), color = CmoPrimarySoft) {
-                                    Text(tubo, fontSize = 10.sp, color = CmoPrimary, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                                }
-                            }
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Indicar Examen", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    OutlinedTextField(
-                        value = obs,
-                        onValueChange = { obs = it },
-                        label = { Text("Justificación clínica") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Text("FILTRAR POR ESTADO DE ANÁLISIS", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = CmoTextSoft)
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Button(
-                        onClick = {
-                            if (seleccionados.isNotEmpty()) {
-                                onEmitir(seleccionados.toList(), prioridad, obs)
-                                obs = ""
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = if (prioridad == "STAT") StatusRed else CmoPrimary)
-                    ) {
-                        Text("EMITIR ORDEN ANALÍTICA AL LIS", fontWeight = FontWeight.Bold)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(estadosFiltro) { est ->
+                            val isSel = filtroEstado == est
+                            FilterChip(
+                                selected = isSel,
+                                onClick = { filtroEstado = est },
+                                label = { Text(est, fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = CmoPrimary,
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                        }
                     }
                 }
             }
         }
 
-        // Cola de órdenes activas
+        // Contador y lista de órdenes
         item {
-            Text("Órdenes de Laboratorio en Seguimiento", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CmoText)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Órdenes Registradas (${ordenesFiltradas.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = CmoText
+                )
+                Text(
+                    text = "Toca el estado para cambiarlo ▾",
+                    fontSize = 11.sp,
+                    color = CmoPrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
 
-        items(ordenes) { ord ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = CmoSurface)
-            ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+        if (ordenesFiltradas.isEmpty()) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = CmoSurface)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(ord.examenNombre, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = CmoText)
-                            if (ord.prioridad == "STAT") {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Surface(shape = RoundedCornerShape(4.dp), color = StatusRedBg) {
-                                    Text("STAT", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = StatusRed, modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp))
-                                }
-                            }
-                        }
-                        Text("Tubo: ${ord.tipoTubo ?: "Estándar"} · Solicitud: ${ord.fechaSolicitud ?: "Hoy"}", fontSize = 11.sp, color = CmoTextSoft)
-                        ord.observaciones?.let { Text(it, fontSize = 11.sp, color = CmoTextMuted) }
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(99.dp),
-                        color = when (ord.estado) {
-                            "COMPLETADO" -> StatusGreenBg
-                            "EN_PROCESO" -> StatusAmberBg
-                            else -> StatusBlueBg
-                        }
-                    ) {
-                        Text(
-                            text = ord.estado,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = when (ord.estado) {
-                                "COMPLETADO" -> StatusGreen
-                                "EN_PROCESO" -> StatusAmber
-                                else -> StatusBlue
-                            },
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
-                    }
+                    Text(
+                        text = "No hay órdenes con estado: $filtroEstado",
+                        fontSize = 12.sp,
+                        color = CmoTextSoft,
+                        modifier = Modifier.padding(16.dp),
+                        textAlign = TextAlign.Center
+                    )
                 }
+            }
+        } else {
+            items(ordenesFiltradas) { ord ->
+                TarjetaOrdenLaboratorioDoctor(
+                    orden = ord,
+                    mostrarInfoPaciente = true,
+                    onCambiarEstado = { nuevoEstado -> onCambiarEstado(ord.id, nuevoEstado) }
+                )
             }
         }
 
         item { Spacer(modifier = Modifier.height(20.dp)) }
     }
+
+    if (mostrarDialogoCrear) {
+        DialogoIndicarExamenesLaboratorio(
+            pacientesDisponibles = pacientesDisponibles,
+            onDismiss = { mostrarDialogoCrear = false },
+            onConfirmar = { examenes, prioridad, obs, estadoInicial, paciente ->
+                onEmitir(examenes, prioridad, obs, paciente, estadoInicial)
+                mostrarDialogoCrear = false
+            }
+        )
+    }
+}
+
+// =================================================================
+// COMPONENTE: TARJETA DE ORDEN DE LABORATORIO CON CAMBIO DE ESTADO
+// =================================================================
+@Composable
+fun TarjetaOrdenLaboratorioDoctor(
+    orden: OrdenLaboratorioItem,
+    mostrarInfoPaciente: Boolean = false,
+    onCambiarEstado: (String) -> Unit
+) {
+    var menuExpandido by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = CmoSurface)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            // Fila 1: Nombre de Examen, Prioridad y Selector de Estado interactivo
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Text(orden.examenNombre, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = CmoText)
+                    if (orden.prioridad == "STAT") {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(shape = RoundedCornerShape(4.dp), color = StatusRedBg) {
+                            Text("⚡ STAT", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = StatusRed, modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp))
+                        }
+                    }
+                }
+
+                // Botón interactivo para cambiar el estado de la orden
+                Box {
+                    val colorEstado = when (orden.estado) {
+                        "Realizado" -> StatusGreen
+                        "Cancelado" -> Color(0xFF6B7280)
+                        "En Espera" -> StatusAmber
+                        "Agendado" -> StatusBlue
+                        "En Proceso" -> Color(0xFF7E22CE)
+                        else -> CmoPrimary
+                    }
+                    val bgEstado = when (orden.estado) {
+                        "Realizado" -> StatusGreenBg
+                        "Cancelado" -> Color(0xFFF3F4F6)
+                        "En Espera" -> StatusAmberBg
+                        "Agendado" -> StatusBlueBg
+                        "En Proceso" -> Color(0xFFF3E8FF)
+                        else -> CmoPrimarySoft
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(99.dp),
+                        color = bgEstado,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, colorEstado.copy(alpha = 0.5f)),
+                        modifier = Modifier.clickable { menuExpandido = true }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = orden.estado,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = colorEstado
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = colorEstado, modifier = Modifier.size(16.dp))
+                        }
+                    }
+
+                    DropdownMenu(
+                        expanded = menuExpandido,
+                        onDismissRequest = { menuExpandido = false }
+                    ) {
+                        OrdenLaboratorioItem.ESTADOS_VALIDOS.forEach { estadoOpcion ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = estadoOpcion,
+                                        fontWeight = if (estadoOpcion == orden.estado) FontWeight.Bold else FontWeight.Normal,
+                                        color = when (estadoOpcion) {
+                                            "Realizado" -> StatusGreen
+                                            "Cancelado" -> StatusRed
+                                            "En Espera" -> StatusAmber
+                                            "Agendado" -> StatusBlue
+                                            "En Proceso" -> Color(0xFF7E22CE)
+                                            else -> CmoText
+                                        }
+                                    )
+                                },
+                                onClick = {
+                                    menuExpandido = false
+                                    onCambiarEstado(estadoOpcion)
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = when (estadoOpcion) {
+                                            "Realizado" -> Icons.Default.CheckCircle
+                                            "Cancelado" -> Icons.Default.Cancel
+                                            "En Espera" -> Icons.Default.HourglassTop
+                                            "Agendado" -> Icons.Default.Event
+                                            else -> Icons.Default.Autorenew
+                                        },
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Paciente y Expediente (Formato LB-2026-001)
+            orden.pacienteNombre?.let { pacNom ->
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(13.dp), tint = CmoPrimary)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "$pacNom · Expediente: ${orden.numeroExpediente ?: "N/D"}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CmoPrimary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Tubo: ${orden.tipoTubo ?: "Estándar"} · Solicitud: ${orden.fechaSolicitud ?: "Hoy"}${if (orden.fechaResultado != null) " · Resultado: ${orden.fechaResultado}" else ""}",
+                fontSize = 11.sp,
+                color = CmoTextSoft
+            )
+
+            orden.observaciones?.let { obs ->
+                if (obs.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Indicación: $obs", fontSize = 11.sp, color = CmoTextMuted)
+                }
+            }
+        }
+    }
+}
+
+// =================================================================
+// DIÁLOGO PARA INDICAR EXÁMENES DE LABORATORIO
+// =================================================================
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DialogoIndicarExamenesLaboratorio(
+    paciente: Paciente? = null,
+    pacientesDisponibles: List<Paciente> = emptyList(),
+    onDismiss: () -> Unit,
+    onConfirmar: (List<String>, String, String, String, Paciente?) -> Unit = { _, _, _, _, _ -> }
+) {
+    var pacienteElegido by remember { mutableStateOf(paciente ?: pacientesDisponibles.firstOrNull()) }
+    var prioridad by remember { mutableStateOf("RUTINA") }
+    var estadoInicial by remember { mutableStateOf("En Espera") }
+    var obs by remember { mutableStateOf("") }
+    var examenPersonalizado by remember { mutableStateOf("") }
+
+    val catalogo = listOf(
+        "Hemograma Completo + Plaquetas",
+        "Troponina I Alta Sensibilidad (hs-cTnI)",
+        "Gasometría Arterial y Electrolitos",
+        "Perfil Bioquímico & Renal",
+        "Perfil Lipídico & Glucemia",
+        "Urocultivo & Antibiograma",
+        "Examen General de Orina (EGO)",
+        "Dímero D Cuantitativo"
+    )
+
+    val seleccionados = remember { mutableStateListOf<String>() }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text("Indicar Exámenes de Laboratorio", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                pacienteElegido?.let {
+                    Text(
+                        text = "Paciente: ${it.nombreCompleto} (${it.numeroExpediente ?: "N/D"})",
+                        fontSize = 12.sp,
+                        color = CmoPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        },
+        text = {
+            LazyColumn(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Selector de paciente si no está predefinido
+                if (paciente == null && pacientesDisponibles.isNotEmpty()) {
+                    item {
+                        Text("SELECCIONAR PACIENTE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = CmoTextSoft)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(pacientesDisponibles) { pac ->
+                                val isSel = pacienteElegido?.id == pac.id
+                                FilterChip(
+                                    selected = isSel,
+                                    onClick = { pacienteElegido = pac },
+                                    label = { Text("${pac.nombreCompleto.split(" ").first()} (${pac.numeroExpediente})", fontSize = 11.sp) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Prioridad
+                item {
+                    Text("PRIORIDAD ANALÍTICA", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = CmoTextSoft)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (prioridad == "RUTINA") CmoPrimary else CmoSurfaceContainerLow,
+                            modifier = Modifier.weight(1f).clickable { prioridad = "RUTINA" }
+                        ) {
+                            Text("Rutinario", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (prioridad == "RUTINA") Color.White else CmoText, modifier = Modifier.padding(vertical = 8.dp), textAlign = TextAlign.Center)
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (prioridad == "STAT") StatusRed else CmoSurfaceContainerLow,
+                            modifier = Modifier.weight(1f).clickable { prioridad = "STAT" }
+                        ) {
+                            Text("⚡ STAT (< 30m)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (prioridad == "STAT") Color.White else CmoText, modifier = Modifier.padding(vertical = 8.dp), textAlign = TextAlign.Center)
+                        }
+                    }
+                }
+
+                // Estado Inicial
+                item {
+                    Text("ESTADO INICIAL DE LA ORDEN", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = CmoTextSoft)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("En Espera", "Agendado", "En Proceso").forEach { est ->
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (estadoInicial == est) CmoPrimary else CmoSurfaceContainerLow,
+                                modifier = Modifier.weight(1f).clickable { estadoInicial = est }
+                            ) {
+                                Text(est, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (estadoInicial == est) Color.White else CmoText, modifier = Modifier.padding(vertical = 6.dp), textAlign = TextAlign.Center)
+                            }
+                        }
+                    }
+                }
+
+                // Catálogo de Exámenes
+                item {
+                    Text("SELECCIONAR EXÁMENES (${seleccionados.size} seleccionados)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = CmoTextSoft)
+                }
+
+                items(catalogo) { ex ->
+                    val isChecked = seleccionados.contains(ex)
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = CmoSurfaceContainerLow,
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            if (isChecked) seleccionados.remove(ex) else seleccionados.add(ex)
+                        }
+                    ) {
+                        Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = isChecked, onCheckedChange = {
+                                if (it) seleccionados.add(ex) else seleccionados.remove(ex)
+                            })
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(ex, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = CmoText)
+                        }
+                    }
+                }
+
+                // Examen personalizado
+                item {
+                    OutlinedTextField(
+                        value = examenPersonalizado,
+                        onValueChange = { examenPersonalizado = it },
+                        label = { Text("Otro examen (opcional)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+
+                // Justificación médica
+                item {
+                    OutlinedTextField(
+                        value = obs,
+                        onValueChange = { obs = it },
+                        label = { Text("Indicaciones clínicas / Observaciones") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val listaFinal = seleccionados.toMutableList()
+                    if (examenPersonalizado.isNotBlank()) {
+                        listaFinal.add(examenPersonalizado.trim())
+                    }
+                    if (listaFinal.isNotEmpty()) {
+                        onConfirmar(listaFinal, prioridad, obs, estadoInicial, pacienteElegido)
+                    }
+                },
+                enabled = seleccionados.isNotEmpty() || examenPersonalizado.isNotBlank()
+            ) {
+                Text("Guardar en Expediente & Enviar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+// Diálogo sobrecargado para cuando ya se conoce el paciente
+@Composable
+fun DialogoIndicarExamenesLaboratorio(
+    paciente: Paciente,
+    onDismiss: () -> Unit,
+    onConfirmar: (List<String>, String, String, String) -> Unit
+) {
+    DialogoIndicarExamenesLaboratorio(
+        paciente = paciente,
+        pacientesDisponibles = listOf(paciente),
+        onDismiss = onDismiss,
+        onConfirmar = { examenes, prioridad, obs, estadoInicial, _ ->
+            onConfirmar(examenes, prioridad, obs, estadoInicial)
+        }
+    )
 }
 
 // =================================================================
@@ -1050,110 +1520,238 @@ fun DialogoEditarSignos(
     var fc by remember { mutableStateOf(signosActuales.frecuenciaCardiaca?.toString() ?: "") }
     var fr by remember { mutableStateOf(signosActuales.frecuenciaRespiratoria?.toString() ?: "") }
     var temp by remember { mutableStateOf(signosActuales.temperaturaC?.toString() ?: "") }
-    var sat by remember { mutableStateOf(signosActuales.saturacionOxigeno?.toString() ?: "") }
+    var spo2 by remember { mutableStateOf(signosActuales.saturacionOxigeno?.toString() ?: "") }
     var peso by remember { mutableStateOf(signosActuales.pesoKg?.toString() ?: "") }
     var talla by remember { mutableStateOf(signosActuales.tallaCm?.toString() ?: "") }
     var obs by remember { mutableStateOf(signosActuales.observaciones ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Toma de Signos Vitales en Box", fontWeight = FontWeight.Bold) },
+        title = {
+            Column {
+                Text("Toma / Ajuste de Signos Vitales", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text("Campos flexibles (opcionales para emergencia)", fontSize = 11.sp, color = CmoTextSoft)
+            }
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Campos flexibles (útil para emergencias y re-toma directa):", fontSize = 11.sp, color = CmoTextSoft)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedTextField(value = sist, onValueChange = { sist = it }, label = { Text("Sistólica") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    OutlinedTextField(value = diast, onValueChange = { diast = it }, label = { Text("Diastólica") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = sist,
+                            onValueChange = { sist = it },
+                            label = { Text("PA Sist.") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                        OutlinedTextField(
+                            value = diast,
+                            onValueChange = { diast = it },
+                            label = { Text("PA Diast.") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                    }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedTextField(value = fc, onValueChange = { fc = it }, label = { Text("FC (lpm)") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                    OutlinedTextField(value = fr, onValueChange = { fr = it }, label = { Text("FR (rpm)") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = fc,
+                            onValueChange = { fc = it },
+                            label = { Text("FC (lpm)") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                        OutlinedTextField(
+                            value = fr,
+                            onValueChange = { fr = it },
+                            label = { Text("FR (rpm)") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                    }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedTextField(value = temp, onValueChange = { temp = it }, label = { Text("Temp (°C)") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                    OutlinedTextField(value = sat, onValueChange = { sat = it }, label = { Text("SpO2 (%)") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = temp,
+                            onValueChange = { temp = it },
+                            label = { Text("Temp (°C)") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
+                        OutlinedTextField(
+                            value = spo2,
+                            onValueChange = { spo2 = it },
+                            label = { Text("SpO2 (%)") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                    }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedTextField(value = peso, onValueChange = { peso = it }, label = { Text("Peso (kg)") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-                    OutlinedTextField(value = talla, onValueChange = { talla = it }, label = { Text("Talla (cm)") }, modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = peso,
+                            onValueChange = { peso = it },
+                            label = { Text("Peso (kg)") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
+                        OutlinedTextField(
+                            value = talla,
+                            onValueChange = { talla = it },
+                            label = { Text("Talla (cm)") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
+                    }
                 }
-                OutlinedTextField(value = obs, onValueChange = { obs = it }, label = { Text("Notas de signos") }, modifier = Modifier.fillMaxWidth())
+                item {
+                    OutlinedTextField(
+                        value = obs,
+                        onValueChange = { obs = it },
+                        label = { Text("Observaciones del examen físico") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         },
         confirmButton = {
             Button(onClick = {
-                onGuardar(
-                    SignosVitales(
-                        presionSistolica = sist.toIntOrNull(),
-                        presionDiastolica = diast.toIntOrNull(),
-                        frecuenciaCardiaca = fc.toIntOrNull(),
-                        frecuenciaRespiratoria = fr.toIntOrNull(),
-                        temperaturaC = temp.toDoubleOrNull(),
-                        saturacionOxigeno = sat.toIntOrNull(),
-                        pesoKg = peso.toDoubleOrNull(),
-                        tallaCm = talla.toDoubleOrNull(),
-                        observaciones = obs.ifBlank { null }
-                    )
+                val nuevos = SignosVitales(
+                    presionSistolica = sist.toIntOrNull(),
+                    presionDiastolica = diast.toIntOrNull(),
+                    frecuenciaCardiaca = fc.toIntOrNull(),
+                    frecuenciaRespiratoria = fr.toIntOrNull(),
+                    temperaturaC = temp.toDoubleOrNull(),
+                    saturacionOxigeno = spo2.toIntOrNull(),
+                    pesoKg = peso.toDoubleOrNull(),
+                    tallaCm = talla.toDoubleOrNull(),
+                    observaciones = obs.ifBlank { null }
                 )
-            }) { Text("Guardar Signos") }
+                onGuardar(nuevos)
+            }) {
+                Text("Guardar Signos")
+            }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
     )
 }
 
 @Composable
-fun DialogoAgregarCie10(onDismiss: () -> Unit, onAgregar: (String, String) -> Unit) {
-    var codigo by remember { mutableStateOf("") }
-    var desc by remember { mutableStateOf("") }
+fun DialogoAgregarCie10(
+    onDismiss: () -> Unit,
+    onAgregar: (String, String) -> Unit
+) {
+    var busqueda by remember { mutableStateOf("") }
+    val catalogo = listOf(
+        "I10" to "Hipertensión esencial (primaria)",
+        "E11" to "Diabetes mellitus tipo 2",
+        "J45" to "Asma bronquial",
+        "R07.4" to "Dolor en el pecho, no especificado",
+        "K29" to "Gastritis y duodenitis",
+        "J06.9" to "Infección respiratoria aguda, no especificada",
+        "N39.0" to "Infección del tracto urinario, sitio no especificado",
+        "M54.5" to "Lumbago no especificado"
+    )
+
+    val filtrados = catalogo.filter {
+        busqueda.isBlank() || it.first.contains(busqueda, true) || it.second.contains(busqueda, true)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Añadir Diagnóstico CIE-10", fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = codigo, onValueChange = { codigo = it }, label = { Text("Código (Ej. I10, J45, R07.4)") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Descripción patológica") }, modifier = Modifier.fillMaxWidth())
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = busqueda,
+                    onValueChange = { busqueda = it },
+                    label = { Text("Buscar código o patología...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                LazyColumn(modifier = Modifier.height(220.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(filtrados) { (cod, desc) ->
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = CmoSurfaceContainerLow,
+                            modifier = Modifier.fillMaxWidth().clickable { onAgregar(cod, desc) }
+                        ) {
+                            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(cod, fontWeight = FontWeight.ExtraBold, color = CmoPrimary, fontSize = 12.sp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(desc, fontSize = 12.sp, color = CmoText)
+                            }
+                        }
+                    }
+                }
             }
         },
-        confirmButton = {
-            Button(onClick = { if (codigo.isNotBlank() && desc.isNotBlank()) onAgregar(codigo.trim().uppercase(), desc.trim()) }) { Text("Añadir") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
     )
 }
 
 @Composable
-fun DialogoAgregarReceta(onDismiss: () -> Unit, onAgregar: (RecetaItem) -> Unit) {
+fun DialogoAgregarReceta(
+    onDismiss: () -> Unit,
+    onAgregar: (RecetaItem) -> Unit
+) {
     var med by remember { mutableStateOf("") }
     var dosis by remember { mutableStateOf("") }
-    var frec by remember { mutableStateOf("") }
-    var duracion by remember { mutableStateOf("") }
-    var ind by remember { mutableStateOf("") }
+    var freq by remember { mutableStateOf("") }
+    var dur by remember { mutableStateOf("") }
+    var indic by remember { mutableStateOf("") }
     var tipo by remember { mutableStateOf("Crónico") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Añadir Medicamento a Receta", fontWeight = FontWeight.Bold) },
+        title = { Text("Prescripción de Medicamento", fontWeight = FontWeight.Bold) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedTextField(value = med, onValueChange = { med = it }, label = { Text("Medicamento (Ej. Enalapril 10mg)") }, modifier = Modifier.fillMaxWidth())
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedTextField(value = dosis, onValueChange = { dosis = it }, label = { Text("Dosis") }, modifier = Modifier.weight(1f))
-                    OutlinedTextField(value = frec, onValueChange = { frec = it }, label = { Text("Frecuencia") }, modifier = Modifier.weight(1f))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = med, onValueChange = { med = it }, label = { Text("Medicamento (ej. Losartán 50mg)") }, modifier = Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = dosis, onValueChange = { dosis = it }, label = { Text("Dosis (ej. 1 comp.)") }, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = dur, onValueChange = { dur = it }, label = { Text("Duración (ej. 30 días)") }, modifier = Modifier.weight(1f))
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedTextField(value = duracion, onValueChange = { duracion = it }, label = { Text("Duración") }, modifier = Modifier.weight(1f))
-                    OutlinedTextField(value = tipo, onValueChange = { tipo = it }, label = { Text("Tipo (Crónico/SOS)") }, modifier = Modifier.weight(1f))
+                OutlinedTextField(value = freq, onValueChange = { freq = it }, label = { Text("Frecuencia (ej. Cada 12 hrs)") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = indic, onValueChange = { indic = it }, label = { Text("Indicaciones específicas") }, modifier = Modifier.fillMaxWidth())
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Crónico", "SOS", "Agudo").forEach { t ->
+                        FilterChip(
+                            selected = tipo == t,
+                            onClick = { tipo = t },
+                            label = { Text(t, fontSize = 11.sp) }
+                        )
+                    }
                 }
-                OutlinedTextField(value = ind, onValueChange = { ind = it }, label = { Text("Indicaciones específicas") }, modifier = Modifier.fillMaxWidth())
             }
         },
         confirmButton = {
-            Button(onClick = {
-                if (med.isNotBlank() && dosis.isNotBlank()) {
-                    onAgregar(RecetaItem(medicamento = med, dosis = dosis, frecuencia = frec, duracion = duracion, indicaciones = ind, tipo = tipo))
-                }
-            }) { Text("Añadir a Receta") }
+            Button(
+                onClick = {
+                    if (med.isNotBlank() && dosis.isNotBlank() && freq.isNotBlank()) {
+                        onAgregar(
+                            RecetaItem(
+                                medicamento = med,
+                                dosis = dosis,
+                                frecuencia = freq,
+                                duracion = dur.ifBlank { "7 días" },
+                                indicaciones = indic.ifBlank { null },
+                                tipo = tipo
+                            )
+                        )
+                    }
+                },
+                enabled = med.isNotBlank() && dosis.isNotBlank() && freq.isNotBlank()
+            ) {
+                Text("Añadir a Receta")
+            }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
     )
