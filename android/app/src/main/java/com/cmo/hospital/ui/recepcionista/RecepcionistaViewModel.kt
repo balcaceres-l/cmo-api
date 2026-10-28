@@ -21,7 +21,7 @@ data class RecepcionistaUiState(
 
 class RecepcionistaViewModel(application: Application) : AndroidViewModel(application) {
     private val authRepository = AuthRepository(application)
-    private val recepcionistaRepository = RecepcionistaRepository(application)
+    private val recepcionistaRepository = RecepcionistaRepository.getInstance(application)
 
     private val _uiState = MutableStateFlow(RecepcionistaUiState(currentUser = authRepository.getCurrentUser()))
     val uiState: StateFlow<RecepcionistaUiState> = _uiState.asStateFlow()
@@ -53,31 +53,55 @@ class RecepcionistaViewModel(application: Application) : AndroidViewModel(applic
     }
 
     fun agendarCita(
+        especialidad: String,
+        medicoNombre: String,
         pacienteNombre: String,
         dui: String,
         fechaNacimiento: String?,
         fecha: String,
         horaInicio: String,
         motivo: String,
-        especialidad: String,
         box: String,
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             val result = recepcionistaRepository.agendarCita(
+                especialidad = especialidad,
+                medicoNombre = medicoNombre,
                 pacienteNombre = pacienteNombre,
                 dui = dui,
                 fechaNacimiento = fechaNacimiento,
                 fecha = fecha,
                 horaInicio = horaInicio,
                 motivo = motivo,
-                especialidad = especialidad,
                 box = box
             )
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
-                userMessage = if (result.isSuccess) "Cita agendada (Bloque de 30 min asignado)." else null,
+                userMessage = if (result.isSuccess) "Cita con $medicoNombre agendada (Bloque de 30 min asignado)." else null,
+                errorMessage = result.exceptionOrNull()?.message
+            )
+            if (result.isSuccess) onSuccess()
+        }
+    }
+
+    fun tomarSignosYPasarAConsulta(
+        citaId: String,
+        signosVitales: SignosVitales?,
+        pasarAConsulta: Boolean,
+        onSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            val result = recepcionistaRepository.tomarSignosYPasarAConsulta(
+                citaId = citaId,
+                signosVitales = signosVitales,
+                pasarAConsulta = pasarAConsulta
+            )
+            _uiState.value = _uiState.value.copy(
+                isLoading = false,
+                userMessage = result.getOrNull(),
                 errorMessage = result.exceptionOrNull()?.message
             )
             if (result.isSuccess) onSuccess()

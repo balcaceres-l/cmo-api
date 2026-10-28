@@ -41,6 +41,8 @@ fun DoctorMainScreen(
     val expedientes by viewModel.expedientes.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
+    var mostrarDialogoAgendarCita by remember { mutableStateOf(false) }
+    val citasGlobales by viewModel.citas.collectAsState()
 
     LaunchedEffect(uiState.userMessage, uiState.errorMessage) {
         val msg = uiState.userMessage ?: uiState.errorMessage
@@ -81,6 +83,13 @@ fun DoctorMainScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { mostrarDialogoAgendarCita = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Event,
+                            contentDescription = "Agendar Cita de Control",
+                            tint = Color.White
+                        )
+                    }
                     IconButton(onClick = { viewModel.logout(onLogout) }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
@@ -153,7 +162,8 @@ fun DoctorMainScreen(
                     },
                     onCambiarEstadoLab = { id, st -> viewModel.cambiarEstadoLaboratorio(id, st) },
                     onFinalizar = { viewModel.finalizarConsulta {} },
-                    onIrALab = { viewModel.setTab(2) }
+                    onIrALab = { viewModel.setTab(2) },
+                    onAbrirAgendarCita = { mostrarDialogoAgendarCita = true }
                 )
                 1 -> DoctorExpedientesTab(
                     expedientes = expedientes,
@@ -172,6 +182,22 @@ fun DoctorMainScreen(
                 )
             }
         }
+    }
+
+    if (mostrarDialogoAgendarCita) {
+        DialogoAgendarCitaDoctor(
+            pacienteDefault = consulta.paciente,
+            expedientesDisponibles = expedientes,
+            doctorNombre = uiState.currentUser?.nombreCompleto ?: "Dr. Alejandro Restrepo",
+            especialidadDoctor = uiState.currentUser?.cargo ?: "Medicina Interna",
+            citasExistentes = citasGlobales,
+            onDismiss = { mostrarDialogoAgendarCita = false },
+            onConfirmar = { pac, fecha, hora, motivo, esp ->
+                viewModel.agendarCitaSeguimiento(pac, fecha, hora, motivo, esp) {
+                    mostrarDialogoAgendarCita = false
+                }
+            }
+        )
     }
 }
 
@@ -192,7 +218,8 @@ fun DoctorConsultaTab(
     onEmitirLab: (List<String>, String, String, Paciente?, String) -> Unit,
     onCambiarEstadoLab: (String, String) -> Unit,
     onFinalizar: () -> Unit,
-    onIrALab: () -> Unit
+    onIrALab: () -> Unit,
+    onAbrirAgendarCita: () -> Unit
 ) {
     var mostrarDialogoVitals by remember { mutableStateOf(false) }
     var mostrarDialogoCie10 by remember { mutableStateOf(false) }
@@ -681,6 +708,16 @@ fun DoctorConsultaTab(
         // Acciones Finales de Consulta
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = onAbrirAgendarCita,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Default.Event, contentDescription = null, modifier = Modifier.size(18.dp), tint = CmoPrimary)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Agendar Cita de Control / Seguimiento", fontWeight = FontWeight.SemiBold, color = CmoPrimary)
+                }
+
                 OutlinedButton(
                     onClick = onIrALab,
                     modifier = Modifier.fillMaxWidth(),
@@ -1754,5 +1791,174 @@ fun DialogoAgregarReceta(
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
+}
+
+/**
+ * Diálogo para que el Doctor agende citas de control / seguimiento para sí mismo.
+ * Valida disponibilidad en intervalos de 30 minutos sin permitir solapamientos.
+ */
+@Composable
+fun DialogoAgendarCitaDoctor(
+    pacienteDefault: Paciente,
+    expedientesDisponibles: List<com.cmo.hospital.repository.DoctorClinicalRepository.ExpedienteDetalle>,
+    doctorNombre: String,
+    especialidadDoctor: String,
+    citasExistentes: List<Cita>,
+    onDismiss: () -> Unit,
+    onConfirmar: (Paciente, String, String, String, String) -> Unit
+) {
+    var pacienteSeleccionado by remember { mutableStateOf(pacienteDefault) }
+    var fechaCita by remember { mutableStateOf("2026-10-29") }
+    var horaInicioCita by remember { mutableStateOf("09:00") }
+    var motivoCita by remember { mutableStateOf("Control y seguimiento médico post-consulta") }
+
+    val hayConflicto = remember(citasExistentes, doctorNombre, fechaCita, horaInicioCita) {
+        Cita.hayConflictoHorario(citasExistentes, doctorNombre, fechaCita, horaInicioCita)
+    }
+
+    val horaFinCalculada = Cita.calcularFin30Minutos(horaInicioCita)
+    val listaPacientes = remember(expedientesDisponibles) { expedientesDisponibles.map { it.paciente } }
+    val bloquesHorarios = Cita.BLOQUES_30_MINUTOS
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text("Agendar Cita de Control", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Médico: $doctorNombre · $especialidadDoctor", fontSize = 12.sp, color = CmoPrimary)
+            }
+        },
+        text = {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item {
+                    Text("Paciente:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(containerColor = CmoSurfaceContainerLow)
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(pacienteSeleccionado.nombreCompleto, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = CmoText)
+                            Text("Expediente: ${pacienteSeleccionado.numeroExpediente ?: "N/D"} · DUI: ${pacienteSeleccionado.dui ?: "N/D"}", fontSize = 11.sp, color = CmoTextSoft)
+                        }
+                    }
+                }
+
+                if (listaPacientes.size > 1) {
+                    item {
+                        Text("O cambiar paciente:", fontSize = 11.sp, color = CmoTextSoft)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(items = listaPacientes) { p ->
+                                val sel = p.id == pacienteSeleccionado.id
+                                FilterChip(
+                                    selected = sel,
+                                    onClick = { pacienteSeleccionado = p },
+                                    label = { Text(p.nombreCompleto.split(" ").take(2).joinToString(" "), fontSize = 11.sp) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = fechaCita,
+                        onValueChange = { fechaCita = it },
+                        label = { Text("Fecha de Cita (AAAA-MM-DD)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+
+                item {
+                    Text("Horario de Disponibilidad (Intervalos de 30 min):", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(items = bloquesHorarios) { hora ->
+                            val ocupado = Cita.hayConflictoHorario(citasExistentes, doctorNombre, fechaCita, hora)
+                            val sel = hora == horaInicioCita
+                            AssistChip(
+                                onClick = { if (!ocupado) horaInicioCita = hora },
+                                enabled = !ocupado,
+                                label = {
+                                    Text(
+                                        if (ocupado) "$hora (Ocupado)" else hora,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (ocupado) StatusRed else if (sel) CmoPrimary else CmoText
+                                    )
+                                },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = if (sel) CmoPrimarySoft else if (ocupado) StatusRedBg else Color.Transparent
+                                ),
+                                border = AssistChipDefaults.assistChipBorder(
+                                    enabled = !ocupado,
+                                    borderColor = if (sel) CmoPrimary else Color(0xFFCBD5E1)
+                                )
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    Surface(shape = RoundedCornerShape(8.dp), color = CmoSurfaceContainerLow) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Duración fija:", fontSize = 11.sp, color = CmoTextSoft)
+                            Text("$horaInicioCita - $horaFinCalculada (30 min)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CmoPrimary)
+                        }
+                    }
+                }
+
+                if (hayConflicto) {
+                    item {
+                        Surface(shape = RoundedCornerShape(8.dp), color = StatusRedBg) {
+                            Text(
+                                "⛔ Ya tienes una cita asignada en ese bloque ($horaInicioCita). Por ningún motivo se permiten citas a la misma hora.",
+                                fontSize = 11.sp,
+                                color = StatusRed,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
+                    }
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = motivoCita,
+                        onValueChange = { motivoCita = it },
+                        label = { Text("Motivo / Indicaciones de seguimiento *") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 3
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (motivoCita.isNotBlank() && !hayConflicto) {
+                        onConfirmar(pacienteSeleccionado, fechaCita, horaInicioCita, motivoCita, especialidadDoctor)
+                    }
+                },
+                enabled = motivoCita.isNotBlank() && !hayConflicto,
+                colors = ButtonDefaults.buttonColors(containerColor = CmoPrimary)
+            ) {
+                Text("Agendar Cita (30 min)", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
     )
 }

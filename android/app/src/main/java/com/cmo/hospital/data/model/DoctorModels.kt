@@ -26,15 +26,23 @@ data class Cita(
     @SerializedName("hora_inicio") val horaInicio: String,
     @SerializedName("hora_fin") val horaFin: String?,
     val estado: String,
-    val motivo: String?,
-    val paciente: PacienteInfo?,
-    val consultorio: ConsultorioInfo?,
+    val motivo: String? = null,
+    val paciente: PacienteInfo? = null,
+    val consultorio: ConsultorioInfo? = null,
+    @SerializedName("id_medico") val idMedico: String? = null,
+    @SerializedName("medico_nombre") val medicoNombre: String? = "Dr. Alejandro Restrepo",
+    @SerializedName("especialidad") val especialidad: String? = "Medicina General",
     @SerializedName("signos_vitales") val signosVitales: SignosVitales? = null
 ) {
     /**
      * Calcula la hora de finalización sumando el bloque de 30 minutos obligatorio.
      */
     companion object {
+        val BLOQUES_30_MINUTOS = listOf(
+            "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+            "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"
+        )
+
         fun calcularFin30Minutos(horaInicio: String): String {
             return try {
                 val parts = horaInicio.split(":")
@@ -51,8 +59,40 @@ data class Cita(
                 horaInicio
             }
         }
+
+        /**
+         * Validación estricta: por ningún motivo habrán citas agendadas a la misma hora para el mismo médico.
+         */
+        fun hayConflictoHorario(
+            citasExistentes: List<Cita>,
+            medicoNombre: String?,
+            fecha: String,
+            horaInicio: String,
+            citaIdExcluir: String? = null
+        ): Boolean {
+            return citasExistentes.any { cita ->
+                if (cita.id == citaIdExcluir || cita.estado == "CANCELADA") return@any false
+                val coincideFecha = cita.fecha == fecha
+                val coincideHora = cita.horaInicio == horaInicio
+                val coincideMedico = medicoNombre.isNullOrBlank() ||
+                        cita.medicoNombre.isNullOrBlank() ||
+                        cita.medicoNombre.equals(medicoNombre, ignoreCase = true)
+                coincideFecha && coincideHora && coincideMedico
+            }
+        }
     }
 }
+
+val BLOQUES_30_MINUTOS = Cita.BLOQUES_30_MINUTOS
+
+val CATALOGO_ESPECIALIDADES = mapOf(
+    "Medicina General" to listOf("Dr. Alejandro Restrepo", "Dra. Sofía Valenzuela"),
+    "Medicina Interna" to listOf("Dr. Alejandro Restrepo", "Dr. Marcos Peralta"),
+    "Cardiología" to listOf("Dra. Camila Benítez", "Dr. Fernando Ruiz"),
+    "Pediatría" to listOf("Dra. Elena Ramos", "Dr. Andrés Meza"),
+    "Cirugía General" to listOf("Dr. Javier Morales"),
+    "Ginecología y Obstetricia" to listOf("Dra. Lucía Domínguez")
+)
 
 data class PaginatedData<T>(
     val data: List<T>,

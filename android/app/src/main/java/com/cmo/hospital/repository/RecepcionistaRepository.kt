@@ -8,6 +8,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class RecepcionistaRepository(private val context: Context) {
+    companion object {
+        @Volatile
+        private var INSTANCE: RecepcionistaRepository? = null
+
+        fun getInstance(context: Context): RecepcionistaRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: RecepcionistaRepository(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+    }
+
     private val apiService = RetrofitClient.getApiService(context)
 
     // Estado en memoria de las 17 camas para interacción en tiempo real
@@ -17,6 +28,7 @@ class RecepcionistaRepository(private val context: Context) {
     // Estado en memoria de las citas
     private val _citasState = MutableStateFlow<List<Cita>>(getMockCitas())
     val citasState: StateFlow<List<Cita>> = _citasState.asStateFlow()
+    val citas: StateFlow<List<Cita>> get() = citasState
 
     // Turno activo en el llamador de sala
     private val _turnoEnBox = MutableStateFlow<Cita?>(_citasState.value.firstOrNull { it.estado == "EN_ATENCION" } ?: _citasState.value.firstOrNull())
@@ -41,16 +53,28 @@ class RecepcionistaRepository(private val context: Context) {
         }
     }
 
+    fun agregarCitaDirecta(cita: Cita) {
+        _citasState.value = listOf(cita) + _citasState.value
+    }
+
     suspend fun agendarCita(
+        especialidad: String,
+        medicoNombre: String,
         pacienteNombre: String,
         dui: String,
         fechaNacimiento: String?,
         fecha: String,
         horaInicio: String,
         motivo: String,
-        especialidad: String,
         box: String
     ): Result<Cita> {
+        // Validación estricta: Por ningún motivo habrán citas agendadas a la misma hora
+        if (Cita.hayConflictoHorario(_citasState.value, medicoNombre, fecha, horaInicio)) {
+            return Result.failure(
+                IllegalStateException("⚠️ Horario no disponible: El $medicoNombre ya tiene una cita agendada a las $horaInicio el $fecha. Por ningún motivo se permiten citas duplicadas.")
+            )
+        }
+
         val horaFin = Cita.calcularFin30Minutos(horaInicio)
         val nuevaCita = Cita(
             id = "c-" + System.currentTimeMillis().toString().takeLast(6),
@@ -59,6 +83,8 @@ class RecepcionistaRepository(private val context: Context) {
             horaFin = horaFin,
             estado = "AGENDADA",
             motivo = motivo,
+            medicoNombre = medicoNombre,
+            especialidad = especialidad,
             paciente = PacienteInfo(
                 id = "p-" + System.currentTimeMillis().toString().takeLast(4),
                 nombreCompleto = pacienteNombre,
@@ -88,6 +114,40 @@ class RecepcionistaRepository(private val context: Context) {
             _citasState.value = listOf(nuevaCita) + _citasState.value
             Result.success(nuevaCita)
         }
+    }
+
+    /**
+     * Registro de signos vitales en el triaje y transferencia inmediata a Box ("Pasar a Consulta").
+     * Los signos vitales no son obligatorios (pueden ser parciales o vacíos en una emergencia).
+     */
+    suspend fun tomarSignosYPasarAConsulta(
+        citaId: String,
+        signosVitales: SignosVitales? = null,
+        pasarAConsulta: Boolean
+    ): Result<String> {
+        var citaTransferida: Cita? = null
+        _citasState.value = _citasState.value.map { cita ->
+            if (cita.id == citaId) {
+                val nuevosSignos = if (signosVitales?.hasAnyData == true) signosVitales else cita.signosVitales
+                val actualizada = cita.copy(
+                    signosVitales = nuevosSignos,
+                    estado = if (pasarAConsulta) "EN_ATENCION" else cita.estado
+                )
+                if (pasarAConsulta) {
+                    citaTransferida = actualizada
+                }
+                actualizada
+            } else cita
+        }
+
+        if (pasarAConsulta && citaTransferida != null) {
+            _turnoEnBox.value = citaTransferida
+            // Transfiere inmediatamente al paciente a la Consulta Activa del Doctor
+            DoctorClinicalRepository.getInstance(context).iniciarConsultaDesdeCita(citaTransferida!!)
+            return Result.success("✅ Paciente ${citaTransferida!!.paciente?.nombreCompleto} transferido a Consulta Activa del Doctor en ${citaTransferida!!.consultorio?.codigo ?: "Box"}.")
+        }
+
+        return Result.success("Signos vitales guardados correctamente.")
     }
 
     suspend fun marcarLlegada(citaId: String): Boolean {

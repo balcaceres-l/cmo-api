@@ -10,7 +10,20 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 class DoctorClinicalRepository(private val context: Context) {
+    companion object {
+        @Volatile
+        private var INSTANCE: DoctorClinicalRepository? = null
+
+        fun getInstance(context: Context): DoctorClinicalRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: DoctorClinicalRepository(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+    }
+
     private val apiService = RetrofitClient.getApiService(context)
+    val repRecepcion: RecepcionistaRepository = RecepcionistaRepository.getInstance(context)
+    val citas: StateFlow<List<Cita>> = repRecepcion.citas
 
     // Consulta activa actual
     private val _consultaActiva = MutableStateFlow(getMockConsultaActiva())
@@ -120,6 +133,91 @@ class DoctorClinicalRepository(private val context: Context) {
             apiService.finalizarConsulta(_consultaActiva.value.id)
         } catch (e: Exception) {}
         return Result.success("Consulta finalizada y receta digital firmada electrónicamente.")
+    }
+
+    /**
+     * Inicia una consulta activa cuando recepción o enfermería presiona "Pasar a Consulta".
+     * Carga al paciente, los signos vitales tomados en el triaje (o vacíos si fue de emergencia)
+     * y reinicia el cronómetro del semáforo en 0 minutos (Verde).
+     */
+    fun iniciarConsultaDesdeCita(cita: Cita) {
+        val pac = cita.paciente?.let {
+            Paciente(
+                id = it.id,
+                nombreCompleto = it.nombreCompleto,
+                numeroExpediente = it.numeroExpediente ?: Paciente.generarNumeroExpediente(it.nombreCompleto),
+                dui = it.dui,
+                sexo = it.sexo,
+                fechaNacimiento = it.fechaNacimiento,
+                alergias = it.alergias
+            )
+        } ?: _consultaActiva.value.paciente
+
+        val vitals = cita.signosVitales ?: SignosVitales()
+
+        _consultaActiva.value = ConsultaActivaData(
+            id = "cons-" + System.currentTimeMillis().toString().takeLast(4),
+            citaId = cita.id,
+            box = cita.consultorio?.codigo ?: "Box 03",
+            medicoNombre = cita.medicoNombre ?: "Dr. Alejandro Restrepo",
+            especialidad = cita.especialidad ?: "Medicina General",
+            paciente = pac,
+            signosVitales = vitals,
+            diagnosticosCie10 = emptyList(),
+            anamnesis = cita.motivo ?: "Paciente transferido directamente desde admisión.",
+            recetas = emptyList(),
+            ordenesLaboratorio = emptyList(),
+            segundosTranscurridos = 0, // Cronómetro arranca en 0 minutos (Verde)
+            duracionTotalSegundos = 30 * 60,
+            estadoSemaforo = EstadoSemaforo.VERDE,
+            finalizada = false
+        )
+    }
+
+    /**
+     * El Doctor agenda citas para sí mismo (ej. seguimiento, control) respetando
+     * bloques de 30 minutos y validando que por ningún motivo haya solapamiento de horario.
+     */
+    suspend fun agendarCitaParaSiMismo(
+        paciente: Paciente,
+        fecha: String,
+        horaInicio: String,
+        motivo: String,
+        especialidad: String,
+        medicoNombre: String = "Dr. Alejandro Restrepo"
+    ): Result<Cita> {
+        val repRecepcion = RecepcionistaRepository.getInstance(context)
+        val citasGlobales = repRecepcion.citasState.value
+
+        if (Cita.hayConflictoHorario(citasGlobales, medicoNombre, fecha, horaInicio)) {
+            return Result.failure(
+                IllegalStateException("⚠️ Horario no disponible: Ya tienes una cita programada a las $horaInicio el $fecha. Por ningún motivo se permiten citas a la misma hora.")
+            )
+        }
+
+        val horaFin = Cita.calcularFin30Minutos(horaInicio)
+        val nuevaCita = Cita(
+            id = "c-doc-" + System.currentTimeMillis().toString().takeLast(4),
+            fecha = fecha,
+            horaInicio = horaInicio,
+            horaFin = horaFin,
+            estado = "AGENDADA",
+            motivo = motivo,
+            medicoNombre = medicoNombre,
+            especialidad = especialidad,
+            paciente = PacienteInfo(
+                id = paciente.id,
+                nombreCompleto = paciente.nombreCompleto,
+                numeroExpediente = paciente.numeroExpediente ?: Paciente.generarNumeroExpediente(paciente.nombreCompleto),
+                dui = paciente.dui,
+                sexo = paciente.sexo,
+                fechaNacimiento = paciente.fechaNacimiento
+            ),
+            consultorio = ConsultorioInfo("cs-box3", "Box 03 ($especialidad)", "Box 03")
+        )
+
+        repRecepcion.agregarCitaDirecta(nuevaCita)
+        return Result.success(nuevaCita)
     }
 
     /**

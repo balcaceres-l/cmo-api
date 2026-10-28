@@ -166,11 +166,14 @@ fun RecepcionistaMainScreen(
                 0 -> CitasLlamadorTab(
                     citas = citas,
                     turnoEnBox = turnoEnBox,
-                    onAgendar = { nom, dui, fn, fecha, hora, mot, esp, box ->
-                        viewModel.agendarCita(nom, dui, fn, fecha, hora, mot, esp, box) {}
+                    onAgendar = { esp, doc, nom, dui, fn, fecha, hora, mot, box ->
+                        viewModel.agendarCita(esp, doc, nom, dui, fn, fecha, hora, mot, box) {}
                     },
                     onLlegada = { viewModel.registrarLlegada(it) },
                     onCancelar = { id, mot -> viewModel.cancelarCita(id, mot) },
+                    onTomarSignosYPasarAConsulta = { id, vitals, pasar ->
+                        viewModel.tomarSignosYPasarAConsulta(id, vitals, pasar) {}
+                    },
                     onReLlamar = { viewModel.reLlamar() },
                     onSiguiente = { viewModel.siguienteTurno() }
                 )
@@ -192,29 +195,46 @@ fun RecepcionistaMainScreen(
 }
 
 // =================================================================
-// TAB 1: CITAS Y LLAMADOR EN SALA (BLOQUES DE 30 MIN)
+// TAB 1: CITAS Y LLAMADOR EN SALA (BLOQUES DE 30 MIN - CASCADA)
 // =================================================================
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CitasLlamadorTab(
     citas: List<Cita>,
     turnoEnBox: Cita?,
-    onAgendar: (String, String, String, String, String, String, String, String) -> Unit,
+    onAgendar: (String, String, String, String, String, String, String, String, String) -> Unit,
     onLlegada: (String) -> Unit,
     onCancelar: (String, String) -> Unit,
+    onTomarSignosYPasarAConsulta: (String, SignosVitales?, Boolean) -> Unit,
     onReLlamar: () -> Unit,
     onSiguiente: () -> Unit
 ) {
     var mostrarFormAgendar by remember { mutableStateOf(false) }
+    var citaParaTriaje by remember { mutableStateOf<Cita?>(null) }
 
-    // Form inputs
+    // Cascada: Especialidad -> Doctor
+    val especialidades = remember { CATALOGO_ESPECIALIDADES.keys.toList() }
+    var citaEspecialidad by remember { mutableStateOf(especialidades.firstOrNull() ?: "Medicina General") }
+    val doctoresDisponibles = remember(citaEspecialidad) {
+        CATALOGO_ESPECIALIDADES[citaEspecialidad] ?: listOf("Dr. Alejandro Restrepo")
+    }
+    var citaDoctor by remember(citaEspecialidad) {
+        mutableStateOf(doctoresDisponibles.firstOrNull() ?: "Dr. Alejandro Restrepo")
+    }
+
+    // Datos del Paciente y Cita
     var pacNombre by remember { mutableStateOf("") }
     var pacDui by remember { mutableStateOf("") }
     var pacFechaNac by remember { mutableStateOf("1990-05-15") }
     var citaFecha by remember { mutableStateOf("2026-10-28") }
-    var citaHoraInicio by remember { mutableStateOf("10:30") }
+    var citaHoraInicio by remember { mutableStateOf("08:30") }
     var citaMotivo by remember { mutableStateOf("") }
-    var citaEspecialidad by remember { mutableStateOf("Medicina General") }
     var citaBox by remember { mutableStateOf("Box 03") }
+
+    // Validación de Conflicto en Tiempo Real (Por ningún motivo citas a la misma hora)
+    val hayConflicto = remember(citas, citaDoctor, citaFecha, citaHoraInicio) {
+        Cita.hayConflictoHorario(citas, citaDoctor, citaFecha, citaHoraInicio)
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -376,7 +396,7 @@ fun CitasLlamadorTab(
             }
         }
 
-        // Formulario Agendar Cita (con bloque fijo de 30 minutos)
+        // Formulario Agendar Cita (en Cascada Especialidad -> Médico -> Paciente -> Intervalo 30m sin solapamiento)
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -395,8 +415,8 @@ fun CitasLlamadorTab(
                             Icon(Icons.Default.AddTask, contentDescription = null, tint = CmoPrimary)
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
-                                Text("Agendar Nueva Cita", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CmoText)
-                                Text("Bloque estándar de 30 minutos asignado", fontSize = 11.sp, color = CmoPrimary)
+                                Text("Agendar Cita (Cascada Especialidad-Doctor)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CmoText)
+                                Text("Intervalos de 30 min · Sin solapamiento horario", fontSize = 11.sp, color = CmoPrimary)
                             }
                         }
                         Icon(
@@ -409,10 +429,46 @@ fun CitasLlamadorTab(
                     if (mostrarFormAgendar) {
                         Spacer(modifier = Modifier.height(14.dp))
 
+                        // PASO 1: Cascada Especialidad
+                        Text("1. Especialidad Médica:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CmoText)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(items = especialidades) { esp ->
+                                val sel = esp == citaEspecialidad
+                                FilterChip(
+                                    selected = sel,
+                                    onClick = { citaEspecialidad = esp },
+                                    label = { Text(esp, fontSize = 11.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal) }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // PASO 2: Doctor según Especialidad
+                        Text("2. Médico Asignado:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CmoText)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(items = doctoresDisponibles) { doc ->
+                                val sel = doc == citaDoctor
+                                FilterChip(
+                                    selected = sel,
+                                    onClick = { citaDoctor = doc },
+                                    label = { Text(doc, fontSize = 11.sp, fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal) },
+                                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(14.dp)) }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // PASO 3: Datos del Paciente
+                        Text("3. Datos del Paciente:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CmoText)
+                        Spacer(modifier = Modifier.height(4.dp))
                         OutlinedTextField(
                             value = pacNombre,
                             onValueChange = { pacNombre = it },
-                            label = { Text("Nombre completo del paciente") },
+                            label = { Text("Nombre completo del paciente *") },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true
                         )
@@ -436,34 +492,17 @@ fun CitasLlamadorTab(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // PASO 4: Fecha y Bloque Horario (30 minutos)
+                        Text("4. Horario Disponible (Intervalos de 30 min):", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CmoText)
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(
-                                value = citaHoraInicio,
-                                onValueChange = { citaHoraInicio = it },
-                                label = { Text("Hora Inicio (HH:mm)") },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true
-                            )
-                            // Cálculo automático del fin (30 min)
-                            val horaFinCalculada = Cita.calcularFin30Minutos(citaHoraInicio)
-                            OutlinedTextField(
-                                value = horaFinCalculada,
-                                onValueChange = {},
-                                label = { Text("Hora Fin (+30m)") },
-                                enabled = false,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = citaEspecialidad,
-                                onValueChange = { citaEspecialidad = it },
-                                label = { Text("Especialidad") },
+                                value = citaFecha,
+                                onValueChange = { citaFecha = it },
+                                label = { Text("Fecha (AAAA-MM-DD)") },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true
                             )
@@ -477,27 +516,105 @@ fun CitasLlamadorTab(
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
+                        Text("Seleccione bloque de 30 minutos para $citaDoctor:", fontSize = 11.sp, color = CmoTextSoft)
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        val listaBloques = Cita.BLOQUES_30_MINUTOS
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(items = listaBloques) { hora ->
+                                val ocupado = Cita.hayConflictoHorario(citas, citaDoctor, citaFecha, hora)
+                                val sel = hora == citaHoraInicio
+                                AssistChip(
+                                    onClick = { if (!ocupado) citaHoraInicio = hora },
+                                    enabled = !ocupado,
+                                    label = {
+                                        Text(
+                                            if (ocupado) "$hora (Ocupado)" else hora,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (ocupado) StatusRed else if (sel) CmoPrimary else CmoText
+                                        )
+                                    },
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        containerColor = if (sel) CmoPrimarySoft else if (ocupado) StatusRedBg else Color.Transparent
+                                    ),
+                                    border = AssistChipDefaults.assistChipBorder(
+                                        enabled = !ocupado,
+                                        borderColor = if (sel) CmoPrimary else Color(0xFFCBD5E1)
+                                    )
+                                )
+                            }
+                        }
+
+                        val horaFinCalculada = Cita.calcularFin30Minutos(citaHoraInicio)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Surface(shape = RoundedCornerShape(8.dp), color = CmoSurfaceContainerLow) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Horario bloque fijado:", fontSize = 11.sp, color = CmoTextSoft)
+                                Text("$citaHoraInicio - $horaFinCalculada (30 minutos exactos)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CmoPrimary)
+                            }
+                        }
+
+                        // Banner de conflicto si existiese
+                        if (hayConflicto) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = StatusRedBg
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = StatusRed, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        "⛔ Horario no disponible: $citaDoctor ya tiene una cita a las $citaHoraInicio el $citaFecha. Por ningún motivo se permiten citas a la misma hora.",
+                                        fontSize = 11.sp,
+                                        color = StatusRed,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         OutlinedTextField(
                             value = citaMotivo,
                             onValueChange = { citaMotivo = it },
-                            label = { Text("Motivo de consulta") },
+                            label = { Text("Motivo de consulta *") },
                             modifier = Modifier.fillMaxWidth(),
                             maxLines = 2
                         )
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
                         Button(
                             onClick = {
-                                if (pacNombre.isNotBlank() && citaMotivo.isNotBlank()) {
-                                    onAgendar(pacNombre, pacDui, pacFechaNac, citaFecha, citaHoraInicio, citaMotivo, citaEspecialidad, citaBox)
+                                if (pacNombre.isNotBlank() && citaMotivo.isNotBlank() && !hayConflicto) {
+                                    onAgendar(
+                                        citaEspecialidad,
+                                        citaDoctor,
+                                        pacNombre,
+                                        pacDui,
+                                        pacFechaNac,
+                                        citaFecha,
+                                        citaHoraInicio,
+                                        citaMotivo,
+                                        citaBox
+                                    )
                                     pacNombre = ""
                                     pacDui = ""
                                     citaMotivo = ""
                                     mostrarFormAgendar = false
                                 }
                             },
+                            enabled = pacNombre.isNotBlank() && citaMotivo.isNotBlank() && !hayConflicto,
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = CmoPrimary)
@@ -515,10 +632,28 @@ fun CitasLlamadorTab(
         }
 
         items(citas) { cita ->
-            CitaRecepcionCard(cita = cita, onLlegada = { onLlegada(cita.id) }, onCancelar = { onCancelar(cita.id, "Cancelada por paciente") })
+            CitaRecepcionCard(
+                cita = cita,
+                onLlegada = { onLlegada(cita.id) },
+                onCancelar = { onCancelar(cita.id, "Cancelada por paciente") },
+                onTomarSignos = { citaParaTriaje = cita },
+                onPasarDirectoAConsulta = { onTomarSignosYPasarAConsulta(cita.id, null, true) }
+            )
         }
 
         item { Spacer(modifier = Modifier.height(20.dp)) }
+    }
+
+    // Modal de Triaje (Signos Vitales Opcionales y Pase a Consulta)
+    citaParaTriaje?.let { citaSel ->
+        DialogoTriajeCitaRecepcion(
+            cita = citaSel,
+            onDismiss = { citaParaTriaje = null },
+            onGuardarSignos = { signos, pasarAConsulta ->
+                onTomarSignosYPasarAConsulta(citaSel.id, signos, pasarAConsulta)
+                citaParaTriaje = null
+            }
+        )
     }
 }
 
@@ -526,7 +661,9 @@ fun CitasLlamadorTab(
 fun CitaRecepcionCard(
     cita: Cita,
     onLlegada: () -> Unit,
-    onCancelar: () -> Unit
+    onCancelar: () -> Unit,
+    onTomarSignos: () -> Unit,
+    onPasarDirectoAConsulta: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -589,40 +726,344 @@ fun CitaRecepcionCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(cita.paciente?.nombreCompleto ?: "Paciente", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = CmoText)
-            Text(
-                text = "DUI: ${cita.paciente?.dui ?: "N/D"} · Exp: ${cita.paciente?.numeroExpediente ?: "N/D"}",
-                fontSize = 11.sp,
-                color = CmoTextSoft
-            )
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    text = "DUI: ${cita.paciente?.dui ?: "N/D"} · Exp: ${cita.paciente?.numeroExpediente ?: "N/D"}",
+                    fontSize = 11.sp,
+                    color = CmoTextSoft
+                )
+                Text(
+                    text = cita.medicoNombre ?: "Dr. Alejandro Restrepo",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = CmoPrimary
+                )
+            }
+
             cita.motivo?.let {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(it, fontSize = 12.sp, color = CmoTextMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
 
-            if (cita.estado == "AGENDADA") {
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = onLlegada,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = CmoPrimary)
-                    ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Registrar Llegada", fontSize = 11.sp)
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Botones de acción según estado
+            when (cita.estado) {
+                "AGENDADA" -> {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = onLlegada,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = CmoPrimary)
+                        ) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Registrar Llegada", fontSize = 11.sp)
+                        }
+                        OutlinedButton(
+                            onClick = onCancelar,
+                            modifier = Modifier.weight(0.7f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Cancelar", fontSize = 11.sp, color = StatusRed)
+                        }
                     }
-                    OutlinedButton(
-                        onClick = onCancelar,
-                        modifier = Modifier.weight(0.8f),
-                        shape = RoundedCornerShape(8.dp)
+                }
+                "EN_ESPERA" -> {
+                    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = onTomarSignos,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.Favorite, contentDescription = null, tint = StatusRed, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("🩺 Triaje / Signos", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            Button(
+                                onClick = onPasarDirectoAConsulta,
+                                modifier = Modifier.weight(1.2f),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = CmoPrimary)
+                            ) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("🚀 Pasar a Consulta", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        OutlinedButton(
+                            onClick = onCancelar,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Cancelar Cita", fontSize = 11.sp, color = StatusRed)
+                        }
+                    }
+                }
+                "EN_ATENCION" -> {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = StatusBlueBg,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Cancelar", fontSize = 11.sp, color = StatusRed)
+                        Row(
+                            modifier = Modifier.padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.MedicalServices, contentDescription = null, tint = StatusBlue, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Paciente actualmente en consulta con el doctor", fontSize = 11.sp, color = StatusBlue, fontWeight = FontWeight.Medium)
+                        }
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * Diálogo de Triaje de Signos Vitales para Recepcionista / Enfermería.
+ * No es obligatorio llenar todos los campos (apoya emergencias o pase directo).
+ * Permite guardar signos y pasar a consulta con un solo toque.
+ */
+@Composable
+fun DialogoTriajeCitaRecepcion(
+    cita: Cita,
+    onDismiss: () -> Unit,
+    onGuardarSignos: (SignosVitales?, Boolean) -> Unit
+) {
+    var sistolica by remember { mutableStateOf("") }
+    var diastolica by remember { mutableStateOf("") }
+    var frecCardiaca by remember { mutableStateOf("") }
+    var frecResp by remember { mutableStateOf("") }
+    var temperatura by remember { mutableStateOf("") }
+    var saturacion by remember { mutableStateOf("") }
+    var peso by remember { mutableStateOf("") }
+    var talla by remember { mutableStateOf("") }
+    var obs by remember { mutableStateOf("") }
+
+    val imcCalculado = remember(peso, talla) {
+        val p = peso.toDoubleOrNull()
+        val t = talla.toDoubleOrNull()
+        if (p != null && t != null && t > 0) {
+            val hMetros = if (t > 3) t / 100.0 else t
+            p / (hMetros * hMetros)
+        } else null
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text("Triaje y Signos Vitales", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    "${cita.paciente?.nombreCompleto ?: "Paciente"} · Exp: ${cita.paciente?.numeroExpediente ?: "N/D"}",
+                    fontSize = 12.sp,
+                    color = CmoPrimary
+                )
+            }
+        },
+        text = {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = CmoSurfaceContainerLow
+                    ) {
+                        Text(
+                            "ℹ️ La toma de signos vitales es opcional y flexible. En una emergencia puede pasar directamente a consulta y el doctor podrá registrarlos.",
+                            fontSize = 11.sp,
+                            color = CmoTextSoft,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+
+                item {
+                    Text("Presión Arterial (mmHg):", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = sistolica,
+                            onValueChange = { sistolica = it },
+                            label = { Text("Sistólica") },
+                            placeholder = { Text("120") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = diastolica,
+                            onValueChange = { diastolica = it },
+                            label = { Text("Diastólica") },
+                            placeholder = { Text("80") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                    }
+                }
+
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = frecCardiaca,
+                            onValueChange = { frecCardiaca = it },
+                            label = { Text("FC (lpm)") },
+                            placeholder = { Text("75") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = frecResp,
+                            onValueChange = { frecResp = it },
+                            label = { Text("FR (rpm)") },
+                            placeholder = { Text("18") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                    }
+                }
+
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = temperatura,
+                            onValueChange = { temperatura = it },
+                            label = { Text("Temp (°C)") },
+                            placeholder = { Text("36.5") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = saturacion,
+                            onValueChange = { saturacion = it },
+                            label = { Text("SpO2 (%)") },
+                            placeholder = { Text("98") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                    }
+                }
+
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = peso,
+                            onValueChange = { peso = it },
+                            label = { Text("Peso (kg)") },
+                            placeholder = { Text("70") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = talla,
+                            onValueChange = { talla = it },
+                            label = { Text("Talla (cm)") },
+                            placeholder = { Text("170") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                    }
+                }
+
+                if (imcCalculado != null) {
+                    item {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = StatusBlueBg
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("IMC Calculado:", fontSize = 11.sp, color = StatusBlue)
+                                Text(
+                                    String.format(java.util.Locale.US, "%.1f kg/m²", imcCalculado),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = StatusBlue
+                                )
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    OutlinedTextField(
+                        value = obs,
+                        onValueChange = { obs = it },
+                        label = { Text("Observaciones de enfermería") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 2
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val signos = if (sistolica.isNotBlank() || frecCardiaca.isNotBlank() || temperatura.isNotBlank()) {
+                        SignosVitales(
+                            presionSistolica = sistolica.toIntOrNull(),
+                            presionDiastolica = diastolica.toIntOrNull(),
+                            frecuenciaCardiaca = frecCardiaca.toIntOrNull(),
+                            frecuenciaRespiratoria = frecResp.toIntOrNull(),
+                            temperaturaC = temperatura.toDoubleOrNull(),
+                            saturacionOxigeno = saturacion.toIntOrNull(),
+                            pesoKg = peso.toDoubleOrNull(),
+                            tallaCm = talla.toDoubleOrNull(),
+                            observaciones = obs.ifBlank { null }
+                        )
+                    } else null
+                    onGuardarSignos(signos, true)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = CmoPrimary)
+            ) {
+                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("🚀 Pasar a Consulta", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextButton(onClick = onDismiss) {
+                    Text("Cerrar")
+                }
+                TextButton(
+                    onClick = {
+                        val signos = if (sistolica.isNotBlank() || frecCardiaca.isNotBlank() || temperatura.isNotBlank()) {
+                            SignosVitales(
+                                presionSistolica = sistolica.toIntOrNull(),
+                                presionDiastolica = diastolica.toIntOrNull(),
+                                frecuenciaCardiaca = frecCardiaca.toIntOrNull(),
+                                frecuenciaRespiratoria = frecResp.toIntOrNull(),
+                                temperaturaC = temperatura.toDoubleOrNull(),
+                                saturacionOxigeno = saturacion.toIntOrNull(),
+                                pesoKg = peso.toDoubleOrNull(),
+                                tallaCm = talla.toDoubleOrNull(),
+                                observaciones = obs.ifBlank { null }
+                            )
+                        } else null
+                        onGuardarSignos(signos, false)
+                    }
+                ) {
+                    Text("Solo Guardar Signos")
+                }
+            }
+        }
+    )
 }
 
 // =================================================================

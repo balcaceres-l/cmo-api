@@ -23,7 +23,7 @@ data class DoctorUiState(
 
 class DoctorViewModel(application: Application) : AndroidViewModel(application) {
     private val authRepository = AuthRepository(application)
-    private val clinicalRepository = DoctorClinicalRepository(application)
+    private val clinicalRepository = DoctorClinicalRepository.getInstance(application)
 
     private val _uiState = MutableStateFlow(DoctorUiState(currentUser = authRepository.getCurrentUser()))
     val uiState: StateFlow<DoctorUiState> = _uiState.asStateFlow()
@@ -31,6 +31,7 @@ class DoctorViewModel(application: Application) : AndroidViewModel(application) 
     val consultaActiva = clinicalRepository.consultaActiva
     val ordenesLab = clinicalRepository.ordenesLab
     val expedientes = clinicalRepository.expedientes
+    val citas = clinicalRepository.citas
 
     init {
         // Ticker de cronómetro de consulta (30 minutos con semáforo)
@@ -118,6 +119,42 @@ class DoctorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val res = clinicalRepository.cambiarEstadoLaboratorio(ordenId, nuevoEstado)
             _uiState.value = _uiState.value.copy(userMessage = "Estado actualizado a: $nuevoEstado")
+        }
+    }
+
+    /**
+     * El Doctor puede agendar citas de control o seguimiento para sí mismo,
+     * validando disponibilidad de bloques de 30 minutos sin solapamiento.
+     */
+    fun agendarCitaSeguimiento(
+        paciente: Paciente,
+        fecha: String,
+        horaInicio: String,
+        motivo: String,
+        especialidad: String,
+        onSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(errorMessage = null)
+            val docNombre = _uiState.value.currentUser?.nombreCompleto ?: "Dr. Alejandro Restrepo"
+            val result = clinicalRepository.agendarCitaParaSiMismo(
+                paciente = paciente,
+                fecha = fecha,
+                horaInicio = horaInicio,
+                motivo = motivo,
+                especialidad = especialidad,
+                medicoNombre = docNombre
+            )
+            if (result.isSuccess) {
+                _uiState.value = _uiState.value.copy(
+                    userMessage = "✅ Cita de seguimiento agendada para el $fecha a las $horaInicio (30 min)."
+                )
+                onSuccess()
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = result.exceptionOrNull()?.message ?: "Error al agendar cita."
+                )
+            }
         }
     }
 

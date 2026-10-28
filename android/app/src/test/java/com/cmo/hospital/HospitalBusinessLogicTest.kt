@@ -135,4 +135,74 @@ class HospitalBusinessLogicTest {
         val ordenCancelada = orden.copy(estado = "Cancelado")
         assertEquals("Cancelado", ordenCancelada.estado)
     }
+
+    @Test
+    fun testCitasNoSolapamientoMismaHora() {
+        val citas = listOf(
+            Cita(
+                id = "c1",
+                fecha = "2026-10-28",
+                horaInicio = "09:00",
+                horaFin = "09:30",
+                estado = "AGENDADA",
+                medicoNombre = "Dr. Alejandro Restrepo"
+            ),
+            Cita(
+                id = "c2",
+                fecha = "2026-10-28",
+                horaInicio = "10:00",
+                horaFin = "10:30",
+                estado = "CANCELADA",
+                medicoNombre = "Dr. Alejandro Restrepo"
+            )
+        )
+
+        // Mismo doctor, misma fecha y misma hora -> CONFLICTO ESTRICTO (true)
+        assertTrue(Cita.hayConflictoHorario(citas, "Dr. Alejandro Restrepo", "2026-10-28", "09:00"))
+
+        // Mismo doctor, diferente hora -> SIN CONFLICTO (false)
+        assertFalse(Cita.hayConflictoHorario(citas, "Dr. Alejandro Restrepo", "2026-10-28", "09:30"))
+
+        // Diferente doctor, misma hora -> SIN CONFLICTO (false)
+        assertFalse(Cita.hayConflictoHorario(citas, "Dra. Sofía Valenzuela", "2026-10-28", "09:00"))
+
+        // Misma hora pero cita existente está CANCELADA -> SIN CONFLICTO (false)
+        assertFalse(Cita.hayConflictoHorario(citas, "Dr. Alejandro Restrepo", "2026-10-28", "10:00"))
+    }
+
+    @Test
+    fun testCatalogoEspecialidadesYMedicosCascada() {
+        assertTrue(CATALOGO_ESPECIALIDADES.containsKey("Medicina General"))
+        assertTrue(CATALOGO_ESPECIALIDADES.containsKey("Medicina Interna"))
+        assertTrue(CATALOGO_ESPECIALIDADES.containsKey("Cardiología"))
+        assertTrue(CATALOGO_ESPECIALIDADES.containsKey("Pediatría"))
+
+        // Cada especialidad tiene médicos asignados
+        CATALOGO_ESPECIALIDADES.forEach { (esp, doctores) ->
+            assertTrue("Especialidad $esp debe tener al menos un doctor", doctores.isNotEmpty())
+        }
+
+        // Bloques de 30 minutos cubren jornada hospitalaria
+        assertTrue(BLOQUES_30_MINUTOS.contains("08:00"))
+        assertTrue(BLOQUES_30_MINUTOS.contains("08:30"))
+        assertTrue(BLOQUES_30_MINUTOS.contains("17:30"))
+    }
+
+    @Test
+    fun testTriajeOpcionalYFlexibilidad() {
+        // En una emergencia, los signos vitales pueden no ser registrados
+        val signosVacios = SignosVitales()
+        assertFalse(signosVacios.hasAnyData)
+        assertEquals("N/D", signosVacios.presionTexto)
+
+        // Con toma de signos
+        val signosCompletos = SignosVitales(
+            presionSistolica = 120,
+            presionDiastolica = 80,
+            frecuenciaCardiaca = 72,
+            temperaturaC = 36.6
+        )
+        assertTrue(signosCompletos.hasAnyData)
+        assertEquals("120/80 mmHg", signosCompletos.presionTexto)
+    }
 }
