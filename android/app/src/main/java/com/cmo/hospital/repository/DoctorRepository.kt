@@ -18,7 +18,7 @@ class DoctorRepository(private val context: Context) {
             } else {
                 getMockAgenda()
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             getMockAgenda()
         }
     }
@@ -29,7 +29,7 @@ class DoctorRepository(private val context: Context) {
             if (res.isSuccessful && res.body()?.success == true) {
                 (res.body()?.data?.get("estado") as? String) ?: "DISPONIBLE"
             } else "DISPONIBLE"
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             "DISPONIBLE"
         }
 

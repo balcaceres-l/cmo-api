@@ -210,22 +210,98 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Botón Demo Médico
-                OutlinedButton(
-                    onClick = {
-                        usuario = "medico.general"
-                        password = "Hospital2026!"
-                        viewModel.clearError()
-                    },
+                Text(
+                    text = "ACCESOS RÁPIDOS DE PRUEBA",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = CmoTextSoft,
+                    letterSpacing = 0.5.sp
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = CmoPrimary)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "⚡ Cargar cuenta Médico Demo",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    OutlinedButton(
+                        onClick = {
+                            usuario = "medico.general"
+                            password = "Hospital2026!"
+                            viewModel.clearError()
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = CmoPrimary)
+                    ) {
+                        Text(
+                            text = "👨‍⚕️ Dr. Gral",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            usuario = "medico.emergencia"
+                            password = "Hospital2026!"
+                            viewModel.clearError()
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusAmber)
+                    ) {
+                        Text(
+                            text = "🚨 Dr. Urg",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            usuario = "recepcion"
+                            password = "Hospital2026!"
+                            viewModel.clearError()
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusGreen)
+                    ) {
+                        Text(
+                            text = "📋 Recepción",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            usuario = "enfermeria"
+                            password = "Hospital2026!"
+                            viewModel.clearError()
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = CmoPrimaryDark)
+                    ) {
+                        Text(
+                            text = "💉 Enfermería",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))

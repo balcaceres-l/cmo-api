@@ -12,23 +12,30 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.cmo.hospital.data.local.SessionManager
-import com.cmo.hospital.ui.dashboard.DoctorDashboardScreen
-import com.cmo.hospital.ui.dashboard.DoctorDashboardViewModel
+import com.cmo.hospital.ui.doctor.DoctorMainScreen
+import com.cmo.hospital.ui.doctor.DoctorViewModel
 import com.cmo.hospital.ui.login.LoginScreen
 import com.cmo.hospital.ui.login.LoginViewModel
 import com.cmo.hospital.ui.navigation.Screen
+import com.cmo.hospital.ui.recepcionista.RecepcionistaMainScreen
+import com.cmo.hospital.ui.recepcionista.RecepcionistaViewModel
 import com.cmo.hospital.ui.theme.CMOHospitalTheme
 
 class MainActivity : ComponentActivity() {
     private val loginViewModel: LoginViewModel by viewModels()
-    private val doctorDashboardViewModel: DoctorDashboardViewModel by viewModels()
+    private val doctorViewModel: DoctorViewModel by viewModels()
+    private val recepcionistaViewModel: RecepcionistaViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val sessionManager = SessionManager(this)
         val currentUser = sessionManager.getUser()
-        val startDestination = if (sessionManager.isLoggedIn() && currentUser?.rol == "MEDICO") {
-            Screen.DoctorDashboard.route
+        val startDestination = if (sessionManager.isLoggedIn()) {
+            when (currentUser?.rol) {
+                "MEDICO" -> Screen.DoctorMain.route
+                "RECEPCIONISTA" -> Screen.RecepcionistaMain.route
+                else -> Screen.Login.route
+            }
         } else {
             Screen.Login.route
         }
@@ -38,8 +45,10 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     AppNavigation(
                         startDestination = startDestination,
+                        sessionManager = sessionManager,
                         loginViewModel = loginViewModel,
-                        doctorDashboardViewModel = doctorDashboardViewModel
+                        doctorViewModel = doctorViewModel,
+                        recepcionistaViewModel = recepcionistaViewModel
                     )
                 }
             }
@@ -50,8 +59,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation(
     startDestination: String,
+    sessionManager: SessionManager,
     loginViewModel: LoginViewModel,
-    doctorDashboardViewModel: DoctorDashboardViewModel
+    doctorViewModel: DoctorViewModel,
+    recepcionistaViewModel: RecepcionistaViewModel
 ) {
     val navController = rememberNavController()
 
@@ -60,27 +71,43 @@ fun AppNavigation(
             LoginScreen(
                 viewModel = loginViewModel,
                 onLoginSuccess = { user ->
-                    if (user.rol == "MEDICO") {
-                        doctorDashboardViewModel.loadDashboard()
-                        navController.navigate(Screen.DoctorDashboard.route) {
-                            popUpTo(Screen.Login.route) { inclusive = true }
+                    when (user.rol) {
+                        "MEDICO" -> {
+                            doctorViewModel.cargarDatos()
+                            navController.navigate(Screen.DoctorMain.route) {
+                                popUpTo(Screen.Login.route) { inclusive = true }
+                            }
                         }
-                    } else {
-                        // Recepción o personal
-                        navController.navigate(Screen.DoctorDashboard.route) {
-                            popUpTo(Screen.Login.route) { inclusive = true }
+                        "RECEPCIONISTA" -> {
+                            recepcionistaViewModel.cargarDatos()
+                            navController.navigate(Screen.RecepcionistaMain.route) {
+                                popUpTo(Screen.Login.route) { inclusive = true }
+                            }
                         }
                     }
                 }
             )
         }
 
-        composable(Screen.DoctorDashboard.route) {
-            DoctorDashboardScreen(
-                viewModel = doctorDashboardViewModel,
+        composable(Screen.DoctorMain.route) {
+            DoctorMainScreen(
+                viewModel = doctorViewModel,
                 onLogout = {
+                    sessionManager.clear()
                     navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.DoctorDashboard.route) { inclusive = true }
+                        popUpTo(Screen.DoctorMain.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.RecepcionistaMain.route) {
+            RecepcionistaMainScreen(
+                viewModel = recepcionistaViewModel,
+                onLogout = {
+                    sessionManager.clear()
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.RecepcionistaMain.route) { inclusive = true }
                     }
                 }
             )

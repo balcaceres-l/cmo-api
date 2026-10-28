@@ -49,7 +49,7 @@ class AuthRepository(private val context: Context) {
     suspend fun logout() {
         try {
             apiService.logout()
-        } catch (_: Exception) {}
+        } catch (e: Exception) {}
         sessionManager.clear()
     }
 
