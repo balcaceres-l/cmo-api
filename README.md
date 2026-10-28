@@ -14,9 +14,11 @@ Todas las apps consumen la misma API bajo `/api/v1`. La documentación interacti
 
 ## Inicio rápido
 
-1. **Backend**: Levanta el backend siguiendo [`backend/README.md`](backend/README.md).
+> 📖 **Guía Completa**: Consulta [`INSTRUCCIONES.md`](INSTRUCCIONES.md) para la guía paso a paso desde `composer install` para el backend hasta los comandos de compilación, pruebas y ejecución de Android.
+
+1. **Backend**: Levanta el backend siguiendo [`backend/README.md`](backend/README.md) o [`INSTRUCCIONES.md`](INSTRUCCIONES.md).
 2. **Web**: Abre [`web/README.md`](web/README.md) y ejecuta `npm install && npm run dev` (puerto 5173).
-3. **Android**: Abre `android/` en Android Studio y configura `local.properties` según [`android/README.md`](android/README.md).
+3. **Android**: Sigue [`INSTRUCCIONES.md`](INSTRUCCIONES.md) o abre `android/` en Android Studio.
 4. **iOS**: Abre `ios/` en Xcode en una Mac y configura `Config.xcconfig` según [`ios/README.md`](ios/README.md).
 
 ## Convenciones de trabajo
