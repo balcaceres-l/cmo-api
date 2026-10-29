@@ -1,6 +1,17 @@
 package com.cmo.hospital
 
-import com.cmo.hospital.data.model.*
+import com.cmo.hospital.core.data.datasource.HospitalClinicalDataSource
+import com.cmo.hospital.core.domain.model.*
+import com.cmo.hospital.features.doctor.inicio.data.repository.InicioDoctorRepositoryImpl
+import com.cmo.hospital.features.doctor.inicio.domain.usecase.ConstruirPacientesMedicoUseCase
+import com.cmo.hospital.features.doctor.inicio.domain.usecase.IniciarORetomarConsultaMedicoUseCase
+import com.cmo.hospital.features.doctor.laboratorio.data.repository.LaboratorioRepositoryImpl
+import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.CambiarEstadoOrdenLabUseCase
+import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.EmitirOrdenLabUseCase
+import com.cmo.hospital.features.recepcionista.admision.data.repository.AdmisionRepositoryImpl
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.GenerarBrazaleteQrUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.RegistrarIngresoPacienteUseCase
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -16,28 +27,23 @@ class HospitalBusinessLogicTest {
 
     @Test
     fun testSignosVitalesCalculoImcYClasificacion() {
-        // Peso 70kg, Talla 175cm -> IMC ~22.9
         val normal = SignosVitales(pesoKg = 70.0, tallaCm = 175.0)
         assertNotNull(normal.imc)
         assertEquals(22.9, normal.imc!!, 0.1)
         assertEquals("Normal", normal.imcClasificacion)
 
-        // Sobrepeso: 80kg, 170cm -> IMC ~27.7
         val sobrepeso = SignosVitales(pesoKg = 80.0, tallaCm = 170.0)
         assertEquals("Sobrepeso", sobrepeso.imcClasificacion)
 
-        // Obesidad: 100kg, 170cm -> IMC ~34.6
         val obesidad = SignosVitales(pesoKg = 100.0, tallaCm = 170.0)
         assertEquals("Obesidad", obesidad.imcClasificacion)
 
-        // Bajo peso: 45kg, 165cm -> IMC ~16.5
         val bajoPeso = SignosVitales(pesoKg = 45.0, tallaCm = 165.0)
         assertEquals("Bajo peso", bajoPeso.imcClasificacion)
     }
 
     @Test
     fun testSignosVitalesSonFlexiblesYOpcionales() {
-        // En una emergencia el paciente puede no tener signos vitales al inicio
         val emergenciaSinSignos = SignosVitales()
         assertNull(emergenciaSinSignos.presionSistolica)
         assertNull(emergenciaSinSignos.presionDiastolica)
@@ -59,10 +65,8 @@ class HospitalBusinessLogicTest {
             dui = "01234567-8",
             fechaNacimiento = "2000-01-01"
         )
-        // Debe tener al menos 24 años
         assertTrue(paciente1.edad >= 24)
 
-        // Manejo seguro con fecha nula o inválida
         val pacienteInvalido = Paciente(
             id = "p-2",
             nombreCompleto = "Juan Test",
@@ -78,35 +82,32 @@ class HospitalBusinessLogicTest {
         val rolesBloqueados = listOf("ADMINISTRADOR", "PACIENTE", "OTRO")
 
         for (rol in rolesPermitidos) {
-            assertTrue("El rol $rol debe estar permitido en Android", rol == "MEDICO" || rol == "RECEPCIONISTA")
+            assertTrue(
+                "El rol $rol debe estar permitido en Android",
+                RoleAccessPolicy.isAllowedInMobileApp(rol)
+            )
         }
 
         for (rol in rolesBloqueados) {
-            assertFalse("El rol $rol debe ser denegado en Android", rol == "MEDICO" || rol == "RECEPCIONISTA")
+            assertFalse(
+                "El rol $rol debe ser denegado en Android",
+                RoleAccessPolicy.isAllowedInMobileApp(rol)
+            )
         }
     }
 
     @Test
     fun testSemaforoConsulta30Minutos() {
-        fun calcularSemaforo(minutosTranscurridos: Int): EstadoSemaforo {
-            return when {
-                minutosTranscurridos < 20 -> EstadoSemaforo.VERDE
-                minutosTranscurridos in 20..25 -> EstadoSemaforo.AMBAR
-                else -> EstadoSemaforo.ROJO
-            }
-        }
-
-        assertEquals(EstadoSemaforo.VERDE, calcularSemaforo(10))
-        assertEquals(EstadoSemaforo.VERDE, calcularSemaforo(19))
-        assertEquals(EstadoSemaforo.AMBAR, calcularSemaforo(20))
-        assertEquals(EstadoSemaforo.AMBAR, calcularSemaforo(25))
-        assertEquals(EstadoSemaforo.ROJO, calcularSemaforo(26))
-        assertEquals(EstadoSemaforo.ROJO, calcularSemaforo(35))
+        assertEquals(EstadoSemaforo.VERDE, EstadoSemaforo.calcularPorMinutos(10))
+        assertEquals(EstadoSemaforo.VERDE, EstadoSemaforo.calcularPorMinutos(19))
+        assertEquals(EstadoSemaforo.AMBAR, EstadoSemaforo.calcularPorMinutos(20))
+        assertEquals(EstadoSemaforo.AMBAR, EstadoSemaforo.calcularPorMinutos(25))
+        assertEquals(EstadoSemaforo.ROJO, EstadoSemaforo.calcularPorMinutos(26))
+        assertEquals(EstadoSemaforo.ROJO, EstadoSemaforo.calcularPorMinutos(35))
     }
 
     @Test
     fun testFormatoNumeroExpedienteIniciales() {
-        // Formato (LB-2026-001): Primera letra del primer nombre + primera letra del primer apellido + año + correlativo
         assertEquals("LB-2026-001", Paciente.generarNumeroExpediente("Luis Barillas", 2026, 1))
         assertEquals("CM-2026-002", Paciente.generarNumeroExpediente("Carlos Mendoza", 2026, 2))
         assertEquals("MS-2026-003", Paciente.generarNumeroExpediente("Mariana Silva Rivas", 2026, 3))
@@ -126,12 +127,10 @@ class HospitalBusinessLogicTest {
         )
         assertEquals("En Espera", orden.estado)
 
-        // El Doctor cambia el estado a Realizado
         val ordenRealizada = orden.copy(estado = "Realizado", fechaResultado = "Hoy, 10:45")
         assertEquals("Realizado", ordenRealizada.estado)
         assertEquals("Hoy, 10:45", ordenRealizada.fechaResultado)
 
-        // O a Cancelado
         val ordenCancelada = orden.copy(estado = "Cancelado")
         assertEquals("Cancelado", ordenCancelada.estado)
     }
@@ -157,45 +156,34 @@ class HospitalBusinessLogicTest {
             )
         )
 
-        // Mismo doctor, misma fecha y misma hora -> CONFLICTO ESTRICTO (true)
         assertTrue(Cita.hayConflictoHorario(citas, "Dr. Alejandro Restrepo", "2026-10-28", "09:00"))
-
-        // Mismo doctor, diferente hora -> SIN CONFLICTO (false)
         assertFalse(Cita.hayConflictoHorario(citas, "Dr. Alejandro Restrepo", "2026-10-28", "09:30"))
-
-        // Diferente doctor, misma hora -> SIN CONFLICTO (false)
         assertFalse(Cita.hayConflictoHorario(citas, "Dra. Sofía Valenzuela", "2026-10-28", "09:00"))
-
-        // Misma hora pero cita existente está CANCELADA -> SIN CONFLICTO (false)
         assertFalse(Cita.hayConflictoHorario(citas, "Dr. Alejandro Restrepo", "2026-10-28", "10:00"))
     }
 
     @Test
     fun testCatalogoEspecialidadesYMedicosCascada() {
-        assertTrue(CATALOGO_ESPECIALIDADES.containsKey("Medicina General"))
-        assertTrue(CATALOGO_ESPECIALIDADES.containsKey("Medicina Interna"))
-        assertTrue(CATALOGO_ESPECIALIDADES.containsKey("Cardiología"))
-        assertTrue(CATALOGO_ESPECIALIDADES.containsKey("Pediatría"))
+        assertTrue(CatalogoClinico.CATALOGO_ESPECIALIDADES.containsKey("Medicina General"))
+        assertTrue(CatalogoClinico.CATALOGO_ESPECIALIDADES.containsKey("Medicina Interna"))
+        assertTrue(CatalogoClinico.CATALOGO_ESPECIALIDADES.containsKey("Cardiología"))
+        assertTrue(CatalogoClinico.CATALOGO_ESPECIALIDADES.containsKey("Pediatría"))
 
-        // Cada especialidad tiene médicos asignados
-        CATALOGO_ESPECIALIDADES.forEach { (esp, doctores) ->
+        CatalogoClinico.CATALOGO_ESPECIALIDADES.forEach { (esp, doctores) ->
             assertTrue("Especialidad $esp debe tener al menos un doctor", doctores.isNotEmpty())
         }
 
-        // Bloques de 30 minutos cubren jornada hospitalaria
-        assertTrue(BLOQUES_30_MINUTOS.contains("08:00"))
-        assertTrue(BLOQUES_30_MINUTOS.contains("08:30"))
-        assertTrue(BLOQUES_30_MINUTOS.contains("17:30"))
+        assertTrue(CatalogoClinico.BLOQUES_30_MINUTOS.contains("08:00"))
+        assertTrue(CatalogoClinico.BLOQUES_30_MINUTOS.contains("08:30"))
+        assertTrue(CatalogoClinico.BLOQUES_30_MINUTOS.contains("17:30"))
     }
 
     @Test
     fun testTriajeOpcionalYFlexibilidad() {
-        // En una emergencia, los signos vitales pueden no ser registrados
         val signosVacios = SignosVitales()
         assertFalse(signosVacios.hasAnyData)
         assertEquals("N/D", signosVacios.presionTexto)
 
-        // Con toma de signos
         val signosCompletos = SignosVitales(
             presionSistolica = 120,
             presionDiastolica = 80,
@@ -204,5 +192,205 @@ class HospitalBusinessLogicTest {
         )
         assertTrue(signosCompletos.hasAnyData)
         assertEquals("120/80 mmHg", signosCompletos.presionTexto)
+    }
+
+    // ─── Nuevos Tests Clean Architecture & Prototipo HUC Móvil ───────────────
+
+    @Test
+    fun testTriageManchester4NivelesYAnonimizacionLey19628() {
+        assertEquals(4, NivelTriageManchester.entries.size)
+        assertEquals(NivelTriageManchester.NIVEL_I_ROJO, NivelTriageManchester.fromNivel(1))
+        assertEquals("Inmediato (0 min)", NivelTriageManchester.NIVEL_I_ROJO.tiempoRespuesta)
+        assertEquals("Estándar (120 min)", NivelTriageManchester.NIVEL_IV_VERDE.tiempoRespuesta)
+
+        val anonimo = Paciente.anonimizarNombre("Carlos Mendoza")
+        assertEquals("C. M**** (Protegido)", anonimo)
+
+        val generarQr = GenerarBrazaleteQrUseCase()
+        val qrProtegido = generarQr(
+            dni = "17.489.201-3",
+            nombres = "Francisca",
+            apellidos = "Navarro",
+            codigoCama = "VIP-302",
+            esEmergenciaDirecta = false,
+            nivelTriage = NivelTriageManchester.NIVEL_II_NARANJA,
+            protegidoLey19628 = true
+        )
+        assertTrue(qrProtegido.isSuccess)
+        assertEquals("F. N**** (Protegido)", qrProtegido.getOrThrow().pacienteNombre)
+        assertEquals("VIP-302", qrProtegido.getOrThrow().codigoCama)
+    }
+
+    @Test
+    fun testCapacidadEstricta17CamasYBloqueoSobrecupo() = runTest {
+        val dataSource = HospitalClinicalDataSource(apiService = null)
+        val repo = AdmisionRepositoryImpl(dataSource)
+        val useCase = RegistrarIngresoPacienteUseCase(repo)
+
+        val capInicial = repo.obtenerCapacidadActual()
+        assertEquals(17, capInicial.totalCamas)
+        assertEquals(14, capInicial.ocupadas)
+        assertEquals(3, capInicial.disponibles)
+        assertEquals(5, capInicial.vipCamas.size)
+        assertEquals(6, capInicial.salasSemiprivadas.size) // 6 salas * 2 camas (A/B) = 12 camas
+
+        // Ingreso válido ocupando VIP-302
+        val ingreso1 = useCase(
+            dni = "17.489.201-3",
+            nombres = "Francisca",
+            apellidos = "Navarro",
+            edadTexto = "34",
+            prevision = "Fonasa Tramo D",
+            contactoEmergencia = "+56 9 7654 3210",
+            protegidoLey19628 = false,
+            motivoIngreso = "Síndrome coronario en observación",
+            nivelTriage = NivelTriageManchester.NIVEL_II_NARANJA,
+            esEmergenciaDirecta = false,
+            codigoCamaSeleccionada = "VIP-302",
+            signosVitales = null
+        )
+        assertTrue(ingreso1.isSuccess)
+
+        val capDespues = repo.obtenerCapacidadActual()
+        assertEquals(15, capDespues.ocupadas)
+        assertEquals(2, capDespues.disponibles)
+
+        // Intentar reasignar la misma cama VIP-302 debe bloquearse por sobrecupo estricto
+        val intentoDuplicado = useCase(
+            dni = "12.111.222-3",
+            nombres = "Pedro",
+            apellidos = "Rojas",
+            edadTexto = "50",
+            prevision = "Isapre Colmena",
+            contactoEmergencia = "",
+            protegidoLey19628 = false,
+            motivoIngreso = "Observación",
+            nivelTriage = NivelTriageManchester.NIVEL_III_AMARILLO,
+            esEmergenciaDirecta = false,
+            codigoCamaSeleccionada = "VIP-302",
+            signosVitales = null
+        )
+        assertTrue(intentoDuplicado.isFailure)
+    }
+
+    @Test
+    fun testEmergenciaDirectaIniciaConsultaActivaDoctorEnCeroSegundos() = runTest {
+        val dataSource = HospitalClinicalDataSource(apiService = null)
+        val repo = AdmisionRepositoryImpl(dataSource)
+        val useCase = RegistrarIngresoPacienteUseCase(repo)
+
+        val res = useCase(
+            dni = "19.888.777-K",
+            nombres = "Mateo",
+            apellidos = "Contreras",
+            edadTexto = "61",
+            prevision = "Fonasa Tramo D",
+            contactoEmergencia = "",
+            protegidoLey19628 = true,
+            motivoIngreso = "Dolor precordial agudo",
+            nivelTriage = NivelTriageManchester.NIVEL_I_ROJO,
+            esEmergenciaDirecta = true,
+            codigoCamaSeleccionada = null,
+            signosVitales = null
+        )
+        assertTrue(res.isSuccess)
+
+        val consultaDoctor = dataSource.consultaActiva.value
+        assertEquals("Mateo Contreras", consultaDoctor.paciente.nombreCompleto)
+        assertEquals(0, consultaDoctor.segundosTranscurridos)
+        assertEquals("00:00", consultaDoctor.relojFormateado)
+        assertEquals(EstadoSemaforo.VERDE, consultaDoctor.estadoSemaforo)
+        assertFalse(consultaDoctor.signosVitales.hasAnyData)
+    }
+
+    @Test
+    fun testSincronizacionLaboratorioLisConsultaYExpedientes() {
+        val dataSource = HospitalClinicalDataSource(apiService = null)
+        val labRepo = LaboratorioRepositoryImpl(dataSource)
+        val emitirUseCase = EmitirOrdenLabUseCase(labRepo)
+        val cambiarEstadoUseCase = CambiarEstadoOrdenLabUseCase(labRepo)
+
+        val pacienteActivo = dataSource.consultaActiva.value.paciente
+        val creadasRes = emitirUseCase(
+            examenes = listOf("Dímero D Cuantitativo"),
+            prioridad = "STAT",
+            observaciones = "Descartar TEP",
+            paciente = pacienteActivo,
+            estadoInicial = "En Espera"
+        )
+        assertTrue(creadasRes.isSuccess)
+        val ordenId = creadasRes.getOrThrow().first().id
+
+        // Cambiar estado a Realizado y verificar propagación en las 3 fuentes
+        assertTrue(cambiarEstadoUseCase(ordenId, "Realizado").isSuccess)
+
+        val enLis = dataSource.ordenesLab.value.first { it.id == ordenId }
+        val enConsulta = dataSource.consultaActiva.value.ordenesLaboratorio.first { it.id == ordenId }
+        val expCarlos = dataSource.expedientes.value.first {
+            it.paciente.numeroExpediente == pacienteActivo.numeroExpediente
+        }
+        val enExpediente = expCarlos.ordenesLaboratorio.first { it.id == ordenId }
+
+        assertEquals("Realizado", enLis.estado)
+        assertEquals("Realizado", enConsulta.estado)
+        assertEquals("Realizado", enExpediente.estado)
+        assertNotNull(enLis.fechaResultado)
+    }
+
+    @Test
+    fun testFlujoPaginaPrincipalMedicoIniciarVolverYFinalizarConsulta() = runTest {
+        val dataSource = HospitalClinicalDataSource(apiService = null)
+        val inicioRepo = InicioDoctorRepositoryImpl(dataSource)
+        val iniciarUseCase = IniciarORetomarConsultaMedicoUseCase(inicioRepo)
+        val construirPacientesUseCase = ConstruirPacientesMedicoUseCase()
+
+        // 1. La página principal construye la lista completa de pacientes del médico (citas + expedientes)
+        val todosPacientes = construirPacientesUseCase(
+            citas = dataSource.citasState.value,
+            expedientes = dataSource.expedientes.value,
+            query = ""
+        )
+        assertTrue(todosPacientes.size >= 5)
+        val filtradoLucia = construirPacientesUseCase(
+            citas = dataSource.citasState.value,
+            expedientes = dataSource.expedientes.value,
+            query = "Lucía"
+        )
+        assertEquals(1, filtradoLucia.size)
+        assertEquals("LM-2026-002", filtradoLucia.first().paciente.numeroExpediente)
+
+        // 2. El médico inicia consulta desde la cita "c-102" (Lucía Morales Castillo, EN_ESPERA)
+        val resInicio = iniciarUseCase("c-102")
+        assertTrue(resInicio.isSuccess)
+
+        val cita102 = dataSource.citasState.value.first { it.id == "c-102" }
+        val cita101Anterior = dataSource.citasState.value.first { it.id == "c-101" }
+        assertEquals("EN_ATENCION", cita102.estado)
+        assertEquals("EN_ESPERA", cita101Anterior.estado)
+
+        val consultaAbierta = dataSource.consultaActiva.value
+        assertEquals("c-102", consultaAbierta.citaId)
+        assertEquals("Lucía Morales Castillo", consultaAbierta.paciente.nombreCompleto)
+        assertEquals(0, consultaAbierta.segundosTranscurridos)
+        assertEquals(EstadoSemaforo.VERDE, consultaAbierta.estadoSemaforo)
+        assertFalse(consultaAbierta.finalizada)
+
+        // 3. El médico vuelve a la página principal y luego retoma la misma consulta sin reiniciar cronómetro
+        dataSource.actualizarSegundosConsulta(120)
+        val resRetomar = iniciarUseCase("c-102")
+        assertTrue(resRetomar.isSuccess)
+        assertEquals(120, dataSource.consultaActiva.value.segundosTranscurridos)
+
+        // 4. El médico registra CIE-10 y finaliza la consulta -> cita pasa a ATENDIDA y se añade al expediente
+        dataSource.agregarDiagnosticoCie10("R51", "Cefalea")
+        dataSource.finalizarConsulta()
+
+        assertTrue(dataSource.consultaActiva.value.finalizada)
+        assertEquals("ATENDIDA", dataSource.citasState.value.first { it.id == "c-102" }.estado)
+
+        val expLucia = dataSource.expedientes.value.first {
+            it.paciente.numeroExpediente == "LM-2026-002"
+        }
+        assertTrue(expLucia.atencionesPrevias.first().diagnostico.contains("R51"))
     }
 }
