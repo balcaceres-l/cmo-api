@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/huc_surface"
+    android:clipToPadding="false"
+    android:paddingBottom="108dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/huc_space_md">
+
+        <!-- Micro-Banner Institucional del Panel Médico -->
+        <include
+            android:id="@+id/microBannerDoctorInicio"
+            layout="@layout/comp_huc_micro_banner" />
+
+        <!-- KPIs Operativos de la Jornada Médica -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:orientation="horizontal">
+
+            <!-- KPI 1: En Sala / Pendientes -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_card_rounded_16"
+                android:elevation="1dp"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PENDIENTES"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                    android:textColor="@color/huc_secondary" />
+
+                <TextView
+                    android:id="@+id/tvKpiDocPendientes"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="0"
+                    android:textAppearance="@style/TextAppearance.Huc.HeadlineMd"
+                    android:textColor="@color/huc_on_surface" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sala y agenda"
+                    android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+            </LinearLayout>
+
+            <!-- KPI 2: En Consulta Activa -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="3dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_card_rounded_16"
+                android:elevation="1dp"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="EN BOX"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                    android:textColor="@color/huc_primary_container" />
+
+                <TextView
+                    android:id="@+id/tvKpiDocEnBox"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="0"
+                    android:textAppearance="@style/TextAppearance.Huc.HeadlineMd"
+                    android:textColor="@color/huc_primary_container" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="En atención"
+                    android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+            </LinearLayout>
+
+            <!-- KPI 3: Finalizadas / Atendidas -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_card_rounded_16"
+                android:elevation="1dp"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ATENDIDAS"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                    android:textColor="@color/huc_semaforo_verde" />
+
+                <TextView
+                    android:id="@+id/tvKpiDocAtendidas"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="0"
+                    android:textAppearance="@style/TextAppearance.Huc.HeadlineMd"
+                    android:textColor="@color/huc_semaforo_verde" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cerradas"
+                    android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Banner Dinámico: Consulta Actualmente en Curso (Permite Volver en 1 toque) -->
+        <LinearLayout
+            android:id="@+id/cardConsultaEnCursoInicio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:background="@drawable/bg_semaforo_verde"
+            android:orientation="vertical"
+            android:padding="@dimen/huc_space_md"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvBannerActivaEstado"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="🟢 CONSULTA EN CURSO • 00:00"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelMd"
+                    android:textColor="@color/huc_semaforo_verde" />
+
+                <TextView
+                    android:id="@+id/tvBannerActivaBox"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_pill_primary"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="3dp"
+                    android:text="Box 03"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                    android:textColor="@color/huc_primary_fixed" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvBannerActivaPaciente"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Carlos Mendoza"
+                        android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
+
+                    <TextView
+                        android:id="@+id/tvBannerActivaMeta"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="EXP: CM-2026-001 • Cronómetro activo"
+                        android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnVolverAConsultaActiva"
+                    style="@style/Widget.Huc.Button.Primary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="42dp"
+                    android:layout_marginStart="8dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="42dp"
+                    android:text="Retomar Consulta"
+                    android:textAllCaps="false"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Tarjeta Principal con Selector Segmentado: Mis Citas | Mis Pacientes -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:background="@drawable/bg_card_rounded_16"
+            android:elevation="1dp"
+            android:orientation="vertical"
+            android:padding="@dimen/huc_space_md">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:letterSpacing="0.06"
+                        android:text="GESTIÓN CLÍNICA DEL MÉDICO"
+                        android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                        android:textColor="@color/huc_secondary" />
+
+                    <TextView
+                        android:id="@+id/tvInicioSeccionTitulo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Mis Citas Asignadas"
+                        android:textAppearance="@style/TextAppearance.Huc.HeadlineSm" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnInicioAgendarControl"
+                    style="@style/Widget.Huc.Button.Secondary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="38dp"
+                    android:text="+ Control"
+                    android:textAllCaps="false"
+                    android:textSize="12sp"
+                    app:icon="@drawable/ic_event"
+                    app:iconSize="15dp" />
+            </LinearLayout>
+
+            <!-- Botones Segmentados: Mis Citas vs Mis Pacientes -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/huc_space_sm"
+                android:background="@drawable/bg_surface_low_16"
+                android:orientation="horizontal"
+                android:padding="4dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSegmentoMisCitas"
+                    style="@style/Widget.Huc.Button.Primary"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="3dp"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="40dp"
+                    android:text="Mis Citas"
+                    android:textAllCaps="false"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSegmentoMisPacientes"
+                    style="@style/Widget.Huc.Button.Outlined"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="3dp"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="40dp"
+                    android:text="Mis Pacientes"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    app:strokeWidth="0dp" />
+            </LinearLayout>
+
+            <!-- Filtros para Mis Citas -->
+            <HorizontalScrollView
+                android:id="@+id/scrollFiltrosCitasDoc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:scrollbars="none">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupFiltroCitasDoc"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:selectionRequired="true"
+                    app:singleLine="true"
+                    app:singleSelection="true" />
+            </HorizontalScrollView>
+
+            <!-- Buscador para Mis Pacientes -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilBuscarMiPaciente"
+                style="@style/Widget.Huc.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:hint="Buscar paciente por nombre, DNI o expediente"
+                android:visibility="gone"
+                app:startIconDrawable="@drawable/ic_search"
+                app:startIconTint="@color/huc_primary_container">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etBuscarMiPaciente"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:textAppearance="@style/TextAppearance.Huc.BodyMd" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <!-- Contenedor Lista 1: Mis Citas -->
+        <LinearLayout
+            android:id="@+id/sectionListaMisCitas"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvCitasMedicoEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_surface_low_16"
+                android:gravity="center"
+                android:padding="@dimen/huc_space_lg"
+                android:text="No hay citas para el filtro seleccionado."
+                android:textAppearance="@style/TextAppearance.Huc.BodySm"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvCitasMedico"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false" />
+        </LinearLayout>
+
+        <!-- Contenedor Lista 2: Mis Pacientes -->
+        <LinearLayout
+            android:id="@+id/sectionListaMisPacientes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvPacientesMedicoEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_surface_low_16"
+                android:gravity="center"
+                android:padding="@dimen/huc_space_lg"
+                android:text="No se encontraron pacientes asignados."
+                android:textAppearance="@style/TextAppearance.Huc.BodySm"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvPacientesMedico"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false" />
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
