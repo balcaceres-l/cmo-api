@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Paleta Institucional HUC Móvil (Material 3 / Prototipo HTML) -->
+    <color name="huc_primary">#00342B</color>
+    <color name="huc_on_primary">#FFFFFF</color>
+    <color name="huc_primary_container">#004D40</color>
+    <color name="huc_on_primary_container">#7EBDAC</color>
+    <color name="huc_primary_fixed">#AFEFDD</color>
+    <color name="huc_primary_fixed_dim">#94D3C1</color>
+    <color name="huc_on_primary_fixed">#00201A</color>
+    <color name="huc_on_primary_fixed_variant">#065043</color>
+    <color name="huc_surface_tint">#29695B</color>
+
+    <!-- Secondary -->
+    <color name="huc_secondary">#00629E</color>
+    <color name="huc_on_secondary">#FFFFFF</color>
+    <color name="huc_secondary_container">#62B4FE</color>
+    <color name="huc_on_secondary_container">#004470</color>
+    <color name="huc_secondary_fixed">#CFE5FF</color>
+    <color name="huc_secondary_fixed_dim">#99CBFF</color>
+    <color name="huc_on_secondary_fixed">#001D34</color>
+    <color name="huc_on_secondary_fixed_variant">#004A78</color>
+
+    <!-- Tertiary (Ámbar / Protección Ley 19.628 / Triage Nivel II-III) -->
+    <color name="huc_tertiary">#442700</color>
+    <color name="huc_on_tertiary">#FFFFFF</color>
+    <color name="huc_tertiary_container">#623B00</color>
+    <color name="huc_on_tertiary_container">#F99C00</color>
+    <color name="huc_tertiary_fixed">#FFDDBA</color>
+    <color name="huc_tertiary_fixed_dim">#FFB865</color>
+    <color name="huc_on_tertiary_fixed">#2B1700</color>
+    <color name="huc_on_tertiary_fixed_variant">#663D00</color>
+
+    <!-- Error / Crítico / STAT / Triage Nivel I -->
+    <color name="huc_error">#BA1A1A</color>
+    <color name="huc_on_error">#FFFFFF</color>
+    <color name="huc_error_container">#FFDAD6</color>
+    <color name="huc_on_error_container">#93000A</color>
+
+    <!-- Superficies & Fondos -->
+    <color name="huc_background">#F8F9FA</color>
+    <color name="huc_on_background">#191C1D</color>
+    <color name="huc_surface">#F8F9FA</color>
+    <color name="huc_surface_bright">#F8F9FA</color>
+    <color name="huc_surface_dim">#D9DADB</color>
+    <color name="huc_surface_lowest">#FFFFFF</color>
+    <color name="huc_surface_low">#F3F4F5</color>
+    <color name="huc_surface_container">#EDEEEF</color>
+    <color name="huc_surface_high">#E7E8E9</color>
+    <color name="huc_surface_highest">#E1E3E4</color>
+    <color name="huc_surface_variant">#E1E3E4</color>
+    <color name="huc_on_surface">#191C1D</color>
+    <color name="huc_on_surface_variant">#3F4945</color>
+    <color name="huc_outline">#707975</color>
+    <color name="huc_outline_variant">#BFC9C4</color>
+    <color name="huc_inverse_surface">#2E3132</color>
+    <color name="huc_inverse_on_surface">#F0F1F2</color>
+    <color name="huc_inverse_primary">#94D3C1</color>
+
+    <!-- Estados Clínicos Auxiliares (Semáforo 30m y LIS) -->
+    <color name="huc_semaforo_verde">#0D7A5F</color>
+    <color name="huc_semaforo_verde_bg">#E3F8F1</color>
+    <color name="huc_semaforo_ambar">#B45309</color>
+    <color name="huc_semaforo_ambar_bg">#FEF3C7</color>
+    <color name="huc_semaforo_rojo">#BA1A1A</color>
+    <color name="huc_semaforo_rojo_bg">#FFDAD6</color>
+    <color name="huc_white">#FFFFFF</color>
+    <color name="huc_transparent">#00000000</color>
+</resources>

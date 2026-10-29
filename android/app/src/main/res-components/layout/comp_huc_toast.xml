@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/toastRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_card_primary_16"
+    android:elevation="8dp"
+    android:gravity="top"
+    android:orientation="horizontal"
+    android:padding="@dimen/huc_space_md"
+    android:visibility="gone"
+    tools:visibility="visible">
+
+    <FrameLayout
+        android:id="@+id/toastIconBox"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/bg_circle_primary_container">
+
+        <ImageView
+            android:id="@+id/ivToastIcon"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_gravity="center"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_check"
+            app:tint="@color/huc_primary_fixed" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/huc_space_sm"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvToastTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/huc_on_primary"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            tools:text="Ingreso Registrado con Éxito" />
+
+        <TextView
+            android:id="@+id/tvToastMessage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/huc_primary_fixed_dim"
+            android:textSize="12sp"
+            tools:text="Paciente asignado a la cama seleccionada con expediente digital activo." />
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/btnToastClose"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@null"
+        android:padding="3dp"
+        android:src="@drawable/ic_close"
+        app:tint="@color/huc_on_primary" />
+
+</LinearLayout>
