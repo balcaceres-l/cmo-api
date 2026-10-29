@@ -9,6 +9,9 @@ captures/
 local.properties
 
 # Firmas y secretos: nunca al repositorio
+.env
+.env.*
+!.env.example
 *.jks
 *.keystore
 keystore.properties

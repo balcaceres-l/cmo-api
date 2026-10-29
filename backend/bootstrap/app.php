@@ -78,3 +78,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ], $status);
         });
     })->create();
+
+// Si existe el archivo .env unificado en la raíz de cmo-api (un nivel arriba de backend), usarlo
+$rootEnv = dirname(__DIR__, 2) . '/.env';
+if (file_exists($rootEnv)) {
+    $app->useEnvironmentPath(dirname(__DIR__, 2));
+}
+
+return $app;
