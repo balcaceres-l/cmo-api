@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_surface_container_16"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="10dp"
+    android:paddingVertical="8dp">
+
+    <TextView
+        android:id="@+id/tvSalaCodigo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingEnd="8dp"
+        android:textAppearance="@style/TextAppearance.Huc.TitleSm"
+        tools:text="HAB-202" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1" />
+
+    <!-- Cama A -->
+    <LinearLayout
+        android:id="@+id/btnCamaA"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:background="@drawable/bg_bed_semi_occupied"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="9dp">
+
+        <View
+            android:id="@+id/dotCamaA"
+            android:layout_width="6dp"
+            android:layout_height="6dp"
+            android:background="@drawable/bg_dot_circle"
+            android:backgroundTint="@color/huc_error" />
+
+        <TextView
+            android:id="@+id/tvCamaALabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:text="Cama A (Ocup.)"
+            android:textColor="@color/huc_error"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/ivCamaACheck"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginStart="3dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_check"
+            android:visibility="gone"
+            app:tint="@color/huc_primary_fixed" />
+    </LinearLayout>
+
+    <!-- Cama B -->
+    <LinearLayout
+        android:id="@+id/btnCamaB"
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:layout_marginStart="6dp"
+        android:background="@drawable/bg_bed_semi_available"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="9dp">
+
+        <View
+            android:id="@+id/dotCamaB"
+            android:layout_width="6dp"
+            android:layout_height="6dp"
+            android:background="@drawable/bg_dot_circle"
+            android:backgroundTint="@color/huc_primary" />
+
+        <TextView
+            android:id="@+id/tvCamaBLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:text="Cama B (Disp.)"
+            android:textColor="@color/huc_primary"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/ivCamaBCheck"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginStart="3dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_check"
+            android:visibility="gone"
+            app:tint="@color/huc_primary_fixed" />
+    </LinearLayout>
+
+</LinearLayout>
