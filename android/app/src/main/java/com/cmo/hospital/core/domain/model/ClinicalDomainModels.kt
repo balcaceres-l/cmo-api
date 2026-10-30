@@ -90,6 +90,8 @@ data class Paciente(
     @SerializedName("tipo_sangre") val tipoSangre: String? = null,
     val alergias: String? = null,
     @SerializedName("numero_expediente") val numeroExpediente: String? = null,
+    /** Cuenta de la app vinculada al expediente (null si el paciente aún no se registró). */
+    @SerializedName("id_usuario") val idUsuario: String? = null,
     val protegido: Boolean = false,
     @SerializedName("contacto_emergencia") val contactoEmergencia: String? = null,
     val prevision: String? = null,
@@ -168,6 +170,13 @@ data class PacienteInfo(
     val protegido: Boolean = false
 )
 
+data class ConsultaRef(
+    @SerializedName("id_consulta") val id: String,
+    @SerializedName("fecha_hora_fin") val fechaHoraFin: String? = null
+) {
+    val abierta: Boolean get() = fechaHoraFin == null
+}
+
 data class ConsultorioInfo(
     @SerializedName(value = "id", alternate = ["id_consultorio"]) val id: String?,
     val nombre: String?,
@@ -190,8 +199,13 @@ data class Cita(
     @SerializedName("id_medico") val idMedico: String? = null,
     @SerializedName("medico_nombre") val medicoNombre: String? = "Dr. Alejandro Restrepo",
     @SerializedName("especialidad") val especialidad: String? = "Medicina General",
-    @SerializedName("signos_vitales") val signosVitales: SignosVitales? = null
+    @SerializedName("signos_vitales") val signosVitales: SignosVitales? = null,
+    /** Consulta registrada en la API para esta cita (null si aún no se inició). */
+    @SerializedName("consulta") val consultaRef: ConsultaRef? = null
 ) {
+    /** Una cita creada solo en el teléfono no existe en la API y no admite consulta. */
+    val esRemota: Boolean get() = !id.startsWith("c-")
+
     companion object {
         val BLOQUES_30_MINUTOS = listOf(
             "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -302,20 +316,35 @@ data class OrdenLaboratorioItem(
     @SerializedName("examen_nombre") val examenNombre: String,
     @SerializedName("tipo_tubo") val tipoTubo: String? = "Tubo EDTA",
     val prioridad: String = "RUTINA", // STAT, RUTINA
-    val estado: String = "En Espera",
+    val estado: String = PENDIENTE,
     @SerializedName("fecha_solicitud") val fechaSolicitud: String? = null,
     @SerializedName("fecha_resultado") val fechaResultado: String? = null,
     val observaciones: String? = null,
-    @SerializedName("medico_solicitante") val medicoSolicitante: String? = "Dr. Alejandro Restrepo"
+    @SerializedName("medico_solicitante") val medicoSolicitante: String? = "Dr. Alejandro Restrepo",
+    /** Consulta en la que se pidió (las órdenes solo se emiten desde una consulta abierta). */
+    @SerializedName("id_consulta") val idConsulta: String? = null
 ) {
+    /** El médico solo puede cancelar una orden que el laboratorio aún no inició. */
+    val cancelable: Boolean get() = estado == PENDIENTE
+
     companion object {
-        val ESTADOS_VALIDOS = listOf(
-            "En Espera",
-            "Agendado",
-            "En Proceso",
-            "Realizado",
-            "Cancelado"
-        )
+        // Estados de la rúbrica; el laboratorio los avanza, el médico solo puede cancelar.
+        const val PENDIENTE = "Pendiente"
+        const val EN_PROCESO = "En Proceso"
+        const val COMPLETADO = "Completado"
+        const val CANCELADA = "Cancelada"
+
+        val ESTADOS_VALIDOS = listOf(PENDIENTE, EN_PROCESO, COMPLETADO, CANCELADA)
+
+        fun estadoDesdeApi(estado: String?): String = when (estado) {
+            "EN_PROCESO" -> EN_PROCESO
+            "COMPLETADO" -> COMPLETADO
+            "CANCELADA" -> CANCELADA
+            else -> PENDIENTE
+        }
+
+        /** La API no tiene prioridad: una orden urgente se marca al inicio de las observaciones. */
+        const val MARCA_STAT = "[STAT]"
     }
 }
 
@@ -365,6 +394,40 @@ data class ConsultaActiva(
             val secs = segundosTranscurridos % 60
             return String.format(Locale.US, "%02d:%02d", mins, secs)
         }
+
+    /** Las consultas abiertas en la API usan su UUID; las locales, el prefijo "cons-". */
+    val esRemota: Boolean get() = !id.startsWith("cons-")
+
+    companion object {
+        /** Estado inicial sin paciente: la pestaña Consulta muestra "Sin consulta abierta". */
+        fun vacia() = ConsultaActiva(
+            id = "cons-vacia",
+            citaId = "",
+            box = "Sin box",
+            medicoNombre = "",
+            especialidad = "",
+            paciente = Paciente(nombreCompleto = "Sin paciente en consulta"),
+            signosVitales = SignosVitales(),
+            diagnosticosCie10 = emptyList(),
+            anamnesis = "",
+            recetas = emptyList(),
+            segundosTranscurridos = 0,
+            finalizada = true
+        )
+
+        private const val SEPARADOR_CIE = " — "
+
+        /** El diagnóstico se guarda en la API como texto: una línea "CÓDIGO — descripción" por código. */
+        fun diagnosticoComoTexto(diagnosticos: List<Cie10Diagnostico>): String? =
+            diagnosticos.joinToString("\n") { "${it.codigo}$SEPARADOR_CIE${it.descripcion}" }.ifBlank { null }
+
+        fun diagnosticoDesdeTexto(texto: String?): List<Cie10Diagnostico> =
+            texto.orEmpty().lines().map { it.trim() }.filter { it.isNotBlank() }.map { linea ->
+                val partes = linea.split(SEPARADOR_CIE, limit = 2)
+                if (partes.size == 2) Cie10Diagnostico(partes[0].trim(), partes[1].trim())
+                else Cie10Diagnostico("DX", linea)
+            }
+    }
 }
 
 data class AtencionHistorica(

@@ -13,7 +13,7 @@ object LabOrderCardBinder {
         binding: CompLabOrderCardBinding,
         orden: OrdenLaboratorioItem,
         showPatientLine: Boolean = true,
-        onStatusChanged: (String, String) -> Unit
+        onCancelar: (OrdenLaboratorioItem) -> Unit
     ) {
         val ctx = binding.root.context
         val isStat = orden.prioridad.equals("STAT", ignoreCase = true)
@@ -30,7 +30,7 @@ object LabOrderCardBinder {
         )
 
         val fecha = orden.fechaSolicitud ?: "Hoy"
-        binding.tvLabTubeBadge.text = "${orden.tipoTubo ?: "Tubo EDTA"} • $fecha"
+        binding.tvLabTubeBadge.text = orden.tipoTubo?.let { "$it • $fecha" } ?: "Solicitada $fecha"
         binding.tvLabExamName.text = orden.examenNombre
 
         if (showPatientLine && !orden.pacienteNombre.isNullOrBlank()) {
@@ -48,37 +48,36 @@ object LabOrderCardBinder {
             binding.tvLabNotes.visibility = View.GONE
         }
 
-        if (orden.estado == "Realizado" && !orden.fechaResultado.isNullOrBlank()) {
+        // Solo el estado: el resultado del examen no pasa por el sistema.
+        if (orden.estado == OrdenLaboratorioItem.COMPLETADO && !orden.fechaResultado.isNullOrBlank()) {
             binding.tvLabResultDate.visibility = View.VISIBLE
-            binding.tvLabResultDate.text = "✓ Resultado validado: ${orden.fechaResultado}"
+            binding.tvLabResultDate.text = "✓ Completado: ${orden.fechaResultado}"
         } else {
             binding.tvLabResultDate.visibility = View.GONE
         }
 
         binding.tvLabStatusValue.text = orden.estado
         val statusColor = when (orden.estado) {
-            "Realizado" -> R.color.huc_semaforo_verde
-            "En Proceso" -> R.color.huc_secondary
-            "Agendado" -> R.color.huc_primary_container
-            "Cancelado" -> R.color.huc_error
+            OrdenLaboratorioItem.COMPLETADO -> R.color.huc_semaforo_verde
+            OrdenLaboratorioItem.EN_PROCESO -> R.color.huc_secondary
+            OrdenLaboratorioItem.CANCELADA -> R.color.huc_error
             else -> R.color.huc_tertiary_container
         }
         binding.btnLabStatusSelector.backgroundTintList =
             ColorStateList.valueOf(ContextCompat.getColor(ctx, statusColor))
 
-        binding.btnLabStatusSelector.setOnClickListener {
-            val popup = PopupMenu(ctx, binding.btnLabStatusSelector)
-            OrdenLaboratorioItem.ESTADOS_VALIDOS.forEachIndexed { idx, est ->
-                popup.menu.add(0, idx, idx, est)
-            }
-            popup.setOnMenuItemClickListener { item ->
-                val nuevo = OrdenLaboratorioItem.ESTADOS_VALIDOS[item.itemId]
-                if (nuevo != orden.estado) {
-                    onStatusChanged(orden.id, nuevo)
+        // El laboratorio avanza los estados; el médico solo puede cancelar una orden Pendiente.
+        binding.btnLabStatusSelector.isClickable = orden.cancelable
+        binding.btnLabStatusSelector.setOnClickListener(
+            if (!orden.cancelable) null else View.OnClickListener {
+                val popup = PopupMenu(ctx, binding.btnLabStatusSelector)
+                popup.menu.add(0, 0, 0, "Cancelar orden")
+                popup.setOnMenuItemClickListener {
+                    onCancelar(orden)
+                    true
                 }
-                true
+                popup.show()
             }
-            popup.show()
-        }
+        )
     }
 }

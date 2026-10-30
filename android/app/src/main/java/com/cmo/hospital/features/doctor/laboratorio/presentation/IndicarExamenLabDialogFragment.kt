@@ -8,7 +8,6 @@ import android.view.View
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
 import com.cmo.hospital.R
-import com.cmo.hospital.core.domain.model.CatalogoClinico
 import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.databinding.DialogIndicarExamenLabBinding
 import com.google.android.material.checkbox.MaterialCheckBox
@@ -16,23 +15,23 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 /**
- * Diálogo reutilizable para indicar exámenes de laboratorio desde Consulta Activa,
- * Expedientes Clínicos o Laboratorio LIS general.
+ * Diálogo para indicar exámenes del catálogo del laboratorio al paciente en consulta.
+ * La orden siempre nace Pendiente: el laboratorio es quien la avanza.
  */
 class IndicarExamenLabDialogFragment : DialogFragment() {
 
     var pacienteFijo: Paciente? = null
     var pacientesDisponibles: List<Paciente> = emptyList()
+    /** Nombres del catálogo real del laboratorio (GET /examenes). */
+    var examenesDisponibles: List<String> = emptyList()
     var onConfirmarOrden: ((
         examenes: List<String>,
         prioridad: String,
         observaciones: String,
-        estadoInicial: String,
         paciente: Paciente?
     ) -> Unit)? = null
 
     private var prioridadSeleccionada: String = "RUTINA"
-    private var estadoInicialSeleccionado: String = "En Espera"
     private var pacienteSeleccionado: Paciente? = null
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -103,24 +102,8 @@ class IndicarExamenLabDialogFragment : DialogFragment() {
             actualizarEstiloPrioridad()
         }
 
-        // Chips de estado inicial ("En Espera", "Agendado", "En Proceso")
-        val estadosIniciales = listOf("En Espera", "Agendado", "En Proceso")
-        estadosIniciales.forEachIndexed { idx, est ->
-            val chip = Chip(ctx).apply {
-                id = View.generateViewId()
-                text = est
-                isCheckable = true
-                isChecked = idx == 0
-                setOnCheckedChangeListener { _, checked ->
-                    if (checked) estadoInicialSeleccionado = est
-                }
-            }
-            binding.chipGroupEstadoInicialLab.addView(chip)
-        }
-
-        // Checkboxes dinámicos desde el catálogo clínico LIS
         val checkBoxes = mutableListOf<MaterialCheckBox>()
-        CatalogoClinico.CATALOGO_EXAMENES_LAB.forEach { nombreExamen ->
+        examenesDisponibles.forEach { nombreExamen ->
             val cb = MaterialCheckBox(ctx).apply {
                 text = nombreExamen
                 setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_surface))
@@ -129,23 +112,19 @@ class IndicarExamenLabDialogFragment : DialogFragment() {
             checkBoxes.add(cb)
             binding.containerCheckboxesExamenes.addView(cb)
         }
+        binding.tvLabCatalogoVacio.visibility = if (examenesDisponibles.isEmpty()) View.VISIBLE else View.GONE
+        binding.btnLabConfirmar.isEnabled = examenesDisponibles.isNotEmpty()
 
         binding.btnLabCancelar.setOnClickListener { dismiss() }
         binding.btnLabConfirmar.setOnClickListener {
             val seleccionados = checkBoxes
                 .filter { it.isChecked }
                 .map { it.text.toString() }
-                .toMutableList()
-            val otro = binding.etLabOtroExamen.text?.toString()?.trim().orEmpty()
-            if (otro.isNotBlank()) {
-                seleccionados.add(otro)
-            }
             val obs = binding.etLabObservaciones.text?.toString()?.trim().orEmpty()
             onConfirmarOrden?.invoke(
                 seleccionados,
                 prioridadSeleccionada,
                 obs,
-                estadoInicialSeleccionado,
                 pacienteSeleccionado
             )
             if (seleccionados.isNotEmpty()) {

@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/huc_surface"
+    android:clipToPadding="false"
+    android:paddingHorizontal="16dp"
+    android:paddingTop="16dp"
+    android:paddingBottom="80dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <include
+            android:id="@+id/microBannerPacientes"
+            layout="@layout/comp_huc_micro_banner" />
+
+        <!-- Buscador + Registrar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:background="@drawable/bg_card_rounded_16"
+            android:elevation="1dp"
+            android:orientation="vertical"
+            android:padding="@dimen/huc_space_md">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_folder_shared"
+                    app:tint="@color/huc_secondary" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:letterSpacing="0.06"
+                    android:text="PACIENTES REGISTRADOS"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                    android:textColor="@color/huc_secondary" />
+
+                <TextView
+                    android:id="@+id/tvPacientesTotalBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_pill_secondary_fixed"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                    android:textColor="@color/huc_on_secondary_fixed"
+                    tools:text="12 pacientes" />
+            </LinearLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Huc.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/huc_space_sm"
+                android:hint="Buscar por nombre, DUI o N° de expediente"
+                app:startIconDrawable="@drawable/ic_search"
+                app:startIconTint="@color/huc_primary_container">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etBuscarPaciente"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:textAppearance="@style/TextAppearance.Huc.BodyMd" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnNuevoPaciente"
+                style="@style/Widget.Huc.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="@dimen/huc_space_sm"
+                android:text="Registrar Paciente"
+                android:textAllCaps="false"
+                app:icon="@drawable/ic_add"
+                app:iconGravity="textStart" />
+        </LinearLayout>
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progressPacientes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_12"
+            android:indeterminate="true"
+            android:visibility="gone" />
+
+        <!-- Error de conexión o permisos -->
+        <LinearLayout
+            android:id="@+id/containerErrorPacientes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_12"
+            android:background="@drawable/bg_error_container_16"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/huc_space_12"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvErrorPacientes"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textAppearance="@style/TextAppearance.Huc.BodySm"
+                android:textColor="@color/huc_on_error_container"
+                tools:text="No se pudo conectar con el servidor." />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnReintentarPacientes"
+                style="@style/Widget.Huc.Button.Outlined"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginStart="@dimen/huc_space_sm"
+                android:minHeight="40dp"
+                android:text="Reintentar"
+                android:textAllCaps="false"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvPacientesVacio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_lg"
+            android:gravity="center"
+            android:text="No hay pacientes que coincidan con la búsqueda."
+            android:textAppearance="@style/TextAppearance.Huc.BodyMd"
+            android:textColor="@color/huc_on_surface_variant"
+            android:visibility="gone" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvPacientesRecepcion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_12"
+            android:nestedScrollingEnabled="false"
+            tools:itemCount="3"
+            tools:listitem="@layout/item_paciente_recepcion" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

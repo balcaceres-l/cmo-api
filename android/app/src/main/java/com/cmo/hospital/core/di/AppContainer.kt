@@ -20,6 +20,7 @@ import com.cmo.hospital.features.doctor.consulta.domain.usecase.GestionarCie10Co
 import com.cmo.hospital.features.doctor.consulta.domain.usecase.GestionarRecetaConsultaUseCase
 import com.cmo.hospital.features.doctor.consulta.domain.usecase.GetConsultaActivaFlowUseCase
 import com.cmo.hospital.features.doctor.consulta.domain.usecase.GuardarAnamnesisUseCase
+import com.cmo.hospital.features.doctor.consulta.domain.usecase.GuardarCambiosConsultaUseCase
 import com.cmo.hospital.features.doctor.consulta.domain.usecase.TickCronometroConsultaUseCase
 import com.cmo.hospital.features.doctor.consulta.presentation.ConsultaViewModel
 import com.cmo.hospital.features.doctor.expedientes.data.repository.ExpedientesRepositoryImpl
@@ -39,7 +40,8 @@ import com.cmo.hospital.features.doctor.inicio.domain.usecase.SincronizarPanelMe
 import com.cmo.hospital.features.doctor.inicio.presentation.InicioDoctorViewModel
 import com.cmo.hospital.features.doctor.laboratorio.data.repository.LaboratorioRepositoryImpl
 import com.cmo.hospital.features.doctor.laboratorio.domain.repository.LaboratorioRepository
-import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.CambiarEstadoOrdenLabUseCase
+import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.CancelarOrdenLabUseCase
+import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.RefrescarLaboratorioUseCase
 import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.EmitirOrdenLabUseCase
 import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.GetOrdenesLabFlowUseCase
 import com.cmo.hospital.features.doctor.laboratorio.presentation.LaboratorioViewModel
@@ -68,6 +70,17 @@ import com.cmo.hospital.features.recepcionista.citas.domain.usecase.MarcarLlegad
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.RefreshCitasUseCase
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.RegistrarTriajeYPasarConsultaUseCase
 import com.cmo.hospital.features.recepcionista.citas.presentation.CitasViewModel
+import com.cmo.hospital.features.recepcionista.pacientes.data.repository.PacientesRepositoryImpl
+import com.cmo.hospital.features.recepcionista.pacientes.domain.repository.PacientesRepository
+import com.cmo.hospital.features.recepcionista.pacientes.domain.usecase.BuscarPacientesUseCase
+import com.cmo.hospital.features.recepcionista.pacientes.domain.usecase.GenerarCodigoActivacionUseCase
+import com.cmo.hospital.features.recepcionista.pacientes.domain.usecase.GuardarPacienteUseCase
+import com.cmo.hospital.features.recepcionista.pacientes.presentation.PacientesViewModel
+import com.cmo.hospital.features.recepcionista.laboratorio.data.repository.LaboratorioRecepcionRepositoryImpl
+import com.cmo.hospital.features.recepcionista.laboratorio.domain.repository.LaboratorioRecepcionRepository
+import com.cmo.hospital.features.recepcionista.laboratorio.domain.usecase.AvanzarOrdenLaboratorioUseCase
+import com.cmo.hospital.features.recepcionista.laboratorio.domain.usecase.ListarOrdenesLaboratorioUseCase
+import com.cmo.hospital.features.recepcionista.laboratorio.presentation.LaboratorioRecepcionViewModel
 
 /**
  * Contenedor de Inyección de Dependencias Clean Architecture (Domain <- Data <- Presentation).
@@ -83,6 +96,9 @@ class AppContainer(context: Context) {
     // ─── Repositorios por Feature ────────────────────────────────────────────
     val authRepository: AuthRepository = AuthRepositoryImpl(apiService, sessionManager)
     val citaRepository: CitaRepository = CitaRepositoryImpl(clinicalDataSource)
+    val pacientesRepository: PacientesRepository = PacientesRepositoryImpl(apiService)
+    val laboratorioRecepcionRepository: LaboratorioRecepcionRepository =
+        LaboratorioRecepcionRepositoryImpl(apiService)
     val admisionRepository: AdmisionRepository = AdmisionRepositoryImpl(clinicalDataSource)
     val ambulanciaRepository: AmbulanciaGuardiaRepository =
         AmbulanciaGuardiaRepositoryImpl(clinicalDataSource)
@@ -112,6 +128,19 @@ class AppContainer(context: Context) {
             cancelarCitaUseCase = CancelarCitaUseCase(citaRepository),
             registrarTriajeYPasarConsultaUseCase = RegistrarTriajeYPasarConsultaUseCase(citaRepository),
             controlarLlamadorSalaUseCase = ControlarLlamadorSalaUseCase(citaRepository)
+        )
+
+    fun createPacientesViewModel(): PacientesViewModel =
+        PacientesViewModel(
+            buscarPacientesUseCase = BuscarPacientesUseCase(pacientesRepository),
+            guardarPacienteUseCase = GuardarPacienteUseCase(pacientesRepository),
+            generarCodigoActivacionUseCase = GenerarCodigoActivacionUseCase(pacientesRepository)
+        )
+
+    fun createLaboratorioRecepcionViewModel(): LaboratorioRecepcionViewModel =
+        LaboratorioRecepcionViewModel(
+            listarOrdenesLaboratorioUseCase = ListarOrdenesLaboratorioUseCase(laboratorioRecepcionRepository),
+            avanzarOrdenLaboratorioUseCase = AvanzarOrdenLaboratorioUseCase(laboratorioRecepcionRepository)
         )
 
     fun createAdmisionViewModel(): AdmisionViewModel =
@@ -150,8 +179,9 @@ class AppContainer(context: Context) {
             guardarAnamnesisUseCase = GuardarAnamnesisUseCase(consultaRepository),
             gestionarRecetaConsultaUseCase = GestionarRecetaConsultaUseCase(consultaRepository),
             finalizarConsultaUseCase = FinalizarConsultaUseCase(consultaRepository),
+            guardarCambiosConsultaUseCase = GuardarCambiosConsultaUseCase(consultaRepository),
             emitirOrdenLabUseCase = EmitirOrdenLabUseCase(laboratorioRepository),
-            cambiarEstadoOrdenLabUseCase = CambiarEstadoOrdenLabUseCase(laboratorioRepository)
+            cancelarOrdenLabUseCase = CancelarOrdenLabUseCase(laboratorioRepository)
         )
 
     fun createExpedientesViewModel(): ExpedientesViewModel =
@@ -160,14 +190,15 @@ class AppContainer(context: Context) {
             expedientesRepository = expedientesRepository,
             filtrarExpedientesUseCase = FiltrarExpedientesUseCase(),
             emitirOrdenLabUseCase = EmitirOrdenLabUseCase(laboratorioRepository),
-            cambiarEstadoOrdenLabUseCase = CambiarEstadoOrdenLabUseCase(laboratorioRepository)
+            cancelarOrdenLabUseCase = CancelarOrdenLabUseCase(laboratorioRepository)
         )
 
     fun createLaboratorioViewModel(): LaboratorioViewModel =
         LaboratorioViewModel(
             getOrdenesLabFlowUseCase = GetOrdenesLabFlowUseCase(laboratorioRepository),
-            expedientesFlow = expedientesRepository.expedientesFlow,
+            consultaActivaFlow = consultaRepository.consultaActivaFlow,
             emitirOrdenLabUseCase = EmitirOrdenLabUseCase(laboratorioRepository),
-            cambiarEstadoOrdenLabUseCase = CambiarEstadoOrdenLabUseCase(laboratorioRepository)
+            cancelarOrdenLabUseCase = CancelarOrdenLabUseCase(laboratorioRepository),
+            refrescarLaboratorioUseCase = RefrescarLaboratorioUseCase(laboratorioRepository)
         )
 }

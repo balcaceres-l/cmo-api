@@ -9,38 +9,42 @@ class GetOrdenesLabFlowUseCase(private val repository: LaboratorioRepository) {
     operator fun invoke(): StateFlow<List<OrdenLaboratorioItem>> = repository.ordenesLabFlow
 }
 
+class RefrescarLaboratorioUseCase(private val repository: LaboratorioRepository) {
+    suspend operator fun invoke(): Result<Unit> = repository.refrescar()
+}
+
 class EmitirOrdenLabUseCase(private val repository: LaboratorioRepository) {
-    operator fun invoke(
+    /** Nombres del catálogo del laboratorio (vacío hasta que se carga desde la API). */
+    fun catalogo(): List<String> = repository.catalogoExamenesFlow.value.map { it.nombre }
+
+    suspend fun cargarCatalogo(): Result<Unit> = repository.refrescar()
+
+    suspend operator fun invoke(
         examenes: List<String>,
         prioridad: String,
         observaciones: String,
-        paciente: Paciente? = null,
-        estadoInicial: String = "En Espera"
+        paciente: Paciente? = null
     ): Result<List<OrdenLaboratorioItem>> {
         val limpios = examenes.map { it.trim() }.filter { it.isNotBlank() }.distinct()
         if (limpios.isEmpty()) {
             return Result.failure(IllegalArgumentException("Seleccione al menos un examen de laboratorio."))
         }
-        val estadoValido = if (estadoInicial in OrdenLaboratorioItem.ESTADOS_VALIDOS) {
-            estadoInicial
-        } else "En Espera"
-        val creadas = repository.emitirOrdenesLaboratorio(
+        return repository.emitirOrdenesLaboratorio(
             examenes = limpios,
             prioridad = prioridad,
             observaciones = observaciones.trim(),
-            paciente = paciente,
-            estadoInicial = estadoValido
+            paciente = paciente
         )
-        return Result.success(creadas)
     }
 }
 
-class CambiarEstadoOrdenLabUseCase(private val repository: LaboratorioRepository) {
-    operator fun invoke(ordenId: String, nuevoEstado: String): Result<Unit> {
-        if (nuevoEstado !in OrdenLaboratorioItem.ESTADOS_VALIDOS) {
-            return Result.failure(IllegalArgumentException("Estado de laboratorio inválido: $nuevoEstado"))
+class CancelarOrdenLabUseCase(private val repository: LaboratorioRepository) {
+    suspend operator fun invoke(orden: OrdenLaboratorioItem): Result<OrdenLaboratorioItem> {
+        if (!orden.cancelable) {
+            return Result.failure(
+                IllegalStateException("Solo se puede cancelar una orden Pendiente; esta ya está ${orden.estado}.")
+            )
         }
-        repository.cambiarEstadoOrdenLaboratorio(ordenId, nuevoEstado)
-        return Result.success(Unit)
+        return repository.cancelarOrden(orden.id)
     }
 }
