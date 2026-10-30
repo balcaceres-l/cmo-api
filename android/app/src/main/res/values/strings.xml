@@ -1,3 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Hospital CMO</string>
+    <string name="app_name">HUC Móvil • CMO</string>
+    <string name="huc_brand_title">HUC</string>
+    <string name="huc_brand_badge">CMO</string>
+    <string name="huc_guardia_activa">Guardia Activa</string>
+    <string name="huc_online">Online</string>
+
+    <!-- Coberturas / Previsión del Prototipo HTML -->
+    <string-array name="huc_prevision_options">
+        <item>Fonasa Tramo D</item>
+        <item>Isapre Colmena</item>
+        <item>Isapre Banmédica</item>
+        <item>Particular / Privado</item>
+        <item>Convenio Mutual</item>
+    </string-array>
 </resources>

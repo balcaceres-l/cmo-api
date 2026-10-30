@@ -77,6 +77,24 @@ final class SessionStore {
         return .ingreso
     }
 
+    /// Crea la cuenta de un paciente: la API responde como un login y la sesión queda iniciada.
+    func registrar(_ solicitud: SolicitudRegistro) async throws {
+        let respuesta = try await auth.registro(solicitud)
+        try keychain.guardarToken(respuesta.token)
+        avisoLogin = nil
+        estado = .autenticado(Sesion(usuario: respuesta.usuario, idPaciente: respuesta.idPaciente))
+    }
+
+    func cambiarPassword(_ solicitud: SolicitudCambioPassword) async throws {
+        try await auth.cambiarPassword(solicitud)
+        // La API ya revocó todos los tokens: no hace falta llamar a logout.
+        descartarSesion(aviso: "Contraseña actualizada. Inicia sesión de nuevo.")
+    }
+
+    var sesion: Sesion? {
+        if case .autenticado(let sesion) = estado { sesion } else { nil }
+    }
+
     func cerrarSesion() async {
         // Aunque la API no responda, la sesión local se cierra.
         try? await auth.logout()

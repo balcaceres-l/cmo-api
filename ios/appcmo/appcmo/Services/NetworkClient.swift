@@ -35,11 +35,12 @@ nonisolated struct NetworkClient: Sendable {
     func request<Respuesta: Decodable & Sendable>(
         _ metodo: HTTPMethod,
         _ ruta: String,
+        consulta: [URLQueryItem] = [],
         cuerpo: (any Encodable & Sendable)? = nil,
         autenticada: Bool = true,
         token: String? = nil
     ) async throws -> Respuesta {
-        let datos = try await ejecutar(metodo, ruta, cuerpo: cuerpo, autenticada: autenticada, token: token)
+        let datos = try await ejecutar(metodo, ruta, consulta: consulta, cuerpo: cuerpo, autenticada: autenticada, token: token)
         do {
             let sobre = try JSONDecoder().decode(ApiEnvelope<Respuesta>.self, from: datos)
             guard let valor = sobre.data else { throw APIError.respuestaInvalida }
@@ -55,11 +56,12 @@ nonisolated struct NetworkClient: Sendable {
     func requestSinRespuesta(
         _ metodo: HTTPMethod,
         _ ruta: String,
+        consulta: [URLQueryItem] = [],
         cuerpo: (any Encodable & Sendable)? = nil,
         autenticada: Bool = true,
         token: String? = nil
     ) async throws {
-        _ = try await ejecutar(metodo, ruta, cuerpo: cuerpo, autenticada: autenticada, token: token)
+        _ = try await ejecutar(metodo, ruta, consulta: consulta, cuerpo: cuerpo, autenticada: autenticada, token: token)
     }
 
     // MARK: - Interno
@@ -67,11 +69,14 @@ nonisolated struct NetworkClient: Sendable {
     private func ejecutar(
         _ metodo: HTTPMethod,
         _ ruta: String,
+        consulta: [URLQueryItem],
         cuerpo: (any Encodable & Sendable)?,
         autenticada: Bool,
         token: String?
     ) async throws -> Data {
-        var peticion = URLRequest(url: baseURL.appending(path: ruta), timeoutInterval: 20)
+        var url = baseURL.appending(path: ruta)
+        if !consulta.isEmpty { url.append(queryItems: consulta) }
+        var peticion = URLRequest(url: url, timeoutInterval: 20)
         peticion.httpMethod = metodo.rawValue
         peticion.setValue("application/json", forHTTPHeaderField: "Accept")
 
@@ -112,6 +117,7 @@ nonisolated struct NetworkClient: Sendable {
         switch estado {
         case 401: return .noAutorizado(mensaje ?? "Tu sesión no es válida. Inicia sesión de nuevo.")
         case 403: return .prohibido(mensaje ?? "No tienes permisos para realizar esta acción.")
+        case 404: return .noEncontrado(mensaje ?? "No se encontró la información solicitada.")
         case 409: return .conflicto(mensaje ?? "La acción no se puede completar en este momento.")
         case 422: return .validacion(mensaje ?? "Los datos enviados no son válidos.", cuerpo?.errors ?? [:])
         case 429: return .demasiadosIntentos(segundos: cabeceras.value(forHTTPHeaderField: "Retry-After").flatMap(Int.init))

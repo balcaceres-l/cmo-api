@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\ConflictoException;
 use App\Models\Cita;
 use App\Models\Paciente;
 use App\Services\AgendaService;
@@ -39,7 +40,7 @@ class CitaController extends ApiController
         }
 
         return DB::transaction(function () use ($d, $r) {
-            $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin'], null, $d['id_consultorio'] ?? null);
+            $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin'], null, $d['id_consultorio'] ?? null, $d['id_paciente']);
             $d['id_creado_por'] = $r->user()->id;
             $d['estado'] = 'AGENDADA';
 
@@ -71,7 +72,7 @@ class CitaController extends ApiController
             $cita = Cita::lockForUpdate()->findOrFail($cita->getKey());
             $cita->exigirEstado(['AGENDADA', 'EN_ESPERA'], 'reprogramar');
             // Sin consultorio nuevo, la cita conserva el que tenía.
-            $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin'], $cita->getKey(), $d['id_consultorio'] ?? $cita->id_consultorio);
+            $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin'], $cita->getKey(), $d['id_consultorio'] ?? $cita->id_consultorio, $cita->id_paciente);
             $cita->update($d + ['estado' => 'AGENDADA']);
 
             return $this->success($cita->refresh());
@@ -81,6 +82,9 @@ class CitaController extends ApiController
     public function registrarLlegada(Cita $cita)
     {
         $cita->exigirEstado(['AGENDADA'], 'registrar la llegada de');
+        if (! $cita->fecha->isToday()) {
+            throw new ConflictoException('La llegada solo se registra el día de la cita.');
+        }
         $cita->update(['estado' => 'EN_ESPERA', 'hora_llegada' => now()]);
 
         return $this->success($cita->refresh());
@@ -102,7 +106,7 @@ class CitaController extends ApiController
         return DB::transaction(function () use ($d, $cita) {
             $cita = Cita::lockForUpdate()->findOrFail($cita->getKey());
             $cita->exigirEstado(['SOLICITADA'], 'confirmar');
-            $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin'], $cita->getKey(), $d['id_consultorio'] ?? null);
+            $this->agenda->validar($d['id_medico'], $d['fecha'], $d['hora_inicio'], $d['hora_fin'], $cita->getKey(), $d['id_consultorio'] ?? null, $cita->id_paciente);
             $cita->update($d + ['estado' => 'AGENDADA']);
 
             return $this->success($cita->refresh());

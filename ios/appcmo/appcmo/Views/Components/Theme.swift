@@ -6,7 +6,7 @@
 import SwiftUI
 import UIKit
 
-/// Paleta del plan de trabajo (verde CMO), con variante para modo oscuro.
+/// Paleta del Figma Hospital-CMO (azul petróleo), con variante para modo oscuro.
 extension Color {
     init(claro: UInt32, oscuro: UInt32) {
         self.init(uiColor: UIColor { rasgos in
@@ -14,18 +14,22 @@ extension Color {
         })
     }
 
-    static let cmoFondo = Color(claro: 0xF3F6F4, oscuro: 0x0D1612)
-    static let cmoSuperficie = Color(claro: 0xFFFFFF, oscuro: 0x15221D)
-    static let cmoTinta = Color(claro: 0x13221C, oscuro: 0xE5EFEA)
-    static let cmoTintaSuave = Color(claro: 0x4A5C53, oscuro: 0xA2B7AD)
-    static let cmoLinea = Color(claro: 0xD1DCD6, oscuro: 0x2B4036)
-    static let cmoMarca = Color(claro: 0x0B5D4B, oscuro: 0x4FC4A2)
-    static let cmoSobreMarca = Color(claro: 0xFFFFFF, oscuro: 0x06201A)
-    static let cmoMarcaSuave = Color(claro: 0xD6EBE3, oscuro: 0x17382F)
-    static let cmoError = Color(claro: 0xA3262A, oscuro: 0xF08A8C)
-    static let cmoErrorSuave = Color(claro: 0xF7DADA, oscuro: 0x3D1C1D)
-    static let cmoInfo = Color(claro: 0x0E5C86, oscuro: 0x6CB7E3)
-    static let cmoInfoSuave = Color(claro: 0xDBEBF4, oscuro: 0x14313F)
+    static let cmoFondo = Color(claro: 0xF1F7FB, oscuro: 0x0C1620)
+    static let cmoSuperficie = Color(claro: 0xFFFFFF, oscuro: 0x14212C)
+    static let cmoTinta = Color(claro: 0x0F1B26, oscuro: 0xE6EEF4)
+    static let cmoTintaSuave = Color(claro: 0x5B6B78, oscuro: 0xA0B2C0)
+    static let cmoLinea = Color(claro: 0xDCE6EE, oscuro: 0x263847)
+    static let cmoMarca = Color(claro: 0x0E5C80, oscuro: 0x6CB8DE)
+    static let cmoSobreMarca = Color(claro: 0xFFFFFF, oscuro: 0x06202D)
+    static let cmoMarcaSuave = Color(claro: 0xDBEBF2, oscuro: 0x163241)
+    static let cmoError = Color(claro: 0xB3261E, oscuro: 0xF08A8C)
+    static let cmoErrorSuave = Color(claro: 0xFBE4E2, oscuro: 0x3D1C1D)
+    static let cmoInfo = Color(claro: 0x1F5FA8, oscuro: 0x8DB8F0)
+    static let cmoInfoSuave = Color(claro: 0xE0EBFE, oscuro: 0x16283F)
+    static let cmoAdvertencia = Color(claro: 0x8A5A00, oscuro: 0xE6B455)
+    static let cmoAdvertenciaSuave = Color(claro: 0xFCEBC8, oscuro: 0x3A2D12)
+    static let cmoExito = Color(claro: 0x1E7A4C, oscuro: 0x68D196)
+    static let cmoExitoSuave = Color(claro: 0xDEF3E8, oscuro: 0x16361F)
 }
 
 private extension UIColor {

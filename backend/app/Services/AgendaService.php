@@ -33,9 +33,9 @@ class AgendaService
 
     /**
      * La cita debe caber en un turno del médico y no chocar con otra cita
-     * activa del mismo médico ni, si se indica, del mismo consultorio.
+     * activa del mismo médico, del mismo paciente ni, si se indica, del mismo consultorio.
      */
-    public function validar(string $medico, string $fecha, string $inicio, string $fin, ?string $ignorar = null, ?string $consultorio = null): void
+    public function validar(string $medico, string $fecha, string $inicio, string $fin, ?string $ignorar = null, ?string $consultorio = null, ?string $paciente = null): void
     {
         $enTurno = TurnoPersonal::where('id_usuario', $medico)->whereDate('fecha', $fecha)->where('hora_inicio', '<=', $inicio)->where('hora_fin', '>=', $fin)->exists();
         if (! $enTurno) {
@@ -56,6 +56,9 @@ class AgendaService
         }
         if ($consultorio && $choca('id_consultorio', $consultorio)) {
             throw new ConflictoException('El consultorio ya está ocupado a esa hora.');
+        }
+        if ($paciente && $choca('id_paciente', $paciente)) {
+            throw new ConflictoException('El paciente ya tiene una cita a esa hora.');
         }
     }
 }

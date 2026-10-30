@@ -19,6 +19,9 @@ class ConsultaController extends ApiController
         return DB::transaction(function () use ($cita, $r) {
             $cita = Cita::lockForUpdate()->findOrFail($cita->getKey());
             $cita->exigirEstado(['AGENDADA', 'EN_ESPERA'], 'iniciar la consulta de');
+            if (! $cita->fecha->isToday()) {
+                throw new ConflictoException('La consulta solo se inicia el día de la cita.');
+            }
             try {
                 $c = Consulta::create(['id_cita' => $cita->getKey(), 'id_medico' => $r->user()->id, 'fecha_hora_inicio' => now(), 'motivo' => $cita->motivo]);
             } catch (UniqueConstraintViolationException) {
@@ -54,6 +57,31 @@ class ConsultaController extends ApiController
             $consulta->cita()->update(['estado' => 'ATENDIDA']);
 
             return $this->success($consulta->refresh(), 'Consulta finalizada.');
+        });
+    }
+
+    /**
+     * Abandona una consulta abierta por error: se descarta junto con sus recetas y sus órdenes de laboratorio, y la
+     * cita vuelve a como estaba (`EN_ESPERA` si el paciente ya había llegado, `AGENDADA` si no). Solo se bloquea si el
+     * laboratorio ya trabajó alguna orden (`EN_PROCESO` o `COMPLETADO`): entonces hay que finalizarla.
+     */
+    public function abandonar(Request $r, Consulta $consulta)
+    {
+        $this->propiaAbierta($r, $consulta);
+
+        return DB::transaction(function () use ($consulta) {
+            $consulta = Consulta::lockForUpdate()->findOrFail($consulta->getKey());
+            abort_if($consulta->fecha_hora_fin, 409, 'La consulta ya está cerrada.');
+            if ($consulta->ordenesLaboratorio()->whereNotIn('estado', ['PENDIENTE', 'CANCELADA'])->exists()) {
+                throw new ConflictoException('El laboratorio ya trabaja una orden de esta consulta; finalízala en lugar de abandonarla.');
+            }
+            $cita = Cita::lockForUpdate()->findOrFail($consulta->id_cita);
+            $consulta->ordenesLaboratorio()->delete();
+            $consulta->recetas()->delete();
+            $consulta->delete();
+            $cita->update(['estado' => $cita->hora_llegada ? 'EN_ESPERA' : 'AGENDADA']);
+
+            return $this->success($cita->refresh(), 'Consulta abandonada.');
         });
     }
 

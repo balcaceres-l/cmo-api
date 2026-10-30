@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_surface_low_16"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="12dp">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvGuardiaNombre"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearance.Huc.TitleSm"
+            tools:text="Dr. Alejandro Restrepo" />
+
+        <TextView
+            android:id="@+id/tvGuardiaCargoYArea"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/huc_secondary"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            tools:text="Urgencias / Med. Interna • Box 03" />
+
+        <TextView
+            android:id="@+id/tvGuardiaHorario"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/huc_on_surface_variant"
+            android:textSize="11sp"
+            tools:text="Turno: 07:00 - 15:00 • Relevo: 2h 18m" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvGuardiaEstadoBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_pill_primary_fixed"
+        android:paddingHorizontal="9dp"
+        android:paddingVertical="4dp"
+        android:textColor="@color/huc_on_primary_fixed"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        tools:text="Activo" />
+
+</LinearLayout>
