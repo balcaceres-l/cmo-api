@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
-  HospitalLogoIcon,
   UserIcon,
   LockIcon,
   EyeIcon,
@@ -110,14 +109,22 @@ export const LoginPage: React.FC = () => {
           <div
             style={{
               display: 'inline-flex',
-              padding: '10px',
-              borderRadius: '20px',
-              background: '#eaf5f1',
-              boxShadow: '0 4px 14px rgba(11, 93, 75, 0.15)',
+              padding: '6px',
+              borderRadius: '24px',
+              background: '#ffffff',
+              boxShadow: '0 8px 24px rgba(11, 93, 75, 0.15)',
               marginBottom: '16px',
             }}
           >
-            <HospitalLogoIcon size={52} />
+            <img
+              src="/logo-icon.png"
+              alt="Logo Hospital CMO"
+              style={{
+                width: '72px',
+                height: '72px',
+                objectFit: 'contain',
+              }}
+            />
           </div>
           <h1
             style={{
@@ -138,7 +145,7 @@ export const LoginPage: React.FC = () => {
               fontWeight: 500,
             }}
           >
-            Sistema Integrado Hospitalario — Panel Central
+            Centro Médico de Occidente — Panel Administrativo
           </p>
         </div>
 

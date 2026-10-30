@@ -2,7 +2,6 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
-  HospitalLogoIcon,
   ActivityIcon,
   BedIcon,
   AmbulanceIcon,
@@ -47,15 +46,29 @@ export const Sidebar: React.FC = () => {
       {/* Brand Header */}
       <div
         style={{
-          padding: '22px 18px',
+          padding: '20px 18px',
           borderBottom: '1px solid #17382d',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
         }}
       >
-        <div style={{ filter: 'drop-shadow(0 2px 6px rgba(16,185,129,0.3))' }}>
-          <HospitalLogoIcon size={36} />
+        <div
+          style={{
+            background: '#ffffff',
+            padding: '4px',
+            borderRadius: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+          }}
+        >
+          <img
+            src="/logo-icon.png"
+            alt="CMO Logo"
+            style={{ width: '38px', height: '38px', objectFit: 'contain' }}
+          />
         </div>
         <div>
           <h1
@@ -72,14 +85,14 @@ export const Sidebar: React.FC = () => {
           <p
             style={{
               color: '#5eead4',
-              fontSize: '0.7rem',
+              fontSize: '0.68rem',
               fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
               margin: 0,
             }}
           >
-            Panel Administrativo
+            Centro Médico de Occidente
           </p>
         </div>
       </div>

@@ -4,13 +4,19 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { MainLayout } from '../components/layout/MainLayout';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { DashboardPage } from '../pages/dashboard/DashboardPage';
+import { UsersPage } from '../pages/users/UsersPage';
+import { PatientsPage } from '../pages/patients/PatientsPage';
+import { PublicPortalPage } from '../pages/public/PublicPortalPage';
 import { ModulePlaceholder } from '../pages/common/ModulePlaceholder';
 
 export const AppRouter: React.FC = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Ruta pública de Login */}
+        {/* Ruta pública del Hospital (HU-69) */}
+        <Route path="/publico" element={<PublicPortalPage />} />
+
+        {/* Ruta pública de Login (HU-24) */}
         <Route path="/login" element={<LoginPage />} />
 
         {/* Rutas Administrativas Protegidas */}
@@ -58,24 +64,8 @@ export const AppRouter: React.FC = () => {
               }
             />
 
-            {/* Personal */}
-            <Route
-              path="/usuarios"
-              element={
-                <ModulePlaceholder
-                  title="Gestión de Usuarios y Personal"
-                  hu="HU-30"
-                  icon="👥"
-                  description="Administración de cuentas para el personal médico, de recepción, enfermería y administración general."
-                  rules={[
-                    'Crear, editar y activar/desactivar cuentas de personal.',
-                    'Asignación de roles autorizados: ADMINISTRADOR, MEDICO, RECEPCIONISTA.',
-                    'Las cuentas de tipo PACIENTE no se crean desde este panel (se auto-registran en iOS).',
-                    'Protección de cuenta: Un administrador no puede desactivarse ni cambiarse el rol a sí mismo.',
-                  ]}
-                />
-              }
-            />
+            {/* Personal (HU-30) */}
+            <Route path="/usuarios" element={<UsersPage />} />
 
             <Route
               path="/turnos"
@@ -94,24 +84,8 @@ export const AppRouter: React.FC = () => {
               }
             />
 
-            {/* Clínico */}
-            <Route
-              path="/pacientes"
-              element={
-                <ModulePlaceholder
-                  title="Pacientes y Expedientes Médicos"
-                  hu="HU-31 / HU-44"
-                  icon="📁"
-                  description="Búsqueda centralizada de pacientes, generación de códigos de activación para la app móvil y consulta autorizada de expedientes."
-                  rules={[
-                    'Búsqueda por nombre, DUI o número correlativo de expediente (EXP-AAAA-NNNNNN).',
-                    'Generación de código de activación de 6 dígitos (vence en 24 horas) para que el paciente vincule su cuenta en iOS.',
-                    'Consulta del historial clínico y recetas en modo de solo lectura para el Administrador autorizado.',
-                    'Respeto de la política de privacidad: información médica protegida sensible.',
-                  ]}
-                />
-              }
-            />
+            {/* Clínico: Pacientes (HU-31 / HU-44) */}
+            <Route path="/pacientes" element={<PatientsPage />} />
 
             <Route
               path="/citas"
