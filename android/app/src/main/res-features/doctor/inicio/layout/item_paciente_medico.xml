@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    android:background="@drawable/bg_card_rounded_16"
+    android:elevation="1dp"
+    android:orientation="vertical"
+    android:padding="@dimen/huc_space_md">
+
+    <!-- Fila superior: Avatar con Iniciales + Nombre + Expediente -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <FrameLayout
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_circle_primary_container">
+
+            <TextView
+                android:id="@+id/tvPacDocIniciales"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="CM"
+                android:textAppearance="@style/TextAppearance.Huc.TitleSm"
+                android:textColor="@color/huc_primary_fixed" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvPacDocNombre"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Carlos Mendoza"
+                    android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
+
+                <TextView
+                    android:id="@+id/tvPacDocExpBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_pill_primary_fixed"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp"
+                    android:text="CM-2026-001"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                    android:textColor="@color/huc_on_primary_fixed" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvPacDocDatosFiliacion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="45 años • DNI: 14.891.203-K • Sangre: O+"
+                android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Ubicación / Estado Clínico Reciente -->
+    <TextView
+        android:id="@+id/tvPacDocUbicacionMotivo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_surface_low_16"
+        android:padding="10dp"
+        android:text="Ubicación: Box 03 • Control de hipertensión"
+        android:textAppearance="@style/TextAppearance.Huc.BodySm"
+        android:textColor="@color/huc_on_surface" />
+
+    <!-- Alerta Farmacológica Condicional -->
+    <TextView
+        android:id="@+id/tvPacDocAlertaAlergia"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/bg_error_container_16"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="6dp"
+        android:text="⚠ Alergia: Dipirona / AINEs"
+        android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+        android:textColor="@color/huc_on_error_container"
+        android:visibility="gone" />
+
+    <!-- Acciones del Paciente -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPacDocAgendarControl"
+            style="@style/Widget.Huc.Button.Outlined"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="Agendar Control"
+            android:textAllCaps="false"
+            android:textSize="12sp"
+            app:icon="@drawable/ic_event"
+            app:iconSize="15dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPacDocAbrirExpediente"
+            style="@style/Widget.Huc.Button.Primary"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minHeight="40dp"
+            android:text="Abrir Expediente"
+            android:textAllCaps="false"
+            android:textSize="12sp"
+            app:icon="@drawable/ic_folder_shared"
+            app:iconGravity="textStart"
+            app:iconSize="15dp" />
+    </LinearLayout>
+
+</LinearLayout>

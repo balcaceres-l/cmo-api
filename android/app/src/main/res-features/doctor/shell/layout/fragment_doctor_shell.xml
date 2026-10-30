@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/huc_surface"
+    android:orientation="vertical">
+
+    <include
+        android:id="@+id/topBarDoctor"
+        layout="@layout/comp_huc_top_bar" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <FrameLayout
+            android:id="@+id/doctorTabContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="12dp">
+
+            <include
+                android:id="@+id/toastOverlayDoctor"
+                layout="@layout/comp_huc_toast" />
+        </FrameLayout>
+    </FrameLayout>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavDoctor"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/huc_surface_lowest"
+        android:elevation="8dp"
+        app:itemActiveIndicatorStyle="@null"
+        app:itemIconTint="@color/selector_bottom_nav_huc"
+        app:itemTextColor="@color/selector_bottom_nav_huc"
+        app:labelVisibilityMode="labeled"
+        app:menu="@menu/menu_doctor_bottom" />
+
+</LinearLayout>

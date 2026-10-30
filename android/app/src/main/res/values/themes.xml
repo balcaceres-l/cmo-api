@@ -1,7 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.CMOHospital" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:statusBarColor">#091A14</item>
-        <item name="android:navigationBarColor">#091A14</item>
+    <style name="Theme.CMOHospital" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/huc_primary_container</item>
+        <item name="colorOnPrimary">@color/huc_on_primary</item>
+        <item name="colorPrimaryContainer">@color/huc_primary_fixed</item>
+        <item name="colorOnPrimaryContainer">@color/huc_on_primary_fixed</item>
+
+        <item name="colorSecondary">@color/huc_secondary</item>
+        <item name="colorOnSecondary">@color/huc_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/huc_secondary_fixed</item>
+        <item name="colorOnSecondaryContainer">@color/huc_on_secondary_fixed</item>
+
+        <item name="colorTertiary">@color/huc_tertiary_container</item>
+        <item name="colorOnTertiary">@color/huc_on_tertiary</item>
+        <item name="colorTertiaryContainer">@color/huc_tertiary_fixed</item>
+        <item name="colorOnTertiaryContainer">@color/huc_on_tertiary_fixed</item>
+
+        <item name="colorError">@color/huc_error</item>
+        <item name="colorOnError">@color/huc_on_error</item>
+        <item name="colorErrorContainer">@color/huc_error_container</item>
+        <item name="colorOnErrorContainer">@color/huc_on_error_container</item>
+
+        <item name="android:colorBackground">@color/huc_surface</item>
+        <item name="colorSurface">@color/huc_surface</item>
+        <item name="colorOnSurface">@color/huc_on_surface</item>
+        <item name="colorSurfaceVariant">@color/huc_surface_container</item>
+        <item name="colorOnSurfaceVariant">@color/huc_on_surface_variant</item>
+        <item name="colorOutline">@color/huc_outline</item>
+
+        <item name="android:statusBarColor">@color/huc_primary</item>
+        <item name="android:navigationBarColor">@color/huc_surface_lowest</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:fontFamily">@font/public_sans</item>
+        <item name="fontFamily">@font/public_sans</item>
     </style>
 </resources>

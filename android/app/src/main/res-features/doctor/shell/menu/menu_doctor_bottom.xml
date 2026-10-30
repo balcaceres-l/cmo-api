@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_doc_inicio"
+        android:icon="@drawable/ic_local_hospital"
+        android:title="Principal" />
+    <item
+        android:id="@+id/nav_doc_consulta"
+        android:icon="@drawable/ic_medical_services"
+        android:title="Consulta" />
+    <item
+        android:id="@+id/nav_doc_expedientes"
+        android:icon="@drawable/ic_folder_shared"
+        android:title="Expedientes" />
+    <item
+        android:id="@+id/nav_doc_laboratorio"
+        android:icon="@drawable/ic_science"
+        android:title="Laboratorio" />
+</menu>

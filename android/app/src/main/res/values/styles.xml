@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tipografía Institucional HUC Móvil (Manrope + Public Sans) -->
+    <style name="TextAppearance.Huc.HeadlineMd" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="fontFamily">@font/manrope_bold</item>
+        <item name="android:fontFamily">@font/manrope_bold</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/huc_on_surface</item>
+    </style>
+
+    <style name="TextAppearance.Huc.HeadlineSm" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="fontFamily">@font/manrope_bold</item>
+        <item name="android:fontFamily">@font/manrope_bold</item>
+        <item name="android:textSize">19sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/huc_on_surface</item>
+    </style>
+
+    <style name="TextAppearance.Huc.TitleLg" parent="TextAppearance.Material3.TitleLarge">
+        <item name="fontFamily">@font/manrope</item>
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/huc_on_surface</item>
+    </style>
+
+    <style name="TextAppearance.Huc.TitleMd" parent="TextAppearance.Material3.TitleMedium">
+        <item name="fontFamily">@font/manrope</item>
+        <item name="android:fontFamily">@font/manrope</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/huc_on_surface</item>
+    </style>
+
+    <style name="TextAppearance.Huc.TitleSm" parent="TextAppearance.Material3.TitleSmall">
+        <item name="fontFamily">@font/public_sans_semibold</item>
+        <item name="android:fontFamily">@font/public_sans_semibold</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/huc_on_surface</item>
+    </style>
+
+    <style name="TextAppearance.Huc.BodyMd" parent="TextAppearance.Material3.BodyMedium">
+        <item name="fontFamily">@font/public_sans</item>
+        <item name="android:fontFamily">@font/public_sans</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/huc_on_surface</item>
+    </style>
+
+    <style name="TextAppearance.Huc.BodySm" parent="TextAppearance.Material3.BodySmall">
+        <item name="fontFamily">@font/public_sans</item>
+        <item name="android:fontFamily">@font/public_sans</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/huc_on_surface_variant</item>
+    </style>
+
+    <style name="TextAppearance.Huc.LabelLg" parent="TextAppearance.Material3.LabelLarge">
+        <item name="fontFamily">@font/public_sans_semibold</item>
+        <item name="android:fontFamily">@font/public_sans_semibold</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.Huc.LabelMd" parent="TextAppearance.Material3.LabelMedium">
+        <item name="fontFamily">@font/public_sans_semibold</item>
+        <item name="android:fontFamily">@font/public_sans_semibold</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.Huc.LabelSm" parent="TextAppearance.Material3.LabelSmall">
+        <item name="fontFamily">@font/public_sans_semibold</item>
+        <item name="android:fontFamily">@font/public_sans_semibold</item>
+        <item name="android:textSize">11sp</item>
+    </style>
+
+    <!-- Widgets Reutilizables HUC -->
+    <style name="Widget.Huc.Card" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/huc_surface_lowest</item>
+        <item name="cardCornerRadius">@dimen/huc_radius_default</item>
+        <item name="cardElevation">1dp</item>
+        <item name="strokeWidth">0dp</item>
+    </style>
+
+    <style name="Widget.Huc.Button.Primary" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/huc_primary_container</item>
+        <item name="android:textColor">@color/huc_on_primary</item>
+        <item name="cornerRadius">@dimen/huc_radius_pill</item>
+        <item name="android:minHeight">50dp</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textAppearance">@style/TextAppearance.Huc.LabelLg</item>
+    </style>
+
+    <style name="Widget.Huc.Button.Secondary" parent="Widget.Material3.Button.TonalButton">
+        <item name="backgroundTint">@color/huc_secondary_fixed</item>
+        <item name="android:textColor">@color/huc_on_secondary_fixed</item>
+        <item name="cornerRadius">@dimen/huc_radius_pill</item>
+        <item name="android:minHeight">50dp</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textAppearance">@style/TextAppearance.Huc.LabelLg</item>
+    </style>
+
+    <style name="Widget.Huc.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">@color/huc_outline_variant</item>
+        <item name="android:textColor">@color/huc_primary_container</item>
+        <item name="cornerRadius">@dimen/huc_radius_default</item>
+        <item name="android:textAppearance">@style/TextAppearance.Huc.LabelMd</item>
+    </style>
+
+    <style name="Widget.Huc.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/huc_surface_low</item>
+        <item name="boxCornerRadiusTopStart">@dimen/huc_radius_default</item>
+        <item name="boxCornerRadiusTopEnd">@dimen/huc_radius_default</item>
+        <item name="boxCornerRadiusBottomStart">@dimen/huc_radius_default</item>
+        <item name="boxCornerRadiusBottomEnd">@dimen/huc_radius_default</item>
+        <item name="boxStrokeColor">@color/huc_primary_container</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="hintTextColor">@color/huc_primary_container</item>
+    </style>
+</resources>

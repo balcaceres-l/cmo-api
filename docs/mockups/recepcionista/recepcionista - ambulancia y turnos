@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><title>HUC Móvil</title><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700&amp;family=Public+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;background-color:#f8f9fa;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "inverse-on-surface": "#f0f1f2", "on-tertiary-fixed-variant": "#663d00", "tertiary-fixed-dim": "#ffb865", "outline": "#707975", "on-primary-fixed": "#00201a", "surface-container-highest": "#e1e3e4", "on-tertiary-container": "#f99c00", "primary-container": "#004d40", "outline-variant": "#bfc9c4", "on-secondary-fixed-variant": "#004a78", "on-background": "#191c1d", "on-secondary-fixed": "#001d34", "tertiary-container": "#623b00", "surface-container": "#edeeef", "primary-fixed": "#afefdd", "on-tertiary-fixed": "#2b1700", "secondary": "#00629e", "tertiary-fixed": "#ffddba", "on-tertiary": "#ffffff", "on-surface": "#191c1d", "surface-bright": "#f8f9fa", "primary-fixed-dim": "#94d3c1", "secondary-fixed": "#cfe5ff", "surface": "#f8f9fa", "tertiary": "#442700", "on-primary-fixed-variant": "#065043", "surface-container-low": "#f3f4f5", "surface-variant": "#e1e3e4", "on-error-container": "#93000a", "surface-tint": "#29695b", "primary": "#00342b", "surface-dim": "#d9dadb", "on-primary": "#ffffff", "secondary-fixed-dim": "#99cbff", "on-primary-container": "#7ebdac", "on-secondary-container": "#004470", "on-secondary": "#ffffff", "inverse-primary": "#94d3c1", "background": "#f8f9fa", "surface-container-high": "#e7e8e9", "secondary-container": "#62b4fe", "on-error": "#ffffff", "on-surface-variant": "#3f4945", "inverse-surface": "#2e3132", "error": "#ba1a1a", "surface-container-lowest": "#ffffff", "error-container": "#ffdad6" }, "borderRadius": { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, "spacing": { "space-sm": "0.5rem", "space-md": "1rem", "gutter": "1rem", "margin": "1rem", "space-xl": "2rem", "gutter-mobile": "0.75rem", "space-lg": "1.5rem", "space-xs": "0.25rem", "margin-tablet": "1.5rem" }, "fontFamily": { "body-md": ["Public Sans"], "label-lg": ["Public Sans"], "headline-lg": ["Manrope"], "title-md": ["Manrope"], "label-sm": ["Public Sans"], "label-md": ["Public Sans"], "headline-lg-mobile": ["Manrope"], "headline-md": ["Manrope"], "title-lg": ["Manrope"], "headline-sm": ["Manrope"], "title-sm": ["Public Sans"], "body-sm": ["Public Sans"], "body-lg": ["Public Sans"] }, "fontSize": { "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "label-lg": ["14px", { "lineHeight": "18px", "fontWeight": "600" }], "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "700" }], "title-md": ["16px", { "lineHeight": "22px", "fontWeight": "600" }], "label-sm": ["11px", { "lineHeight": "14px", "fontWeight": "500" }], "label-md": ["12px", { "lineHeight": "16px", "fontWeight": "600" }], "headline-lg-mobile": ["26px", { "lineHeight": "32px", "fontWeight": "700" }], "headline-md": ["24px", { "lineHeight": "30px", "fontWeight": "600" }], "title-lg": ["18px", { "lineHeight": "24px", "fontWeight": "600" }], "headline-sm": ["20px", { "lineHeight": "26px", "fontWeight": "600" }], "title-sm": ["14px", { "lineHeight": "20px", "fontWeight": "600" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }] } } } };</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 pt-safe bg-primary-container/95 backdrop-blur-xl shadow-[0_4px_16px_rgba(0,28,24,0.14)]"><div class="h-20 px-margin flex items-center justify-between"><div class="flex items-center gap-space-sm"><div class="w-11 h-11 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-primary-fixed text-[24px]">local_hospital</span></div><div class="flex flex-col"><div class="flex items-center gap-space-xs"><span class="font-headline-sm text-headline-sm text-on-primary tracking-tight">HUC</span><span class="px-1.5 py-0.5 rounded-full bg-primary text-primary-fixed font-label-sm text-label-sm">CMO</span></div><span class="font-label-sm text-label-sm text-on-primary-container tracking-wider uppercase">Guardia</span></div></div><div class="flex items-center gap-space-xs"><button class="h-9 px-space-sm rounded-full bg-primary text-on-primary flex items-center gap-1.5 hover:bg-on-primary/10 transition-colors"><span class="w-2 h-2 rounded-full bg-primary-fixed"></span><span class="font-label-sm text-label-sm text-primary-fixed font-semibold">Guardia Activa</span><span class="material-symbols-outlined text-on-primary text-[18px]">expand_more</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 w-full bg-surface pt-20 pb-28"><div class="flex flex-col w-full px-margin space-y-space-md">
+<!-- Micro Banner Contexto Turno Central -->
+<div class="flex items-center justify-between bg-surface-container-low px-space-md py-space-sm rounded-lg shadow-sm">
+<div class="flex items-center gap-space-xs">
+<div class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></div>
+<span class="font-label-md text-label-md text-on-surface-variant font-semibold">Turno Mañana: 07:00 - 15:00</span>
+</div>
+<div class="flex items-center gap-1 bg-surface-container-highest px-2 py-0.5 rounded-full">
+<span class="material-symbols-outlined text-[14px] text-primary">schedule</span>
+<span class="font-label-sm text-label-sm text-on-surface font-semibold" id="clock-display">12:42 PM</span>
+</div>
+</div>
+<!-- SECCIÓN A: RECURSO CRÍTICO - AMBULANCIA ÚNICA -->
+<section class="space-y-space-sm">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[22px]" style="font-variation-settings: 'FILL' 1;">ambulance</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface tracking-tight">Ambulancia Alfa-1</h2>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm font-semibold flex items-center gap-1 shadow-sm">
+<span class="w-2 h-2 rounded-full bg-error animate-ping"></span>
+        Código Rojo Activo
+      </span>
+</div>
+<!-- Banner Principal Estado en Tiempo Real -->
+<div class="bg-surface-container-lowest rounded-lg p-space-md shadow-md space-y-space-md">
+<!-- Selector de Estados Oficiales M3 -->
+<div class="space-y-1.5">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Estado Operativo Institucional</label>
+<div class="grid grid-cols-3 gap-1.5 p-1 bg-surface-container-low rounded-full" id="ambulance-state-selector">
+<button class="py-2 rounded-full font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center gap-1" id="btn-disp" onclick="setAmbulanceStatus('disponible')" type="button">
+<span class="w-2 h-2 rounded-full bg-outline-variant"></span>
+            Disponible
+          </button>
+<button class="py-2 rounded-full font-label-sm text-label-sm bg-error text-on-error font-bold shadow-sm transition-all flex items-center justify-center gap-1" id="btn-serv" onclick="setAmbulanceStatus('servicio')" type="button">
+<span class="w-2 h-2 rounded-full bg-surface-container-lowest animate-pulse"></span>
+            En Servicio
+          </button>
+<button class="py-2 rounded-full font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center gap-1" id="btn-manten" onclick="setAmbulanceStatus('mantenimiento')" type="button">
+<span class="w-2 h-2 rounded-full bg-outline-variant"></span>
+            Mantenim.
+          </button>
+</div>
+</div>
+<!-- Live Mission Card -->
+<div class="bg-error-container/40 rounded-lg p-space-md space-y-space-sm">
+<div class="flex items-start justify-between">
+<div class="space-y-0.5">
+<div class="flex items-center gap-1.5 text-error font-bold font-title-sm text-title-sm">
+<span class="material-symbols-outlined text-[18px]">warning</span>
+              Traslado UCI Coronario
+            </div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Unidad móvil en trayecto prioritario con soporte vital avanzado.</p>
+</div>
+<div class="bg-surface-container-lowest px-3 py-1.5 rounded-xl shadow-sm text-right">
+<span class="block font-label-sm text-label-sm text-on-surface-variant">Retorno est.</span>
+<span class="font-headline-sm text-headline-sm text-error font-bold" id="eta-counter">18 min</span>
+</div>
+</div>
+<!-- Telemetría & Tripulación -->
+<div class="grid grid-cols-2 gap-space-sm pt-space-xs">
+<div class="bg-surface-container-lowest/80 rounded-lg p-2.5 space-y-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-primary">groups</span>
+              Tripulación
+            </span>
+<p class="font-label-md text-label-md text-on-surface font-semibold leading-tight">M. Peralta <span class="text-on-surface-variant text-[10px] font-normal">(Par.)</span></p>
+<p class="font-label-md text-label-md text-on-surface font-semibold leading-tight">G. Soto <span class="text-on-surface-variant text-[10px] font-normal">(Chofer)</span></p>
+</div>
+<div class="bg-surface-container-lowest/80 rounded-lg p-2.5 space-y-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-secondary">pin_drop</span>
+              Destino
+            </span>
+<p class="font-label-md text-label-md text-on-surface font-semibold leading-tight">Hosp. Universitario</p>
+<p class="font-label-sm text-label-sm text-secondary font-medium">Ala Cardiovascular B</p>
+</div>
+</div>
+<!-- Barra de progreso trayecto de retorno -->
+<div class="space-y-1 pt-1">
+<div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant">
+<span>Pabellón Externo Sur</span>
+<span class="font-semibold text-on-surface">62% Recorrido</span>
+</div>
+<div class="w-full h-2 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-error rounded-full transition-all duration-500" style="width: 62%"></div>
+</div>
+</div>
+</div>
+<!-- Quick Action: Despacho -->
+<button class="w-full h-12 rounded-full bg-primary text-on-primary font-label-lg text-label-lg font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-md hover:bg-primary-container active:scale-[0.99] transition-all" onclick="openEmergencyModal()" type="button">
+<span class="material-symbols-outlined text-[20px]">e911_emergency</span>
+        Solicitar Despacho de Emergencia
+      </button>
+<!-- Bitácora Desplegable de Emergencias Atendidas -->
+<div class="space-y-space-xs pt-space-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[18px]">history</span>
+<h3 class="font-title-sm text-title-sm text-on-surface">Bitácora de Despachos Recientes</h3>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Hoy</span>
+</div>
+<!-- Filtros Rápidos de Bitácora -->
+<div class="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+<button class="log-filter-btn px-3 py-1 rounded-full bg-primary-container text-on-primary font-label-sm text-label-sm whitespace-nowrap shadow-sm" onclick="filterLog('todos')" type="button">Todos (3)</button>
+<button class="log-filter-btn px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high" onclick="filterLog('Paro')" type="button">Paro Cardíaco</button>
+<button class="log-filter-btn px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high" onclick="filterLog('Trauma')" type="button">Trauma</button>
+<button class="log-filter-btn px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high" onclick="filterLog('Respiratorio')" type="button">Respiratorio</button>
+</div>
+<!-- Lista de Bitácora Histórica -->
+<div class="space-y-1.5" id="log-container">
+<!-- Item 1 -->
+<div class="log-entry bg-surface-container-low rounded-lg p-2.5 flex items-center justify-between" data-category="Paro">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-8 h-8 rounded-full bg-error-container text-on-error-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[16px]">ecg</span>
+</div>
+<div class="min-w-0">
+<p class="font-label-md text-label-md text-on-surface font-semibold truncate">Paro Cardiorespiratorio</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Sector Centro - Estabilizado en tránsito</p>
+</div>
+</div>
+<div class="text-right shrink-0">
+<span class="font-label-sm text-label-sm text-on-surface font-bold block">10:15</span>
+<span class="font-label-sm text-label-sm text-secondary font-semibold">Resuelto</span>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="log-entry bg-surface-container-low rounded-lg p-2.5 flex items-center justify-between" data-category="Trauma">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-8 h-8 rounded-full bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[16px]">personal_injury</span>
+</div>
+<div class="min-w-0">
+<p class="font-label-md text-label-md text-on-surface font-semibold truncate">Trauma Múltiple Vehicular</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Av. Libertador - Traslado a Quirófano 2</p>
+</div>
+</div>
+<div class="text-right shrink-0">
+<span class="font-label-sm text-label-sm text-on-surface font-bold block">08:40</span>
+<span class="font-label-sm text-label-sm text-secondary font-semibold">Entregado</span>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="log-entry bg-surface-container-low rounded-lg p-2.5 flex items-center justify-between" data-category="Respiratorio">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[16px]">air</span>
+</div>
+<div class="min-w-0">
+<p class="font-label-md text-label-md text-on-surface font-semibold truncate">Crisis Asmática Severa</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">Barrio Universitario - Asistencia O2</p>
+</div>
+</div>
+<div class="text-right shrink-0">
+<span class="font-label-sm text-label-sm text-on-surface font-bold block">06:20</span>
+<span class="font-label-sm text-label-sm text-secondary font-semibold">Entregado</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECCIÓN B: CONTROL DE TURNOS DEL PERSONAL HOSPITALARIO -->
+<section class="space-y-space-sm pt-space-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary text-[22px]" style="font-variation-settings: 'FILL' 1;">badge</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface tracking-tight">Turnos Activos</h2>
+</div>
+<div class="flex items-center gap-1 bg-surface-container px-2.5 py-1 rounded-full">
+<span class="font-label-sm text-label-sm text-primary font-bold">6 Personal</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">en guardia</span>
+</div>
+</div>
+<!-- Barra de Filtros por Rol Hospitalario (Carrusel Horizontal) -->
+<div class="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none" id="staff-filters">
+<button class="staff-pill px-3.5 py-1.5 rounded-full bg-primary-container text-on-primary font-label-sm text-label-sm font-semibold whitespace-nowrap shadow-sm" onclick="filterStaff('todos')" type="button">Todos</button>
+<button class="staff-pill px-3.5 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high" onclick="filterStaff('Doctores')" type="button">Doctores</button>
+<button class="staff-pill px-3.5 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high" onclick="filterStaff('Enfermeras')" type="button">Enfermeras</button>
+<button class="staff-pill px-3.5 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high" onclick="filterStaff('Alergistas')" type="button">Alergistas</button>
+<button class="staff-pill px-3.5 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high" onclick="filterStaff('Emergencia')" type="button">Emergencia</button>
+<button class="staff-pill px-3.5 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high" onclick="filterStaff('Asistentes')" type="button">Asistentes</button>
+<button class="staff-pill px-3.5 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high" onclick="filterStaff('Recepcionistas')" type="button">Recepcionistas</button>
+</div>
+<!-- Lista de Personal en Guardia Activa -->
+<div class="space-y-space-sm" id="staff-list">
+<!-- Dr. Alejandro Restrepo -->
+<div class="staff-card bg-surface-container-lowest rounded-lg p-space-md shadow-sm space-y-2.5 transition-transform active:scale-[0.99]" data-roles="Doctores Emergencia">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary text-[20px]">stethoscope</span>
+</div>
+<div class="min-w-0">
+<p class="font-title-sm text-title-sm text-on-surface font-bold truncate">Dr. Alejandro Restrepo</p>
+<p class="font-label-sm text-label-sm text-secondary font-semibold">Médico Guardia Urgencias</p>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm shrink-0">Activo</span>
+</div>
+<div class="flex items-center justify-between pt-1 border-none bg-surface-container-low/50 px-2.5 py-1.5 rounded-lg font-body-sm text-body-sm">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[15px]">schedule</span>
+<span>07:00 - 15:00 hrs</span>
+</div>
+<span class="font-label-sm text-label-sm text-error font-medium">Relevo en 2h 18m</span>
+</div>
+</div>
+<!-- Dra. Sofía Valenzuela -->
+<div class="staff-card bg-surface-container-lowest rounded-lg p-space-md shadow-sm space-y-2.5 transition-transform active:scale-[0.99]" data-roles="Doctores Alergistas">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-10 h-10 rounded-full bg-tertiary-fixed/60 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-tertiary-container text-[20px]">immunology</span>
+</div>
+<div class="min-w-0">
+<p class="font-title-sm text-title-sm text-on-surface font-bold truncate">Dra. Sofía Valenzuela</p>
+<p class="font-label-sm text-label-sm text-secondary font-semibold">Alergista / Ambulatorio</p>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm shrink-0">En Consulta</span>
+</div>
+<div class="flex items-center justify-between pt-1 border-none bg-surface-container-low/50 px-2.5 py-1.5 rounded-lg font-body-sm text-body-sm">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[15px]">schedule</span>
+<span>08:30 - 14:30 hrs</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Cierre agenda: 14:00</span>
+</div>
+</div>
+<!-- Lic. Mariana Gómez -->
+<div class="staff-card bg-surface-container-lowest rounded-lg p-space-md shadow-sm space-y-2.5 transition-transform active:scale-[0.99]" data-roles="Enfermeras">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-10 h-10 rounded-full bg-secondary-fixed flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-secondary-container text-[20px]">medication</span>
+</div>
+<div class="min-w-0">
+<p class="font-title-sm text-title-sm text-on-surface font-bold truncate">Lic. Mariana Gómez</p>
+<p class="font-label-sm text-label-sm text-secondary font-semibold">Enfermera Jefe 3ª Planta VIP</p>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm shrink-0">Ronda Médica</span>
+</div>
+<div class="flex items-center justify-between pt-1 border-none bg-surface-container-low/50 px-2.5 py-1.5 rounded-lg font-body-sm text-body-sm">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[15px]">schedule</span>
+<span>07:00 - 19:00 hrs</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Turno Largo 12h</span>
+</div>
+</div>
+<!-- Enf. Carlos Duarte -->
+<div class="staff-card bg-surface-container-lowest rounded-lg p-space-md shadow-sm space-y-2.5 transition-transform active:scale-[0.99]" data-roles="Enfermeras Asistentes">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary text-[20px]">vaccines</span>
+</div>
+<div class="min-w-0">
+<p class="font-title-sm text-title-sm text-on-surface font-bold truncate">Enf. Carlos Duarte</p>
+<p class="font-label-sm text-label-sm text-secondary font-semibold">Asistente 2ª Planta Semiprivada</p>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm shrink-0">Activo</span>
+</div>
+<div class="flex items-center justify-between pt-1 border-none bg-surface-container-low/50 px-2.5 py-1.5 rounded-lg font-body-sm text-body-sm">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[15px]">schedule</span>
+<span>07:00 - 15:00 hrs</span>
+</div>
+<span class="font-label-sm text-label-sm text-error font-medium">Relevo en 2h 18m</span>
+</div>
+</div>
+<!-- Roberto Morales -->
+<div class="staff-card bg-surface-container-lowest rounded-lg p-space-md shadow-sm space-y-2.5 transition-transform active:scale-[0.99]" data-roles="Recepcionistas Asistentes">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary text-[20px]">support_agent</span>
+</div>
+<div class="min-w-0">
+<p class="font-title-sm text-title-sm text-on-surface font-bold truncate">Roberto Morales</p>
+<p class="font-label-sm text-label-sm text-secondary font-semibold">Recepcionista Admisión Central</p>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm text-label-sm shrink-0">En Mostrador</span>
+</div>
+<div class="flex items-center justify-between pt-1 border-none bg-surface-container-low/50 px-2.5 py-1.5 rounded-lg font-body-sm text-body-sm">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[15px]">schedule</span>
+<span>07:00 - 15:00 hrs</span>
+</div>
+<span class="font-label-sm text-label-sm text-error font-medium">Relevo en 2h 18m</span>
+</div>
+</div>
+<!-- Marcos Peralta -->
+<div class="staff-card bg-surface-container-lowest rounded-lg p-space-md shadow-sm space-y-2.5 transition-transform active:scale-[0.99]" data-roles="Emergencia">
+<div class="flex items-start justify-between gap-space-xs">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-10 h-10 rounded-full bg-error-container text-on-error-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[20px]">medical_services</span>
+</div>
+<div class="min-w-0">
+<p class="font-title-sm text-title-sm text-on-surface font-bold truncate">Marcos Peralta</p>
+<p class="font-label-sm text-label-sm text-secondary font-semibold">Paramédico Ambulancia Alfa-1</p>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm shrink-0 font-bold">En Despacho</span>
+</div>
+<div class="flex items-center justify-between pt-1 border-none bg-surface-container-low/50 px-2.5 py-1.5 rounded-lg font-body-sm text-body-sm">
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[15px]">schedule</span>
+<span>08:00 - 20:00 hrs</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">Alfa-1 Código Rojo</span>
+</div>
+</div>
+</div>
+<!-- Protocolo de Cambio de Guardia de las 15:00 hrs -->
+<div class="bg-primary/5 rounded-lg p-space-md space-y-space-sm">
+<div class="flex items-start gap-space-sm">
+<div class="w-9 h-9 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[20px]">published_with_changes</span>
+</div>
+<div class="min-w-0">
+<h3 class="font-title-sm text-title-sm text-on-surface font-bold">Relevo de Guardia Central (15:00 hrs)</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Registra y valida firmas para médicos, enfermeros y asistentes salientes del primer turno.</p>
+</div>
+</div>
+<button class="w-full h-12 rounded-full bg-surface-container-lowest text-primary font-label-lg text-label-lg font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm hover:bg-surface-container transition-all" onclick="triggerHandoverProtocol()" type="button">
+<span class="material-symbols-outlined text-[20px] text-primary">how_to_reg</span>
+        Registrar Relevo de Guardia 15:00 hrs
+      </button>
+</div>
+</section>
+<!-- MODAL / BOTTOM SHEET DE SIMULACIÓN DE DESPACHO -->
+<div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex-col justify-end transition-opacity" id="dispatch-sheet">
+<div class="bg-surface-container-lowest rounded-t-xl p-space-lg space-y-space-md max-h-[751px] overflow-y-auto">
+<div class="flex items-center justify-between pb-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error text-[24px]">crisis_alert</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Protocolo de Despacho</h3>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant" onclick="closeEmergencyModal()" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="bg-error-container/30 p-space-sm rounded-lg text-error font-body-sm text-body-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">info</span>
+<span>Aviso: Alfa-1 es la única unidad asignada. Se generará alerta prioritaria a Dirección.</span>
+</div>
+<form class="space-y-space-sm" id="emergency-form" onsubmit="submitDispatch(event)">
+<div class="space-y-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant font-medium">Tipo de Código de Urgencia</label>
+<div class="grid grid-cols-2 gap-2">
+<label class="flex items-center gap-2 p-2.5 rounded-lg bg-surface-container-low cursor-pointer font-label-md text-label-md text-on-surface">
+<input checked="" class="accent-primary" name="priority" type="radio" value="rojo"/>
+<span>Código Rojo (Crítico)</span>
+</label>
+<label class="flex items-center gap-2 p-2.5 rounded-lg bg-surface-container-low cursor-pointer font-label-md text-label-md text-on-surface">
+<input class="accent-primary" name="priority" type="radio" value="amarillo"/>
+<span>Código Amarillo (Grave)</span>
+</label>
+</div>
+</div>
+<div class="space-y-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant font-medium">Ubicación / Punto de Extracción</label>
+<input class="w-full h-11 px-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest" placeholder="Ej: Autopista Norte km 4 o Sala de Shock B" required="" type="text"/>
+</div>
+<div class="space-y-1">
+<label class="font-label-sm text-label-sm text-on-surface-variant font-medium">Motivo Clínico Preliminar</label>
+<textarea class="w-full p-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest resize-none" placeholder="Describa síntomas y soporte requerido..." required="" rows="2"></textarea>
+</div>
+<div class="pt-2 flex gap-2">
+<button class="w-1/2 h-12 rounded-full bg-surface-container text-on-surface font-label-md text-label-md font-semibold" onclick="closeEmergencyModal()" type="button">Cancelar</button>
+<button class="w-1/2 h-12 rounded-full bg-primary text-on-primary font-label-md text-label-md font-bold uppercase shadow-sm" type="submit">Confirmar Salida</button>
+</div>
+</form>
+</div>
+</div>
+<!-- TOAST FEEDBACK INTERACTIVO -->
+<div class="fixed top-24 left-4 right-4 z-50 py-3 px-4 rounded-xl bg-primary text-on-primary font-label-md text-label-md shadow-lg flex items-center justify-between opacity-0 pointer-events-none transition-all duration-300" id="toast-feedback">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-fixed text-[20px]" id="toast-icon">check_circle</span>
+<span id="toast-message">Acción completada con éxito</span>
+</div>
+</div>
+</div>
+<script>
+  function showToast(msg, icon = 'check_circle') {
+    const toast = document.getElementById('toast-feedback');
+    const toastMsg = document.getElementById('toast-message');
+    const toastIcon = document.getElementById('toast-icon');
+    if (!toast || !toastMsg) return;
+    toastMsg.textContent = msg;
+    toastIcon.textContent = icon;
+    toast.classList.remove('opacity-0', 'pointer-events-none');
+    toast.classList.add('opacity-100');
+    setTimeout(() => {
+      toast.classList.remove('opacity-100');
+      toast.classList.add('opacity-0', 'pointer-events-none');
+    }, 3200);
+  }
+
+  function setAmbulanceStatus(status) {
+    const btnDisp = document.getElementById('btn-disp');
+    const btnServ = document.getElementById('btn-serv');
+    const btnManten = document.getElementById('btn-manten');
+
+    // Reset styles
+    [btnDisp, btnServ, btnManten].forEach(b => {
+      b.className = 'py-2 rounded-full font-label-sm text-label-sm text-on-surface-variant hover:text-on-surface transition-all flex items-center justify-center gap-1';
+    });
+
+    if (status === 'disponible') {
+      btnDisp.className = 'py-2 rounded-full font-label-sm text-label-sm bg-primary text-on-primary font-bold shadow-sm transition-all flex items-center justify-center gap-1';
+      showToast('Ambulancia Alfa-1 marcada como DISPONIBLE en base', 'check_circle');
+    } else if (status === 'servicio') {
+      btnServ.className = 'py-2 rounded-full font-label-sm text-label-sm bg-error text-on-error font-bold shadow-sm transition-all flex items-center justify-center gap-1';
+      showToast('Ambulancia Alfa-1 en estado EN SERVICIO activo', 'warning');
+    } else if (status === 'mantenimiento') {
+      btnManten.className = 'py-2 rounded-full font-label-sm text-label-sm bg-tertiary-container text-on-tertiary-container font-bold shadow-sm transition-all flex items-center justify-center gap-1';
+      showToast('Ambulancia en Mantenimiento técnico preventivo', 'build');
+    }
+  }
+
+  function filterStaff(role) {
+    const pills = document.querySelectorAll('.staff-pill');
+    pills.forEach(p => {
+      p.className = 'staff-pill px-3.5 py-1.5 rounded-full bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high';
+    });
+    event.currentTarget.className = 'staff-pill px-3.5 py-1.5 rounded-full bg-primary-container text-on-primary font-label-sm text-label-sm font-semibold whitespace-nowrap shadow-sm';
+
+    const cards = document.querySelectorAll('.staff-card');
+    cards.forEach(card => {
+      if (role === 'todos') {
+        card.style.display = 'block';
+      } else {
+        const roles = card.getAttribute('data-roles') || '';
+        if (roles.includes(role)) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      }
+    });
+  }
+
+  function filterLog(category) {
+    const btns = document.querySelectorAll('.log-filter-btn');
+    btns.forEach(b => {
+      b.className = 'log-filter-btn px-3 py-1 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high';
+    });
+    event.currentTarget.className = 'log-filter-btn px-3 py-1 rounded-full bg-primary-container text-on-primary font-label-sm text-label-sm whitespace-nowrap shadow-sm';
+
+    const entries = document.querySelectorAll('.log-entry');
+    entries.forEach(e => {
+      if (category === 'todos') {
+        e.style.display = 'flex';
+      } else {
+        const cat = e.getAttribute('data-category');
+        e.style.display = (cat === category) ? 'flex' : 'none';
+      }
+    });
+  }
+
+  function triggerHandoverProtocol() {
+    showToast('Apertura de Libro de Guardia 15:00 hrs. Notificando a 6 profesionales.', 'draw');
+  }
+
+  function openEmergencyModal() {
+    const sheet = document.getElementById('dispatch-sheet');
+    sheet.classList.remove('hidden');
+    sheet.classList.add('flex');
+  }
+
+  function closeEmergencyModal() {
+    const sheet = document.getElementById('dispatch-sheet');
+    sheet.classList.add('hidden');
+    sheet.classList.remove('flex');
+  }
+
+  function submitDispatch(e) {
+    e.preventDefault();
+    closeEmergencyModal();
+    showToast('¡Despacho de emergencia transmitido a radio cabina!', 'crisis_alert');
+    setAmbulanceStatus('servicio');
+  }
+
+  // Actualizador de reloj continuo
+  function updateTime() {
+    const clockEl = document.getElementById('clock-display');
+    if (!clockEl) return;
+    const now = new Date();
+    clockEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  setInterval(updateTime, 30000);
+</script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface-container-lowest/90 backdrop-blur-xl shadow-[0_-2px_12px_rgba(0,45,36,0.06)]" data-active-classes="text-primary-container font-semibold"><div class="flex justify-around items-center h-16 px-space-xs"><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] text-on-surface-variant hover:text-primary transition-colors" data-path="pacientes" href="#"><span class="material-symbols-outlined text-[24px]">personal_injury</span><span class="font-label-sm text-label-sm mt-0.5">Pacientes</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] text-on-surface-variant hover:text-primary transition-colors" data-path="camas-salas" href="#"><span class="material-symbols-outlined text-[24px]">hotel</span><span class="font-label-sm text-label-sm mt-0.5">Camas/Salas</span></a><a class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] text-on-surface-variant hover:text-primary transition-colors" data-path="interconsultas" href="#"><span class="material-symbols-outlined text-[24px]">assignment</span><span class="font-label-sm text-label-sm mt-0.5">Interconsultas</span></a><a aria-current="page" class="flex flex-col items-center justify-center min-w-[56px] min-h-[44px] transition-colors text-primary-container font-semibold" data-path="guardia" href="#"><span class="material-symbols-outlined text-[24px]">medical_services</span><span class="font-label-sm text-label-sm mt-0.5">Guardia</span></a></div></nav></body></html>

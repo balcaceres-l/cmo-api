@@ -1,0 +1,642 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/huc_surface"
+    android:clipToPadding="false"
+    android:paddingBottom="112dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/huc_space_md">
+
+        <!-- Barra Superior de Retorno a la Página Principal (Mis Citas y Pacientes) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnVolverAInicioMedico"
+                style="@style/Widget.Huc.Button.Outlined"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="← Volver a Mis Citas y Pacientes"
+                android:textAllCaps="false"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Aviso cuando la consulta ya fue cerrada para elegir el siguiente paciente -->
+        <LinearLayout
+            android:id="@+id/cardSinConsultaAbierta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/huc_space_md"
+            android:background="@drawable/bg_primary_fixed_16"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="12dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Consulta cerrada y firmada"
+                    android:textAppearance="@style/TextAppearance.Huc.TitleSm"
+                    android:textColor="@color/huc_on_primary_fixed" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Seleccione su siguiente cita en la Página Principal para iniciar."
+                    android:textAppearance="@style/TextAppearance.Huc.BodySm"
+                    android:textColor="@color/huc_on_primary_fixed_variant" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnIrASeleccionarCita"
+                style="@style/Widget.Huc.Button.Primary"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:layout_marginStart="8dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minHeight="38dp"
+                android:text="Ver Mis Citas"
+                android:textAllCaps="false"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- 1. Semáforo Clínico de 30 Minutos & Cronómetro en Vivo -->
+        <LinearLayout
+            android:id="@+id/cardSemaforoConsulta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_semaforo_verde"
+            android:orientation="vertical"
+            android:padding="@dimen/huc_space_md">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvSemaforoEstadoLabel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="🟢 EN TIEMPO ÓPTIMO"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelMd"
+                    android:textColor="@color/huc_semaforo_verde" />
+
+                <TextView
+                    android:id="@+id/tvConsultaBoxPill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_pill_primary"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp"
+                    android:text="Box 03 • Med. Interna"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                    android:textColor="@color/huc_primary_fixed" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvCronometroReloj"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="18:00"
+                        android:textAppearance="@style/TextAppearance.Huc.HeadlineMd"
+                        android:textSize="30sp" />
+
+                    <TextView
+                        android:id="@+id/tvCronometroRestante"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Restan 12 min del bloque reglamentario (30m)"
+                        android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPausarReanudarReloj"
+                    style="@style/Widget.Huc.Button.Outlined"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="Pausar"
+                    android:textAllCaps="false"
+                    app:icon="@drawable/ic_pause"
+                    app:iconSize="16dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 2. Ficha del Paciente en Box + Alerta de Alergias -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:background="@drawable/bg_card_rounded_16"
+            android:elevation="1dp"
+            android:orientation="vertical"
+            android:padding="@dimen/huc_space_md">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvConsExpedientePill"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_pill_primary_fixed"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="3dp"
+                    android:text="EXP: CM-2026-001"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                    android:textColor="@color/huc_on_primary_fixed" />
+
+                <TextView
+                    android:id="@+id/tvConsProtegidoBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_pill_tertiary_fixed"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="3dp"
+                    android:text="Ley 19.628"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                    android:textColor="@color/huc_on_tertiary_fixed"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tvConsFinalizadaBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_pill_secondary_fixed"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="3dp"
+                    android:text="✓ FIRMADA"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                    android:textColor="@color/huc_on_secondary_fixed"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvConsPacienteNombre"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Carlos Mendoza"
+                android:textAppearance="@style/TextAppearance.Huc.HeadlineSm" />
+
+            <TextView
+                android:id="@+id/tvConsPacienteDetalles"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="45 años • Nac: 1981-05-14 • DNI: 14.891.203-K • Fonasa Tramo D"
+                android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+
+            <!-- Alerta Farmacológica -->
+            <LinearLayout
+                android:id="@+id/bannerConsAlergias"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_error_container_16"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="10dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_warning"
+                    app:tint="@color/huc_on_error_container" />
+
+                <TextView
+                    android:id="@+id/tvConsAlergiasTexto"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="ALERTA: Alergia a Dipirona / AINEs"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelMd"
+                    android:textColor="@color/huc_on_error_container" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 3. Signos Vitales en Consulta (con soporte de Pase de Emergencia) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:background="@drawable/bg_card_rounded_16"
+            android:elevation="1dp"
+            android:orientation="vertical"
+            android:padding="@dimen/huc_space_md">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Signos Vitales &amp; Antropometría"
+                    android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnTomarAjustarSignos"
+                    style="@style/Widget.Huc.Button.Secondary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="38dp"
+                    android:text="Tomar / Ajustar"
+                    android:textAllCaps="false"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/badgeSinTriajePrevio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_tertiary_fixed_16"
+                android:padding="10dp"
+                android:text="⚡ Pase de Emergencia (Sin triaje previo) • Registre parámetros basales en box"
+                android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                android:textColor="@color/huc_on_tertiary_fixed"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/huc_space_sm"
+                android:orientation="horizontal">
+
+                <include
+                    android:id="@+id/vitalConsPa"
+                    layout="@layout/comp_vitals_chip"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1" />
+
+                <include
+                    android:id="@+id/vitalConsPulso"
+                    layout="@layout/comp_vitals_chip"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="4dp"
+                    android:layout_weight="1" />
+
+                <include
+                    android:id="@+id/vitalConsTemp"
+                    layout="@layout/comp_vitals_chip"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="4dp"
+                    android:layout_weight="1" />
+
+                <include
+                    android:id="@+id/vitalConsSpo2"
+                    layout="@layout/comp_vitals_chip"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <include
+                    android:id="@+id/vitalConsPeso"
+                    layout="@layout/comp_vitals_chip"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1" />
+
+                <include
+                    android:id="@+id/vitalConsTalla"
+                    layout="@layout/comp_vitals_chip"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="4dp"
+                    android:layout_weight="1" />
+
+                <include
+                    android:id="@+id/vitalConsImc"
+                    layout="@layout/comp_vitals_chip"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1.3" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvConsSignosObs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Observaciones: Normotenso en reposo."
+                android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+        </LinearLayout>
+
+        <!-- 4. Hipótesis Diagnóstica (CIE-10) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:background="@drawable/bg_card_rounded_16"
+            android:elevation="1dp"
+            android:orientation="vertical"
+            android:padding="@dimen/huc_space_md">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Hipótesis Diagnóstica (CIE-10)"
+                    android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAgregarCie10"
+                    style="@style/Widget.Huc.Button.Secondary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="38dp"
+                    android:text="+ Añadir CIE-10"
+                    android:textAllCaps="false"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvCie10Empty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Sin diagnósticos CIE-10 codificados aún."
+                android:textAppearance="@style/TextAppearance.Huc.BodySm"
+                android:visibility="gone" />
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupDiagnosticosCie10"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+
+        <!-- 5. Evolución Médica & Anamnesis (Autoguardado) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:background="@drawable/bg_card_rounded_16"
+            android:elevation="1dp"
+            android:orientation="vertical"
+            android:padding="@dimen/huc_space_md">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Evolución Médica &amp; Anamnesis"
+                    android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_pill_primary_fixed"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="3dp"
+                    android:text="● Autoguardado"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                    android:textColor="@color/huc_on_primary_fixed" />
+            </LinearLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Huc.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Motivo de consulta, enfermedad actual y hallazgos físicos">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etConsultaAnamnesis"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top|start"
+                    android:inputType="textCapSentences|textMultiLine"
+                    android:minLines="4"
+                    android:textAppearance="@style/TextAppearance.Huc.BodyMd" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <!-- 6. Recetario Digital -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:background="@drawable/bg_card_rounded_16"
+            android:elevation="1dp"
+            android:orientation="vertical"
+            android:padding="@dimen/huc_space_md">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Recetario Digital HUC"
+                    android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPrescribirReceta"
+                    style="@style/Widget.Huc.Button.Secondary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="38dp"
+                    android:text="+ Prescribir"
+                    android:textAllCaps="false"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvRecetasEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Sin medicamentos prescritos en esta consulta."
+                android:textAppearance="@style/TextAppearance.Huc.BodySm"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvRecetasConsulta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false" />
+        </LinearLayout>
+
+        <!-- 7. Órdenes de Laboratorio en Consulta -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:background="@drawable/bg_card_rounded_16"
+            android:elevation="1dp"
+            android:orientation="vertical"
+            android:padding="@dimen/huc_space_md">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Órdenes de Laboratorio en Consulta"
+                    android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnConsultaIndicarLab"
+                    style="@style/Widget.Huc.Button.Secondary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="38dp"
+                    android:text="+ Indicar Examen"
+                    android:textAllCaps="false"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvConsSinOrdenesLab"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Sin exámenes de laboratorio solicitados en este episodio."
+                android:textAppearance="@style/TextAppearance.Huc.BodySm"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/containerOrdenesLabConsulta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical" />
+        </LinearLayout>
+
+        <!-- 8. Acciones Inferiores de Cierre y Coordinación -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnConsultaAgendarControl"
+                style="@style/Widget.Huc.Button.Outlined"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:text="Agendar Control"
+                android:textAllCaps="false"
+                app:icon="@drawable/ic_event"
+                app:iconSize="16dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnConsultaIrALis"
+                style="@style/Widget.Huc.Button.Outlined"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:text="Ver Panel LIS"
+                android:textAllCaps="false"
+                app:icon="@drawable/ic_science"
+                app:iconSize="16dp" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnFinalizarConsulta"
+            style="@style/Widget.Huc.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="10dp"
+            android:text="FINALIZAR CONSULTA Y FIRMAR RECETA"
+            app:icon="@drawable/ic_check_circle"
+            app:iconGravity="textStart" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

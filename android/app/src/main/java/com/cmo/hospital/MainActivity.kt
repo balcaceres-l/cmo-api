@@ -1,89 +1,55 @@
 package com.cmo.hospital
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.viewModels
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.cmo.hospital.data.local.SessionManager
-import com.cmo.hospital.ui.dashboard.DoctorDashboardScreen
-import com.cmo.hospital.ui.dashboard.DoctorDashboardViewModel
-import com.cmo.hospital.ui.login.LoginScreen
-import com.cmo.hospital.ui.login.LoginViewModel
-import com.cmo.hospital.ui.navigation.Screen
-import com.cmo.hospital.ui.theme.CMOHospitalTheme
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import com.cmo.hospital.core.domain.model.User
+import com.cmo.hospital.databinding.ActivityMainBinding
+import com.cmo.hospital.features.auth.presentation.AuthNavigationHost
+import com.cmo.hospital.features.auth.presentation.LoginFragment
+import com.cmo.hospital.features.doctor.shell.presentation.DoctorShellFragment
+import com.cmo.hospital.features.recepcionista.shell.presentation.RecepcionistaShellFragment
 
-class MainActivity : ComponentActivity() {
-    private val loginViewModel: LoginViewModel by viewModels()
-    private val doctorDashboardViewModel: DoctorDashboardViewModel by viewModels()
+class MainActivity : AppCompatActivity(), AuthNavigationHost {
+
+    private lateinit var binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val sessionManager = SessionManager(this)
-        val currentUser = sessionManager.getUser()
-        val startDestination = if (sessionManager.isLoggedIn() && currentUser?.rol == "MEDICO") {
-            Screen.DoctorDashboard.route
-        } else {
-            Screen.Login.route
-        }
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
-        setContent {
-            CMOHospitalTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    AppNavigation(
-                        startDestination = startDestination,
-                        loginViewModel = loginViewModel,
-                        doctorDashboardViewModel = doctorDashboardViewModel
-                    )
-                }
+        if (savedInstanceState == null) {
+            val appContainer = (application as CmoApplication).appContainer
+            val activeUser = appContainer.getActiveUserUseCase()
+            if (activeUser != null) {
+                navigateForRole(activeUser)
+            } else {
+                replaceRootFragment(LoginFragment())
             }
         }
     }
-}
 
-@Composable
-fun AppNavigation(
-    startDestination: String,
-    loginViewModel: LoginViewModel,
-    doctorDashboardViewModel: DoctorDashboardViewModel
-) {
-    val navController = rememberNavController()
+    override fun onAuthenticated(user: User) {
+        navigateForRole(user)
+    }
 
-    NavHost(navController = navController, startDestination = startDestination) {
-        composable(Screen.Login.route) {
-            LoginScreen(
-                viewModel = loginViewModel,
-                onLoginSuccess = { user ->
-                    if (user.rol == "MEDICO") {
-                        doctorDashboardViewModel.loadDashboard()
-                        navController.navigate(Screen.DoctorDashboard.route) {
-                            popUpTo(Screen.Login.route) { inclusive = true }
-                        }
-                    } else {
-                        // Recepción o personal
-                        navController.navigate(Screen.DoctorDashboard.route) {
-                            popUpTo(Screen.Login.route) { inclusive = true }
-                        }
-                    }
-                }
-            )
+    override fun onLogoutCompleted() {
+        replaceRootFragment(LoginFragment())
+    }
+
+    private fun navigateForRole(user: User) {
+        val target: Fragment = when (user.rol.trim().uppercase()) {
+            "MEDICO" -> DoctorShellFragment()
+            "RECEPCIONISTA" -> RecepcionistaShellFragment()
+            else -> LoginFragment()
         }
+        replaceRootFragment(target)
+    }
 
-        composable(Screen.DoctorDashboard.route) {
-            DoctorDashboardScreen(
-                viewModel = doctorDashboardViewModel,
-                onLogout = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(Screen.DoctorDashboard.route) { inclusive = true }
-                    }
-                }
-            )
-        }
+    private fun replaceRootFragment(fragment: Fragment) {
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.rootFragmentContainer, fragment)
+            .commit()
     }
 }

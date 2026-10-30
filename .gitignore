@@ -4,3 +4,10 @@ Thumbs.db
 .vscode/
 *.sql
 
+# Variables de entorno y secretos: nunca subir al repositorio
+.env
+.env.*
+!.env.example
+.env.backup
+.env.production
+

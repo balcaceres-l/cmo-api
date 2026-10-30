@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="huc_space_xs">4dp</dimen>
+    <dimen name="huc_space_sm">8dp</dimen>
+    <dimen name="huc_space_12">12dp</dimen>
+    <dimen name="huc_space_md">16dp</dimen>
+    <dimen name="huc_space_lg">24dp</dimen>
+    <dimen name="huc_space_xl">32dp</dimen>
+
+    <dimen name="huc_radius_sm">10dp</dimen>
+    <dimen name="huc_radius_default">16dp</dimen>
+    <dimen name="huc_radius_lg">24dp</dimen>
+    <dimen name="huc_radius_pill">999dp</dimen>
+
+    <dimen name="huc_topbar_height">72dp</dimen>
+    <dimen name="huc_input_height">48dp</dimen>
+    <dimen name="huc_button_height">48dp</dimen>
+</resources>
