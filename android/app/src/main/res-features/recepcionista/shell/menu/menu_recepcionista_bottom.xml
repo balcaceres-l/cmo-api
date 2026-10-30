@@ -3,13 +3,21 @@
     <item
         android:id="@+id/nav_recep_citas"
         android:icon="@drawable/ic_event"
-        android:title="Citas &amp; Sala" />
+        android:title="Citas" />
+    <item
+        android:id="@+id/nav_recep_pacientes"
+        android:icon="@drawable/ic_person"
+        android:title="Pacientes" />
     <item
         android:id="@+id/nav_recep_admision"
         android:icon="@drawable/ic_how_to_reg"
-        android:title="Admisión &amp; Camas" />
+        android:title="Camas" />
+    <item
+        android:id="@+id/nav_recep_laboratorio"
+        android:icon="@drawable/ic_science"
+        android:title="Laboratorio" />
     <item
         android:id="@+id/nav_recep_ambulancia"
         android:icon="@drawable/ic_ambulance"
-        android:title="Ambulancia &amp; Guardia" />
+        android:title="Ambulancia" />
 </menu>

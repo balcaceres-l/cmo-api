@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/scrollPacForm"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/huc_surface_lowest">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:id="@+id/tvPacFormTitulo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearance.Huc.TitleLg"
+            tools:text="Registrar Paciente" />
+
+        <TextView
+            android:id="@+id/tvPacFormSubtitulo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/huc_secondary"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            tools:text="El número de expediente se asigna al guardar." />
+
+        <!-- Error de validación o de la API, visible sobre el formulario -->
+        <TextView
+            android:id="@+id/tvPacFormError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_error_container_16"
+            android:drawablePadding="8dp"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="10dp"
+            android:textAppearance="@style/TextAppearance.Huc.BodyMd"
+            android:textColor="@color/huc_on_error_container"
+            android:visibility="gone"
+            app:drawableStartCompat="@drawable/ic_warning"
+            app:drawableTint="@color/huc_on_error_container"
+            tools:text="El campo dui ya está en uso."
+            tools:visibility="visible" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilPacFormNombre"
+            style="@style/Widget.Huc.TextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Nombre completo *">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPacFormNombre"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPersonName|textCapWords"
+                android:maxLength="150" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilPacFormNacimiento"
+            style="@style/Widget.Huc.TextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Fecha de nacimiento * (AAAA-MM-DD)"
+            app:startIconDrawable="@drawable/ic_event">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPacFormNacimiento"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:cursorVisible="false"
+                android:focusable="false"
+                android:inputType="none" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Sexo *"
+            android:textAppearance="@style/TextAppearance.Huc.LabelMd" />
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/toggleSexo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSexoF"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Femenino"
+                android:textAllCaps="false" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSexoM"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Masculino"
+                android:textAllCaps="false" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilPacFormDui"
+            style="@style/Widget.Huc.TextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="DUI (solo los 9 dígitos)"
+            app:helperText="El guion se agrega solo: 00000000-0">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPacFormDui"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:digits="0123456789-"
+                android:inputType="number"
+                android:maxLength="10" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilPacFormTelefono"
+            style="@style/Widget.Huc.TextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Teléfono">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPacFormTelefono"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="phone"
+                android:maxLength="25" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilPacFormDireccion"
+            style="@style/Widget.Huc.TextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Dirección">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPacFormDireccion"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPostalAddress|textMultiLine"
+                android:minLines="2" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Solo al registrar: recepción no puede leer estos datos después -->
+        <LinearLayout
+            android:id="@+id/containerPacFormClinicos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Datos clínicos (opcional). Solo los verán el médico tratante y el paciente."
+                android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilPacFormTipoSangre"
+                    style="@style/Widget.Huc.TextInputLayout"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:hint="Tipo de sangre">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPacFormTipoSangre"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textCapCharacters"
+                        android:maxLength="5" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilPacFormAlergias"
+                    style="@style/Widget.Huc.TextInputLayout"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="2"
+                    android:hint="Alergias">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPacFormAlergias"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPacFormCancelar"
+                style="@style/Widget.Huc.Button.Outlined"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_marginEnd="8dp"
+                android:minHeight="48dp"
+                android:text="Cancelar"
+                android:textAllCaps="false" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPacFormGuardar"
+                style="@style/Widget.Huc.Button.Primary"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:textAllCaps="false"
+                tools:text="Registrar" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

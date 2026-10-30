@@ -7,7 +7,8 @@ import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.features.doctor.expedientes.domain.repository.ExpedientesRepository
 import com.cmo.hospital.features.doctor.expedientes.domain.usecase.FiltrarExpedientesUseCase
 import com.cmo.hospital.features.doctor.expedientes.domain.usecase.GetExpedientesFlowUseCase
-import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.CambiarEstadoOrdenLabUseCase
+import com.cmo.hospital.core.domain.model.OrdenLaboratorioItem
+import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.CancelarOrdenLabUseCase
 import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.EmitirOrdenLabUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -28,7 +29,7 @@ class ExpedientesViewModel(
     private val expedientesRepository: ExpedientesRepository,
     private val filtrarExpedientesUseCase: FiltrarExpedientesUseCase,
     private val emitirOrdenLabUseCase: EmitirOrdenLabUseCase,
-    private val cambiarEstadoOrdenLabUseCase: CambiarEstadoOrdenLabUseCase
+    private val cancelarOrdenLabUseCase: CancelarOrdenLabUseCase
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -73,37 +74,36 @@ class ExpedientesViewModel(
         _selectedNumeroExp.value = numeroExpediente
     }
 
+    fun catalogoExamenes(): List<String> = emitirOrdenLabUseCase.catalogo()
+
+    /** La API solo acepta órdenes dentro de una consulta abierta del mismo paciente. */
     fun emitirOrdenDesdeExpediente(
         paciente: Paciente,
         examenes: List<String>,
         prioridad: String,
-        obs: String,
-        estadoInicial: String
+        obs: String
     ) {
-        emitirOrdenLabUseCase(examenes, prioridad, obs, paciente, estadoInicial).fold(
-            onSuccess = { creadas ->
-                _toastEvent.value = Triple(
-                    "Examen Vinculado a Expediente",
-                    "${creadas.size} orden(es) añadidas a ${paciente.numeroExpediente} y enviadas a LIS.",
-                    false
-                )
-            },
-            onFailure = { err ->
-                _toastEvent.value = Triple(
-                    "Orden Incompleta",
-                    err.message ?: "Seleccione al menos un examen.",
-                    true
-                )
-            }
-        )
+        viewModelScope.launch {
+            emitirOrdenLabUseCase(examenes, prioridad, obs, paciente).fold(
+                onSuccess = { creadas ->
+                    _toastEvent.value = Triple(
+                        "Orden de Laboratorio Emitida",
+                        "${creadas.size} examen(es) enviados al laboratorio como Pendiente.",
+                        false
+                    )
+                },
+                onFailure = { err ->
+                    _toastEvent.value = Triple("Orden no emitida", err.message ?: "Seleccione al menos un examen.", true)
+                }
+            )
+        }
     }
 
-    fun cambiarEstadoOrdenLab(ordenId: String, nuevoEstado: String) {
-        cambiarEstadoOrdenLabUseCase(ordenId, nuevoEstado).onSuccess {
-            _toastEvent.value = Triple(
-                "Estado LIS Actualizado",
-                "Orden cambiada a '$nuevoEstado' en expediente y LIS.",
-                false
+    fun cancelarOrdenLab(orden: OrdenLaboratorioItem) {
+        viewModelScope.launch {
+            cancelarOrdenLabUseCase(orden).fold(
+                onSuccess = { _toastEvent.value = Triple("Orden Cancelada", "${it.examenNombre} ya no se realizará.", false) },
+                onFailure = { err -> _toastEvent.value = Triple("No se pudo cancelar", err.message ?: "Intente de nuevo.", true) }
             )
         }
     }

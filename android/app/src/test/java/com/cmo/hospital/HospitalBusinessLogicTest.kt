@@ -6,7 +6,6 @@ import com.cmo.hospital.features.doctor.inicio.data.repository.InicioDoctorRepos
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.ConstruirPacientesMedicoUseCase
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.IniciarORetomarConsultaMedicoUseCase
 import com.cmo.hospital.features.doctor.laboratorio.data.repository.LaboratorioRepositoryImpl
-import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.CambiarEstadoOrdenLabUseCase
 import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.EmitirOrdenLabUseCase
 import com.cmo.hospital.features.recepcionista.admision.data.repository.AdmisionRepositoryImpl
 import com.cmo.hospital.features.recepcionista.admision.domain.usecase.GenerarBrazaleteQrUseCase
@@ -116,23 +115,18 @@ class HospitalBusinessLogicTest {
 
     @Test
     fun testEstadosLaboratorioPermitidosYTransicion() {
-        val estadosEsperados = listOf("En Espera", "Agendado", "En Proceso", "Realizado", "Cancelado")
-        assertEquals(estadosEsperados, OrdenLaboratorioItem.ESTADOS_VALIDOS)
+        // Estados de la rúbrica, traducidos desde los de la API.
+        assertEquals(listOf("Pendiente", "En Proceso", "Completado", "Cancelada"), OrdenLaboratorioItem.ESTADOS_VALIDOS)
+        assertEquals("Pendiente", OrdenLaboratorioItem.estadoDesdeApi("PENDIENTE"))
+        assertEquals("En Proceso", OrdenLaboratorioItem.estadoDesdeApi("EN_PROCESO"))
+        assertEquals("Completado", OrdenLaboratorioItem.estadoDesdeApi("COMPLETADO"))
+        assertEquals("Cancelada", OrdenLaboratorioItem.estadoDesdeApi("CANCELADA"))
 
-        val orden = OrdenLaboratorioItem(
-            examenNombre = "Troponina I",
-            pacienteNombre = "Luis Barillas",
-            numeroExpediente = "LB-2026-001",
-            estado = "En Espera"
-        )
-        assertEquals("En Espera", orden.estado)
-
-        val ordenRealizada = orden.copy(estado = "Realizado", fechaResultado = "Hoy, 10:45")
-        assertEquals("Realizado", ordenRealizada.estado)
-        assertEquals("Hoy, 10:45", ordenRealizada.fechaResultado)
-
-        val ordenCancelada = orden.copy(estado = "Cancelado")
-        assertEquals("Cancelado", ordenCancelada.estado)
+        // El médico solo puede cancelar mientras el laboratorio no la inició.
+        val orden = OrdenLaboratorioItem(examenNombre = "Hemograma completo")
+        assertTrue(orden.cancelable)
+        assertFalse(orden.copy(estado = OrdenLaboratorioItem.EN_PROCESO).cancelable)
+        assertFalse(orden.copy(estado = OrdenLaboratorioItem.COMPLETADO).cancelable)
     }
 
     @Test
@@ -304,37 +298,13 @@ class HospitalBusinessLogicTest {
     }
 
     @Test
-    fun testSincronizacionLaboratorioLisConsultaYExpedientes() {
+    fun testSinConsultaAbiertaNoSeEmitenOrdenes() = runTest {
         val dataSource = HospitalClinicalDataSource(apiService = null)
-        val labRepo = LaboratorioRepositoryImpl(dataSource)
-        val emitirUseCase = EmitirOrdenLabUseCase(labRepo)
-        val cambiarEstadoUseCase = CambiarEstadoOrdenLabUseCase(labRepo)
+        val emitirUseCase = EmitirOrdenLabUseCase(LaboratorioRepositoryImpl(dataSource))
 
-        val pacienteActivo = dataSource.consultaActiva.value.paciente
-        val creadasRes = emitirUseCase(
-            examenes = listOf("Dímero D Cuantitativo"),
-            prioridad = "STAT",
-            observaciones = "Descartar TEP",
-            paciente = pacienteActivo,
-            estadoInicial = "En Espera"
-        )
-        assertTrue(creadasRes.isSuccess)
-        val ordenId = creadasRes.getOrThrow().first().id
-
-        // Cambiar estado a Realizado y verificar propagación en las 3 fuentes
-        assertTrue(cambiarEstadoUseCase(ordenId, "Realizado").isSuccess)
-
-        val enLis = dataSource.ordenesLab.value.first { it.id == ordenId }
-        val enConsulta = dataSource.consultaActiva.value.ordenesLaboratorio.first { it.id == ordenId }
-        val expCarlos = dataSource.expedientes.value.first {
-            it.paciente.numeroExpediente == pacienteActivo.numeroExpediente
-        }
-        val enExpediente = expCarlos.ordenesLaboratorio.first { it.id == ordenId }
-
-        assertEquals("Realizado", enLis.estado)
-        assertEquals("Realizado", enConsulta.estado)
-        assertEquals("Realizado", enExpediente.estado)
-        assertNotNull(enLis.fechaResultado)
+        assertTrue(emitirUseCase(emptyList(), "RUTINA", "").isFailure)
+        val res = emitirUseCase(listOf("Hemograma completo"), "RUTINA", "", dataSource.expedientes.value.first().paciente)
+        assertTrue(res.exceptionOrNull()!!.message!!.contains("consulta abierta"))
     }
 
     @Test
@@ -359,38 +329,9 @@ class HospitalBusinessLogicTest {
         assertEquals(1, filtradoLucia.size)
         assertEquals("LM-2026-002", filtradoLucia.first().paciente.numeroExpediente)
 
-        // 2. El médico inicia consulta desde la cita "c-102" (Lucía Morales Castillo, EN_ESPERA)
+        // 2. Una cita de ejemplo (solo en el teléfono) no admite consulta: la consulta se abre en la API.
         val resInicio = iniciarUseCase("c-102")
-        assertTrue(resInicio.isSuccess)
-
-        val cita102 = dataSource.citasState.value.first { it.id == "c-102" }
-        val cita101Anterior = dataSource.citasState.value.first { it.id == "c-101" }
-        assertEquals("EN_ATENCION", cita102.estado)
-        assertEquals("EN_ESPERA", cita101Anterior.estado)
-
-        val consultaAbierta = dataSource.consultaActiva.value
-        assertEquals("c-102", consultaAbierta.citaId)
-        assertEquals("Lucía Morales Castillo", consultaAbierta.paciente.nombreCompleto)
-        assertEquals(0, consultaAbierta.segundosTranscurridos)
-        assertEquals(EstadoSemaforo.VERDE, consultaAbierta.estadoSemaforo)
-        assertFalse(consultaAbierta.finalizada)
-
-        // 3. El médico vuelve a la página principal y luego retoma la misma consulta sin reiniciar cronómetro
-        dataSource.actualizarSegundosConsulta(120)
-        val resRetomar = iniciarUseCase("c-102")
-        assertTrue(resRetomar.isSuccess)
-        assertEquals(120, dataSource.consultaActiva.value.segundosTranscurridos)
-
-        // 4. El médico registra CIE-10 y finaliza la consulta -> cita pasa a ATENDIDA y se añade al expediente
-        dataSource.agregarDiagnosticoCie10("R51", "Cefalea")
-        dataSource.finalizarConsulta()
-
+        assertTrue(resInicio.isFailure)
         assertTrue(dataSource.consultaActiva.value.finalizada)
-        assertEquals("ATENDIDA", dataSource.citasState.value.first { it.id == "c-102" }.estado)
-
-        val expLucia = dataSource.expedientes.value.first {
-            it.paciente.numeroExpediente == "LM-2026-002"
-        }
-        assertTrue(expLucia.atencionesPrevias.first().diagnostico.contains("R51"))
     }
 }

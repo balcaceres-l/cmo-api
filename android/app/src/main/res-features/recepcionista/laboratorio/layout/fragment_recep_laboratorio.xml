@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/huc_surface"
+    android:clipToPadding="false"
+    android:paddingHorizontal="16dp"
+    android:paddingTop="16dp"
+    android:paddingBottom="80dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <include
+            android:id="@+id/microBannerLabRecep"
+            layout="@layout/comp_huc_micro_banner" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:background="@drawable/bg_card_rounded_16"
+            android:elevation="1dp"
+            android:orientation="vertical"
+            android:padding="@dimen/huc_space_md">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_science"
+                    app:tint="@color/huc_secondary" />
+
+                <TextView
+                    android:id="@+id/tvLabRecepContador"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelMd"
+                    android:textColor="@color/huc_secondary"
+                    tools:text="3 orden(es) • Pendientes" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRecargarLabRecep"
+                    style="@style/Widget.Huc.Button.Outlined"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:minHeight="40dp"
+                    android:text="Actualizar"
+                    android:textAllCaps="false"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Inicie la orden al tomar la muestra y complétela cuando el examen esté listo. El resultado se entrega fuera del sistema."
+                android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/huc_space_sm"
+                android:scrollbars="none">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupFiltroLabRecep"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:selectionRequired="true"
+                    app:singleLine="true"
+                    app:singleSelection="true" />
+            </HorizontalScrollView>
+        </LinearLayout>
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progressLabRecep"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_12"
+            android:indeterminate="true"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvLabRecepError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_12"
+            android:background="@drawable/bg_error_container_16"
+            android:padding="@dimen/huc_space_12"
+            android:textAppearance="@style/TextAppearance.Huc.BodySm"
+            android:textColor="@color/huc_on_error_container"
+            android:visibility="gone"
+            tools:text="No se pudo conectar con el servidor." />
+
+        <TextView
+            android:id="@+id/tvLabRecepVacio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_lg"
+            android:gravity="center"
+            android:text="No hay órdenes en este estado."
+            android:textAppearance="@style/TextAppearance.Huc.BodyMd"
+            android:textColor="@color/huc_on_surface_variant"
+            android:visibility="gone" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvOrdenesLabRecep"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_12"
+            android:nestedScrollingEnabled="false"
+            tools:itemCount="3"
+            tools:listitem="@layout/item_orden_lab_recepcion" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

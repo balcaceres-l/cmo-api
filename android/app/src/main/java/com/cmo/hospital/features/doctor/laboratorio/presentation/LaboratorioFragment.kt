@@ -45,19 +45,19 @@ class LaboratorioFragment : Fragment() {
 
         HucMicroBannerBinder.bind(
             binding = binding.microBannerLab,
-            title = "Hospital Universitario Central - Laboratorio LIS",
-            subtitle = "Trazabilidad STAT y Rutina • Sincronización Clínica",
-            badgeText = "LIS Online",
+            title = "Laboratorio Clínico",
+            subtitle = "Pendiente → En Proceso → Completado • Solo estados",
+            badgeText = "API",
             iconRes = R.drawable.ic_science
         )
 
-        val adapter = OrdenesLabAdapter(showPatientLine = true) { ordenId, nuevoEstado ->
-            viewModel.cambiarEstado(ordenId, nuevoEstado)
+        val adapter = OrdenesLabAdapter(showPatientLine = true) { orden ->
+            viewModel.cancelarOrden(orden)
         }
         binding.rvOrdenesLaboratorio.layoutManager = LinearLayoutManager(requireContext())
         binding.rvOrdenesLaboratorio.adapter = adapter
 
-        // Construir chips de filtro: Todos + 5 estados válidos
+        // Chips de filtro: Todos + los estados del laboratorio
         val filtros = listOf("Todos") + OrdenLaboratorioItem.ESTADOS_VALIDOS
         filtros.forEach { estado ->
             val chip = Chip(requireContext()).apply {
@@ -73,12 +73,19 @@ class LaboratorioFragment : Fragment() {
         }
 
         binding.btnIndicarExamenLis.setOnClickListener {
-            val pacientes = viewModel.expedientesFlow.value.map { it.paciente }
+            val consulta = viewModel.consultaAbierta()
+            if (consulta == null) {
+                (parentFragment as? DoctorShellHost)?.showToastError(
+                    "Sin consulta abierta",
+                    "Las órdenes de laboratorio se emiten desde la consulta del paciente. Inicie una consulta en Mis Citas."
+                )
+                return@setOnClickListener
+            }
             IndicarExamenLabDialogFragment().apply {
-                pacienteFijo = null
-                pacientesDisponibles = pacientes
-                onConfirmarOrden = { examenes, prioridad, obs, estadoInicial, paciente ->
-                    viewModel.emitirOrdenes(examenes, prioridad, obs, estadoInicial, paciente)
+                pacienteFijo = consulta.paciente
+                examenesDisponibles = viewModel.catalogoExamenes()
+                onConfirmarOrden = { examenes, prioridad, obs, _ ->
+                    viewModel.emitirOrdenes(examenes, prioridad, obs)
                 }
             }.show(childFragmentManager, "dialog_indicar_lab_lis")
         }
@@ -93,6 +100,8 @@ class LaboratorioFragment : Fragment() {
                         val statCount = lista.count { it.prioridad.equals("STAT", true) }
                         binding.tvLabResumenContador.text =
                             "${lista.size} orden(es) visibles • $statCount prioridad STAT"
+                        // Tocar el contador vuelve a consultar el estado en el laboratorio.
+                        binding.tvLabResumenContador.setOnClickListener { viewModel.refrescar() }
                     }
                 }
                 launch {

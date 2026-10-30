@@ -103,8 +103,9 @@ class ConsultaFragment : Fragment() {
             val pacienteActivo = viewModel.consultaState.value.paciente
             IndicarExamenLabDialogFragment().apply {
                 pacienteFijo = pacienteActivo
-                onConfirmarOrden = { examenes, prioridad, obs, estadoInicial, _ ->
-                    viewModel.emitirOrdenLabEnConsulta(examenes, prioridad, obs, estadoInicial)
+                examenesDisponibles = viewModel.catalogoExamenes()
+                onConfirmarOrden = { examenes, prioridad, obs, _ ->
+                    viewModel.emitirOrdenLabEnConsulta(examenes, prioridad, obs)
                 }
             }.show(childFragmentManager, "dialog_indicar_lab_consulta")
         }
@@ -202,10 +203,9 @@ class ConsultaFragment : Fragment() {
 
         val edadStr = if (pac.edad > 0) "${pac.edad} años" else "Edad N/D"
         val nacStr = pac.fechaNacimiento ?: "N/D"
-        val dniStr = pac.dui ?: "S/D"
-        val prevStr = pac.prevision ?: "Fonasa Tramo D"
+        val duiStr = pac.dui ?: "S/D"
         binding.tvConsPacienteDetalles.text =
-            "$edadStr • Nac: $nacStr • DNI: $dniStr • $prevStr"
+            "$edadStr • Nac: $nacStr • DUI: $duiStr"
 
         if (!pac.alergias.isNullOrBlank()) {
             binding.bannerConsAlergias.visibility = View.VISIBLE
@@ -283,8 +283,8 @@ class ConsultaFragment : Fragment() {
                     binding = cardBinding,
                     orden = orden,
                     showPatientLine = false
-                ) { ordenId, nuevoEstado ->
-                    viewModel.cambiarEstadoOrdenLab(ordenId, nuevoEstado)
+                ) { orden ->
+                    viewModel.cancelarOrdenLab(orden)
                 }
                 binding.containerOrdenesLabConsulta.addView(cardBinding.root)
             }
@@ -295,9 +295,9 @@ class ConsultaFragment : Fragment() {
             if (consulta.finalizada) View.VISIBLE else View.GONE
         binding.btnFinalizarConsulta.isEnabled = !consulta.finalizada
         binding.btnFinalizarConsulta.text = if (consulta.finalizada) {
-            "✓ CONSULTA FINALIZADA Y RECETA FIRMADA"
+            "✓ CONSULTA FINALIZADA"
         } else {
-            "FINALIZAR CONSULTA Y FIRMAR RECETA"
+            "FINALIZAR Y GUARDAR CONSULTA"
         }
     }
 

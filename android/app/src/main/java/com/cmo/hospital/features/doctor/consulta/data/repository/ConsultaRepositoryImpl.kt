@@ -38,15 +38,16 @@ class ConsultaRepositoryImpl(
         clinicalDataSource.actualizarAnamnesis(texto)
     }
 
-    override fun agregarReceta(receta: RecetaItem) {
+    override suspend fun agregarReceta(receta: RecetaItem): Result<RecetaItem> =
         clinicalDataSource.agregarReceta(receta)
-    }
 
-    override fun eliminarReceta(recetaId: String) {
+    override suspend fun eliminarReceta(recetaId: String): Result<Unit> =
         clinicalDataSource.eliminarReceta(recetaId)
-    }
 
-    override suspend fun finalizarConsulta(): String =
+    override suspend fun guardarCambios(): Result<Unit> =
+        clinicalDataSource.guardarConsultaRemota()
+
+    override suspend fun finalizarConsulta(): Result<String> =
         clinicalDataSource.finalizarConsulta()
 
     override suspend fun agendarCitaSeguimiento(cita: Cita) {

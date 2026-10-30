@@ -1,11 +1,21 @@
 package com.cmo.hospital.core.data.datasource
 
+import com.cmo.hospital.core.data.mapper.aOrdenLaboratorio
 import com.cmo.hospital.core.domain.model.*
 import com.cmo.hospital.core.network.ApiService
+import com.cmo.hospital.core.network.dto.ConsultaDto
+import com.cmo.hospital.core.network.dto.ExamenDto
+import com.cmo.hospital.core.network.dto.OrdenLaboratorioDto
+import com.cmo.hospital.core.network.dto.RecetaDto
+import com.cmo.hospital.core.network.llamarApi
+import com.cmo.hospital.core.network.llamarApiSinDatos
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -31,11 +41,15 @@ class HospitalClinicalDataSource(
     private val _ambulanciaState = MutableStateFlow(seedInitialAmbulancia())
     val ambulanciaState: StateFlow<AmbulanciaRecurso> = _ambulanciaState.asStateFlow()
 
-    private val _consultaActiva = MutableStateFlow(seedInitialConsultaActiva())
+    // Sin consulta de ejemplo: la consulta real se abre o retoma desde una cita de la API.
+    private val _consultaActiva = MutableStateFlow(ConsultaActiva.vacia())
     val consultaActiva: StateFlow<ConsultaActiva> = _consultaActiva.asStateFlow()
 
     private val _ordenesLab = MutableStateFlow(seedInitialOrdenesLab())
     val ordenesLab: StateFlow<List<OrdenLaboratorioItem>> = _ordenesLab.asStateFlow()
+
+    private val _examenesCatalogo = MutableStateFlow<List<ExamenDto>>(emptyList())
+    val examenesCatalogo: StateFlow<List<ExamenDto>> = _examenesCatalogo.asStateFlow()
 
     private val _expedientes = MutableStateFlow(seedInitialExpedientes())
     val expedientes: StateFlow<List<ExpedienteDetalle>> = _expedientes.asStateFlow()
@@ -155,8 +169,9 @@ class HospitalClinicalDataSource(
         return try {
             val res = apiService?.getCitas()
             if (res != null && res.isSuccessful && res.body()?.success == true) {
-                val remoteList = res.body()?.data?.data
-                if (!remoteList.isNullOrEmpty()) {
+                // Con respuesta válida la API manda, aunque venga vacía: se descartan las citas de ejemplo.
+                val remoteList = res.body()?.data?.data.orEmpty()
+                run {
                     val normalized = remoteList.mapIndexed { idx, raw ->
                         val safeId: String = (raw.id as String?) ?: "c-rem-$idx"
                         val hi = raw.horaInicio.take(5)
@@ -200,11 +215,15 @@ class HospitalClinicalDataSource(
                     val combinadas = localesEnSesion + normalized
                     _citasState.value = combinadas
 
-                    val activaRemota = combinadas.firstOrNull { it.estado == "EN_ATENCION" }
+                    // Retoma la consulta que el médico dejó abierta en la API (p. ej. tras reiniciar la app).
+                    val activaRemota = combinadas.firstOrNull {
+                        it.estado == "EN_ATENCION" && it.consultaRef?.abierta == true
+                    }
                     if (activaRemota != null) {
                         _turnoEnBox.value = activaRemota
-                        if (_consultaActiva.value.citaId != activaRemota.id || _consultaActiva.value.finalizada) {
-                            iniciarConsultaDesdeCita(activaRemota)
+                        val actual = _consultaActiva.value
+                        if (actual.citaId != activaRemota.id || actual.finalizada || !actual.esRemota) {
+                            cargarConsultaRemota(activaRemota.consultaRef!!.id, activaRemota)
                         }
                     } else {
                         _turnoEnBox.value = combinadas.firstOrNull()
@@ -488,52 +507,80 @@ class HospitalClinicalDataSource(
     // Doctor: Consulta Activa (Semáforo 30m), CIE-10, Recetas y Laboratorio LIS
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * Abre la consulta de una cita en la API, o la retoma si ya estaba abierta.
+     * Si la API la rechaza (otra fecha, cita cancelada, etc.) el motivo llega a la pantalla.
+     */
     suspend fun iniciarORetomarConsultaDoctor(citaId: String): Result<ConsultaActiva> {
         val cita = _citasState.value.firstOrNull { it.id == citaId }
             ?: return Result.failure(IllegalArgumentException("No se encontró la cita seleccionada."))
-
-        if (cita.estado == "CANCELADA") {
-            return Result.failure(IllegalStateException("No se puede iniciar una cita cancelada."))
+        if (!cita.esRemota) {
+            return Result.failure(
+                IllegalStateException("Esta cita no está registrada en el sistema; solo las citas de la agenda del hospital admiten consulta.")
+            )
         }
 
-        // Si ya es la consulta abierta actual, retomarla sin reiniciar el cronómetro de 30 min
         val actual = _consultaActiva.value
-        if (actual.citaId == cita.id && !actual.finalizada) {
-            if (cita.estado != "EN_ATENCION") {
-                _citasState.value = _citasState.value.map {
-                    if (it.id == cita.id) it.copy(estado = "EN_ATENCION") else it
-                }
-            }
+        if (actual.citaId == cita.id && !actual.finalizada && actual.esRemota) {
             return Result.success(actual)
         }
 
-        // Intentar abrir la consulta en el backend Laravel (best-effort)
-        var remoteConsultaId: String? = null
-        try {
-            val res = apiService?.abrirConsulta(cita.id)
-            if (res != null && res.isSuccessful && res.body()?.success == true) {
-                val map = res.body()?.data
-                remoteConsultaId = (map?.get("id_consulta") ?: map?.get("id"))?.toString()
-            }
-        } catch (_: Exception) {
+        val api = apiService ?: return Result.failure(IllegalStateException("Sin conexión con la API."))
+        val abierta = cita.consultaRef?.takeIf { it.abierta }
+        val res = if (abierta != null) {
+            llamarApi { api.getConsulta(abierta.id) }
+        } else {
+            llamarApi { api.abrirConsulta(cita.id) }
         }
+        return res.map { dto -> aplicarConsultaRemota(dto, cita) }
+    }
 
-        // Si había otra cita distinta en EN_ATENCION, devolverla a EN_ESPERA para mantener 1 paciente en Box
-        var citaActualizada: Cita = cita.copy(estado = "EN_ATENCION")
-        _citasState.value = _citasState.value.map { item ->
-            when {
-                item.id == cita.id -> {
-                    citaActualizada = item.copy(estado = "EN_ATENCION")
-                    citaActualizada
-                }
-                item.estado == "EN_ATENCION" -> item.copy(estado = "EN_ESPERA")
-                else -> item
-            }
-        }
-        _turnoEnBox.value = citaActualizada
+    /** Usado al sincronizar: retoma la consulta abierta sin bloquear la lista de citas. */
+    private suspend fun cargarConsultaRemota(consultaId: String, cita: Cita) {
+        val api = apiService ?: return
+        llamarApi { api.getConsulta(consultaId) }.onSuccess { aplicarConsultaRemota(it, cita) }
+    }
 
-        iniciarConsultaDesdeCita(citaActualizada, remoteConsultaId = remoteConsultaId)
-        return Result.success(_consultaActiva.value)
+    /** Carga en pantalla lo que la API tiene guardado de la consulta (diagnóstico, notas y recetas). */
+    private fun aplicarConsultaRemota(dto: ConsultaDto, cita: Cita): ConsultaActiva {
+        val enAtencion = cita.copy(
+            estado = if (dto.fechaHoraFin == null) "EN_ATENCION" else "ATENDIDA",
+            consultaRef = ConsultaRef(dto.id, dto.fechaHoraFin)
+        )
+        _citasState.value = _citasState.value.map { if (it.id == cita.id) enAtencion else it }
+        _turnoEnBox.value = enAtencion
+        iniciarConsultaDesdeCita(enAtencion, remoteConsultaId = dto.id)
+
+        val transcurridos = segundosDesde(dto.fechaHoraInicio)
+        val base = _consultaActiva.value
+        _consultaActiva.value = base.copy(
+            diagnosticosCie10 = ConsultaActiva.diagnosticoDesdeTexto(dto.diagnostico),
+            anamnesis = dto.notas ?: base.anamnesis,
+            recetas = dto.recetas.orEmpty().map { it.aReceta() },
+            ordenesLaboratorio = dto.ordenesLaboratorio?.map { it.aOrden(base.paciente) }
+                ?: _ordenesLab.value.filter { it.idConsulta == dto.id },
+            segundosTranscurridos = transcurridos,
+            estadoSemaforo = EstadoSemaforo.calcularPorSegundos(transcurridos),
+            finalizada = dto.fechaHoraFin != null
+        )
+        return _consultaActiva.value
+    }
+
+    private fun RecetaDto.aReceta() = RecetaItem(
+        id = id,
+        medicamento = medicamento,
+        dosis = dosis,
+        frecuencia = frecuencia,
+        duracion = duracion,
+        indicaciones = indicaciones
+    )
+
+    /** El cronómetro continúa desde la hora real de inicio guardada en la API. */
+    private fun segundosDesde(iso: String?): Int = try {
+        val inicio = OffsetDateTime.parse(iso).toInstant()
+        Duration.between(inicio, Instant.now()).seconds.toInt().coerceAtLeast(0)
+    } catch (_: Exception) {
+        0
     }
 
     fun iniciarConsultaDesdeCita(
@@ -639,23 +686,76 @@ class HospitalClinicalDataSource(
         _consultaActiva.value = _consultaActiva.value.copy(anamnesis = texto)
     }
 
-    fun agregarReceta(receta: RecetaItem) {
+    private fun sinConsultaRemota() =
+        IllegalStateException("No hay una consulta abierta en el sistema. Iníciela desde Mis Citas.")
+
+    suspend fun agregarReceta(receta: RecetaItem): Result<RecetaItem> {
         val actual = _consultaActiva.value
-        _consultaActiva.value = actual.copy(recetas = actual.recetas + receta)
+        val api = apiService
+        if (actual.finalizada || !actual.esRemota || api == null) return Result.failure(sinConsultaRemota())
+        return llamarApi {
+            api.agregarReceta(
+                actual.id,
+                mapOf(
+                    "medicamento" to receta.medicamento,
+                    "dosis" to receta.dosis,
+                    "frecuencia" to receta.frecuencia,
+                    "duracion" to receta.duracion,
+                    "indicaciones" to receta.indicaciones
+                )
+            )
+        }.map { dto ->
+            // El tipo (crónico, SOS…) es solo de la pantalla; la API no lo guarda.
+            val guardada = dto.aReceta().copy(tipo = receta.tipo)
+            val a = _consultaActiva.value
+            _consultaActiva.value = a.copy(recetas = a.recetas + guardada)
+            guardada
+        }
     }
 
-    fun eliminarReceta(recetaId: String) {
-        val actual = _consultaActiva.value
-        _consultaActiva.value = actual.copy(
-            recetas = actual.recetas.filter { it.id != recetaId }
-        )
+    suspend fun eliminarReceta(recetaId: String): Result<Unit> {
+        val api = apiService ?: return Result.failure(sinConsultaRemota())
+        return llamarApiSinDatos { api.eliminarReceta(recetaId) }.onSuccess {
+            val a = _consultaActiva.value
+            _consultaActiva.value = a.copy(recetas = a.recetas.filter { it.id != recetaId })
+        }
     }
 
-    suspend fun finalizarConsulta(): String {
+    /** Guarda en la consulta abierta el diagnóstico (códigos CIE-10) y la anamnesis (notas). */
+    suspend fun guardarConsultaRemota(): Result<Unit> {
         val actual = _consultaActiva.value
+        val api = apiService
+        if (actual.finalizada) return Result.success(Unit)
+        if (!actual.esRemota || api == null) return Result.failure(sinConsultaRemota())
+        return llamarApi {
+            api.actualizarConsulta(
+                actual.id,
+                mapOf(
+                    "diagnostico" to ConsultaActiva.diagnosticoComoTexto(actual.diagnosticosCie10),
+                    "notas" to actual.anamnesis.ifBlank { null }
+                )
+            )
+        }.map { }
+    }
+
+    /** Guarda los últimos cambios y cierra la consulta en la API; solo entonces se marca atendida. */
+    suspend fun finalizarConsulta(): Result<String> {
+        val actual = _consultaActiva.value
+        val api = apiService
+        if (actual.finalizada) return Result.failure(IllegalStateException("La consulta ya está cerrada."))
+        if (!actual.esRemota || api == null) return Result.failure(sinConsultaRemota())
+        guardarConsultaRemota().onFailure { return Result.failure(it) }
+        val cierre = llamarApi { api.finalizarConsulta(actual.id) }
+        cierre.onFailure { return Result.failure(it) }
+
         _consultaActiva.value = actual.copy(finalizada = true)
         _citasState.value = _citasState.value.map {
-            if (it.id == actual.citaId) it.copy(estado = "ATENDIDA") else it
+            if (it.id == actual.citaId) {
+                it.copy(
+                    estado = "ATENDIDA",
+                    consultaRef = ConsultaRef(actual.id, cierre.getOrNull()?.fechaHoraFin ?: "cerrada")
+                )
+            } else it
         }
 
         // Registrar la atención recién firmada en el historial del expediente del paciente
@@ -686,80 +786,108 @@ class HospitalClinicalDataSource(
             } else exp
         }
 
-        try {
-            apiService?.finalizarConsulta(actual.id)
-        } catch (_: Exception) {
-        }
-        return "Consulta finalizada y receta digital firmada electrónicamente."
+        return Result.success("Consulta guardada y cerrada en el expediente del paciente.")
     }
 
-    fun emitirOrdenesLaboratorio(
+    // ─── Laboratorio: catálogo y órdenes reales de la API ──────────────────────
+
+    suspend fun syncExamenesCatalogo(): Result<List<ExamenDto>> {
+        val api = apiService ?: return Result.failure(IllegalStateException("Sin conexión con la API."))
+        return llamarApi { api.getExamenes() }.map { it.data }.onSuccess { _examenesCatalogo.value = it }
+    }
+
+    /** Reemplaza las órdenes de ejemplo por las del médico en la API (solo estados, sin resultados). */
+    suspend fun syncOrdenesLabFromRemote(): Result<List<OrdenLaboratorioItem>> {
+        val api = apiService ?: return Result.failure(IllegalStateException("Sin conexión con la API."))
+        return llamarApi { api.getOrdenesLaboratorio() }.map { pagina ->
+            val ordenes = pagina.data.map { it.aOrden() }
+            _ordenesLab.value = ordenes
+            val consulta = _consultaActiva.value
+            if (consulta.esRemota) {
+                _consultaActiva.value = consulta.copy(
+                    ordenesLaboratorio = ordenes.filter { it.idConsulta == consulta.id }
+                )
+            }
+            ordenes
+        }
+    }
+
+    private fun OrdenLaboratorioDto.aOrden(pacienteConsulta: Paciente? = null): OrdenLaboratorioItem =
+        aOrdenLaboratorio(
+            nombreExamen = _examenesCatalogo.value.firstOrNull { it.id == idExamen }?.nombre,
+            pacienteConsulta = pacienteConsulta
+        )
+
+    /**
+     * Crea una orden por examen en la consulta abierta. La API exige consulta abierta,
+     * así que no se pueden pedir exámenes para un paciente que no está en consulta.
+     */
+    suspend fun emitirOrdenesLaboratorio(
         examenes: List<String>,
         prioridad: String,
         observaciones: String,
-        paciente: Paciente?,
-        estadoInicial: String
-    ): List<OrdenLaboratorioItem> {
-        val pac = paciente ?: _consultaActiva.value.paciente
-        val horaActual = obtenerHoraActual()
-
-        val nuevas = examenes.map { nombre ->
-            OrdenLaboratorioItem(
-                id = "ord-" + System.currentTimeMillis().toString().takeLast(4) + (10..99).random(),
-                pacienteId = pac.id,
-                pacienteNombre = pac.nombreCompleto,
-                numeroExpediente = pac.numeroExpediente,
-                examenNombre = nombre,
-                tipoTubo = when {
-                    nombre.contains("Troponina", true) -> "Protocolo SCA"
-                    nombre.contains("Gasometría", true) -> "Heparina Li"
-                    nombre.contains("Glucosa", true) || nombre.contains("Glucemia", true) ||
-                        nombre.contains("Perfil", true) -> "Suero Gel"
-                    nombre.contains("Orina", true) || nombre.contains("Urocultivo", true) -> "Frasco Estéril"
-                    else -> "Tubo EDTA"
-                },
-                prioridad = prioridad,
-                estado = estadoInicial,
-                fechaSolicitud = "Hoy, $horaActual",
-                observaciones = observaciones.ifBlank { null },
-                medicoSolicitante = "Dr. Alejandro Restrepo"
+        paciente: Paciente?
+    ): Result<List<OrdenLaboratorioItem>> {
+        val consulta = _consultaActiva.value
+        val api = apiService
+        if (consulta.finalizada || !consulta.esRemota || api == null) {
+            return Result.failure(
+                IllegalStateException("Las órdenes de laboratorio se emiten desde una consulta abierta. Inicie la consulta del paciente en Mis Citas.")
             )
         }
-
-        _ordenesLab.value = nuevas + _ordenesLab.value
-
-        if (pac.numeroExpediente == _consultaActiva.value.paciente.numeroExpediente) {
-            _consultaActiva.value = _consultaActiva.value.copy(
-                ordenesLaboratorio = nuevas + _consultaActiva.value.ordenesLaboratorio
+        if (paciente?.id != null && paciente.id != consulta.paciente.id) {
+            return Result.failure(
+                IllegalStateException("Solo puede ordenar exámenes para el paciente en consulta (${consulta.paciente.nombreCompleto}).")
             )
         }
+        if (_examenesCatalogo.value.isEmpty()) {
+            syncExamenesCatalogo().onFailure { return Result.failure(it) }
+        }
+        val seleccion = examenes.map { nombre ->
+            _examenesCatalogo.value.firstOrNull { it.nombre == nombre }
+                ?: return Result.failure(IllegalArgumentException("El examen \"$nombre\" no está en el catálogo del laboratorio."))
+        }
+        val obs = listOfNotNull(
+            OrdenLaboratorioItem.MARCA_STAT.takeIf { prioridad.equals("STAT", ignoreCase = true) },
+            observaciones.trim().ifBlank { null }
+        ).joinToString(" ").ifBlank { null }
 
-        _expedientes.value = _expedientes.value.map { exp ->
-            if (exp.paciente.numeroExpediente == pac.numeroExpediente || exp.paciente.id == pac.id) {
-                exp.copy(ordenesLaboratorio = nuevas + exp.ordenesLaboratorio)
-            } else exp
+        val creadas = mutableListOf<OrdenLaboratorioItem>()
+        var error: Throwable? = null
+        for (examen in seleccion) {
+            llamarApi {
+                api.crearOrdenLaboratorio(consulta.id, mapOf("id_examen" to examen.id, "observaciones" to obs))
+            }.fold(
+                onSuccess = { creadas += it.aOrden(consulta.paciente).copy(examenNombre = examen.nombre) },
+                onFailure = { error = it }
+            )
+            if (error != null) break
         }
 
-        return nuevas
+        if (creadas.isNotEmpty()) {
+            _ordenesLab.value = creadas + _ordenesLab.value
+            val actual = _consultaActiva.value
+            _consultaActiva.value = actual.copy(ordenesLaboratorio = creadas + actual.ordenesLaboratorio)
+        }
+        error?.let { err ->
+            val parcial = if (creadas.isEmpty()) "" else "Se emitieron ${creadas.size} de ${seleccion.size}. "
+            return Result.failure(IllegalStateException(parcial + (err.message ?: "No se pudo emitir la orden.")))
+        }
+        return Result.success(creadas)
     }
 
-    fun cambiarEstadoOrdenLaboratorio(ordenId: String, nuevoEstado: String) {
-        val horaActual = obtenerHoraActual()
-        val updater: (OrdenLaboratorioItem) -> OrdenLaboratorioItem = { ord ->
-            if (ord.id == ordenId) {
-                ord.copy(
-                    estado = nuevoEstado,
-                    fechaResultado = if (nuevoEstado == "Realizado") "Hoy, $horaActual" else ord.fechaResultado
-                )
-            } else ord
-        }
-
-        _ordenesLab.value = _ordenesLab.value.map(updater)
-        _consultaActiva.value = _consultaActiva.value.copy(
-            ordenesLaboratorio = _consultaActiva.value.ordenesLaboratorio.map(updater)
-        )
-        _expedientes.value = _expedientes.value.map { exp ->
-            exp.copy(ordenesLaboratorio = exp.ordenesLaboratorio.map(updater))
+    /** El médico solo puede cancelar una orden PENDIENTE; iniciar y completar son de recepción/laboratorio. */
+    suspend fun cancelarOrdenLaboratorio(ordenId: String): Result<OrdenLaboratorioItem> {
+        val api = apiService ?: return Result.failure(IllegalStateException("Sin conexión con la API."))
+        return llamarApi { api.cancelarOrdenLaboratorio(ordenId, mapOf("motivo_cancelacion" to null)) }.map { dto ->
+            val previa = _ordenesLab.value.firstOrNull { it.id == ordenId }
+                ?: _consultaActiva.value.ordenesLaboratorio.firstOrNull { it.id == ordenId }
+            val cancelada = (previa?.copy(estado = OrdenLaboratorioItem.estadoDesdeApi(dto.estado)) ?: dto.aOrden())
+            val reemplazar: (OrdenLaboratorioItem) -> OrdenLaboratorioItem = { if (it.id == ordenId) cancelada else it }
+            _ordenesLab.value = _ordenesLab.value.map(reemplazar)
+            val actual = _consultaActiva.value
+            _consultaActiva.value = actual.copy(ordenesLaboratorio = actual.ordenesLaboratorio.map(reemplazar))
+            cancelada
         }
     }
 
@@ -908,79 +1036,6 @@ class HospitalClinicalDataSource(
         PersonalGuardia("5", "Roberto Morales", "RECEPCIONISTA", "Recepcionista Admisión Central", "07:00", "15:00", "Admisión", "En Mostrador", "2h 18m"),
         PersonalGuardia("6", "Dr. Fernando Castro", "MEDICO", "Médico de Emergencia", "07:00", "19:00", "Ambulancia Alfa-1", "En Traslado", "En ruta")
     )
-
-    private fun seedInitialConsultaActiva(): ConsultaActiva {
-        val pacienteCarlos = Paciente(
-            id = "p-carlos",
-            nombreCompleto = "Carlos Mendoza",
-            fechaNacimiento = "1981-05-14",
-            dui = "14.891.203-K",
-            sexo = "M",
-            telefono = "+503 7123-4567",
-            alergias = "Alergia a Dipirona / AINEs",
-            numeroExpediente = "CM-2026-001",
-            prevision = "Fonasa Tramo D"
-        )
-        val ordenActiva = OrdenLaboratorioItem(
-            id = "ord-02",
-            pacienteId = pacienteCarlos.id,
-            pacienteNombre = pacienteCarlos.nombreCompleto,
-            numeroExpediente = pacienteCarlos.numeroExpediente,
-            examenNombre = "Troponina I Alta Sensibilidad (hs-cTnI)",
-            tipoTubo = "Protocolo SCA",
-            prioridad = "STAT",
-            estado = "En Espera",
-            fechaSolicitud = "Hoy, 10:32",
-            observaciones = "Cinética enzimática 0h - 1h por dolor torácico opresivo.",
-            medicoSolicitante = "Dr. Alejandro Restrepo"
-        )
-        return ConsultaActiva(
-            id = "cons-01",
-            citaId = "c-101",
-            box = "Box 03",
-            medicoNombre = "Dr. Alejandro Restrepo",
-            especialidad = "Medicina Interna",
-            paciente = pacienteCarlos,
-            signosVitales = SignosVitales(
-                presionSistolica = 120,
-                presionDiastolica = 80,
-                frecuenciaCardiaca = 78,
-                frecuenciaRespiratoria = 18,
-                temperaturaC = 36.6,
-                pesoKg = 74.0,
-                tallaCm = 172.0,
-                saturacionOxigeno = 98,
-                observaciones = "Basal AA. Normotenso en reposo."
-            ),
-            diagnosticosCie10 = listOf(
-                Cie10Diagnostico("I10", "Hipertensión Esencial (Primaria)"),
-                Cie10Diagnostico("R07.4", "Dolor torácico atípico no especificado")
-            ),
-            anamnesis = "Paciente masculino de 45 años con antecedente de hipertensión controlada. Refiere opresión retroesternal intermitente de 48 horas de evolución, sin cortejo vegetativo. Normotenso en control seriado.",
-            recetas = listOf(
-                RecetaItem(
-                    medicamento = "Enalapril 10mg",
-                    dosis = "1 comprimido",
-                    frecuencia = "Cada 12 hrs vía oral",
-                    duracion = "30 días",
-                    indicaciones = "Tomar en ayunas y noche. Farmacia Central HUC.",
-                    tipo = "Crónico"
-                ),
-                RecetaItem(
-                    medicamento = "Paracetamol 500mg",
-                    dosis = "1 comprimido",
-                    frecuencia = "Cada 8 hrs en caso de dolor",
-                    duracion = "Máximo 3 días",
-                    indicaciones = "Tomar con abundante agua.",
-                    tipo = "SOS"
-                )
-            ),
-            ordenesLaboratorio = listOf(ordenActiva),
-            segundosTranscurridos = 18 * 60,
-            duracionTotalSegundos = 30 * 60,
-            estadoSemaforo = EstadoSemaforo.VERDE
-        )
-    }
 
     private fun seedInitialOrdenesLab(): List<OrdenLaboratorioItem> = listOf(
         OrdenLaboratorioItem(

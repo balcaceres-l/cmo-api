@@ -30,6 +30,10 @@ class ConsultaTest extends TestCase
 
         Sanctum::actingAs($medico);
         $id = $this->postJson("/api/v1/citas/{$cita->id_cita}/consulta")->assertCreated()->json('data.id_consulta');
+        // La lista de citas indica la consulta abierta para poder retomarla.
+        $this->getJson('/api/v1/citas')->assertOk()
+            ->assertJsonPath('data.data.0.consulta.id_consulta', $id)
+            ->assertJsonPath('data.data.0.consulta.fecha_hora_fin', null);
         $this->putJson("/api/v1/consultas/{$id}", ['diagnostico' => 'Migraña'])->assertOk()->assertJsonPath('data.diagnostico', 'Migraña');
         $this->postJson("/api/v1/consultas/{$id}/recetas", $receta)->assertCreated();
         $this->postJson("/api/v1/consultas/{$id}/ordenes-laboratorio", ['id_examen' => $examen->id_examen])->assertCreated()->assertJsonPath('data.estado', 'PENDIENTE');

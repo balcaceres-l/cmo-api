@@ -11,7 +11,7 @@ import com.cmo.hospital.databinding.CompLabOrderCardBinding
 
 class OrdenesLabAdapter(
     private val showPatientLine: Boolean = true,
-    private val onStatusChanged: (String, String) -> Unit
+    private val onCancelar: (OrdenLaboratorioItem) -> Unit
 ) : ListAdapter<OrdenLaboratorioItem, OrdenesLabAdapter.ViewHolder>(DiffCallback) {
 
     object DiffCallback : DiffUtil.ItemCallback<OrdenLaboratorioItem>() {
@@ -34,7 +34,7 @@ class OrdenesLabAdapter(
                 binding = binding,
                 orden = item,
                 showPatientLine = showPatientLine,
-                onStatusChanged = onStatusChanged
+                onCancelar = onCancelar
             )
         }
     }

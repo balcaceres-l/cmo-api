@@ -15,6 +15,8 @@ import com.cmo.hospital.features.auth.presentation.AuthNavigationHost
 import com.cmo.hospital.features.recepcionista.admision.presentation.AdmisionFragment
 import com.cmo.hospital.features.recepcionista.ambulancia.presentation.AmbulanciaGuardiaFragment
 import com.cmo.hospital.features.recepcionista.citas.presentation.CitasFragment
+import com.cmo.hospital.features.recepcionista.pacientes.presentation.PacientesFragment
+import com.cmo.hospital.features.recepcionista.laboratorio.presentation.LaboratorioRecepcionFragment
 import kotlinx.coroutines.launch
 
 interface RecepcionistaToastHost {
@@ -30,6 +32,8 @@ class RecepcionistaShellFragment : Fragment(), RecepcionistaToastHost {
 
     companion object {
         private const val TAG_CITAS = "tab_recep_citas"
+        private const val TAG_PACIENTES = "tab_recep_pacientes"
+        private const val TAG_LABORATORIO = "tab_recep_laboratorio"
         private const val TAG_ADMISION = "tab_recep_admision"
         private const val TAG_AMBULANCIA = "tab_recep_ambulancia"
         private const val KEY_SELECTED_ITEM = "selected_recep_item"
@@ -83,7 +87,9 @@ class RecepcionistaShellFragment : Fragment(), RecepcionistaToastHost {
     private fun switchTab(itemId: Int) {
         val subtitle = when (itemId) {
             R.id.nav_recep_citas -> "CITAS & SALA"
+            R.id.nav_recep_pacientes -> "REGISTRO DE PACIENTES"
             R.id.nav_recep_admision -> "PACIENTES"
+            R.id.nav_recep_laboratorio -> "LABORATORIO"
             R.id.nav_recep_ambulancia -> "GUARDIA & FLOTA"
             else -> "PACIENTES"
         }
@@ -91,7 +97,9 @@ class RecepcionistaShellFragment : Fragment(), RecepcionistaToastHost {
 
         val targetTag = when (itemId) {
             R.id.nav_recep_citas -> TAG_CITAS
+            R.id.nav_recep_pacientes -> TAG_PACIENTES
             R.id.nav_recep_admision -> TAG_ADMISION
+            R.id.nav_recep_laboratorio -> TAG_LABORATORIO
             R.id.nav_recep_ambulancia -> TAG_AMBULANCIA
             else -> TAG_ADMISION
         }
@@ -99,7 +107,7 @@ class RecepcionistaShellFragment : Fragment(), RecepcionistaToastHost {
         val fm = childFragmentManager
         val tx = fm.beginTransaction()
 
-        listOf(TAG_CITAS, TAG_ADMISION, TAG_AMBULANCIA).forEach { tag ->
+        listOf(TAG_CITAS, TAG_PACIENTES, TAG_ADMISION, TAG_LABORATORIO, TAG_AMBULANCIA).forEach { tag ->
             fm.findFragmentByTag(tag)?.let { frag ->
                 if (tag != targetTag && !frag.isHidden) {
                     tx.hide(frag)
@@ -113,6 +121,8 @@ class RecepcionistaShellFragment : Fragment(), RecepcionistaToastHost {
         } else {
             val newFrag: Fragment = when (targetTag) {
                 TAG_CITAS -> CitasFragment()
+                TAG_PACIENTES -> PacientesFragment()
+                TAG_LABORATORIO -> LaboratorioRecepcionFragment()
                 TAG_ADMISION -> AdmisionFragment()
                 else -> AmbulanciaGuardiaFragment()
             }

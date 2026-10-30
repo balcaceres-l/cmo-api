@@ -3,6 +3,7 @@ package com.cmo.hospital.features.doctor.laboratorio.data.repository
 import com.cmo.hospital.core.data.datasource.HospitalClinicalDataSource
 import com.cmo.hospital.core.domain.model.OrdenLaboratorioItem
 import com.cmo.hospital.core.domain.model.Paciente
+import com.cmo.hospital.core.network.dto.ExamenDto
 import com.cmo.hospital.features.doctor.laboratorio.domain.repository.LaboratorioRepository
 import kotlinx.coroutines.flow.StateFlow
 
@@ -12,21 +13,25 @@ class LaboratorioRepositoryImpl(
 
     override val ordenesLabFlow: StateFlow<List<OrdenLaboratorioItem>> = dataSource.ordenesLab
 
-    override fun emitirOrdenesLaboratorio(
+    override val catalogoExamenesFlow: StateFlow<List<ExamenDto>> = dataSource.examenesCatalogo
+
+    override suspend fun refrescar(): Result<Unit> {
+        dataSource.syncExamenesCatalogo().onFailure { return Result.failure(it) }
+        return dataSource.syncOrdenesLabFromRemote().map { }
+    }
+
+    override suspend fun emitirOrdenesLaboratorio(
         examenes: List<String>,
         prioridad: String,
         observaciones: String,
-        paciente: Paciente?,
-        estadoInicial: String
-    ): List<OrdenLaboratorioItem> = dataSource.emitirOrdenesLaboratorio(
+        paciente: Paciente?
+    ): Result<List<OrdenLaboratorioItem>> = dataSource.emitirOrdenesLaboratorio(
         examenes = examenes,
         prioridad = prioridad,
         observaciones = observaciones,
-        paciente = paciente,
-        estadoInicial = estadoInicial
+        paciente = paciente
     )
 
-    override fun cambiarEstadoOrdenLaboratorio(ordenId: String, nuevoEstado: String) {
-        dataSource.cambiarEstadoOrdenLaboratorio(ordenId, nuevoEstado)
-    }
+    override suspend fun cancelarOrden(ordenId: String): Result<OrdenLaboratorioItem> =
+        dataSource.cancelarOrdenLaboratorio(ordenId)
 }

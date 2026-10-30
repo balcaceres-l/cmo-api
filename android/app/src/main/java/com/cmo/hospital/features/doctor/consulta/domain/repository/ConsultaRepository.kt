@@ -15,8 +15,9 @@ interface ConsultaRepository {
     fun agregarCie10(codigo: String, descripcion: String)
     fun eliminarCie10(codigo: String)
     fun actualizarAnamnesis(texto: String)
-    fun agregarReceta(receta: RecetaItem)
-    fun eliminarReceta(recetaId: String)
-    suspend fun finalizarConsulta(): String
+    suspend fun agregarReceta(receta: RecetaItem): Result<RecetaItem>
+    suspend fun eliminarReceta(recetaId: String): Result<Unit>
+    suspend fun guardarCambios(): Result<Unit>
+    suspend fun finalizarConsulta(): Result<String>
     suspend fun agendarCitaSeguimiento(cita: Cita)
 }

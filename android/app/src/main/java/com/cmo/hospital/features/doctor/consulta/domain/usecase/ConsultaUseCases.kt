@@ -47,7 +47,8 @@ class GuardarAnamnesisUseCase(private val repository: ConsultaRepository) {
 }
 
 class GestionarRecetaConsultaUseCase(private val repository: ConsultaRepository) {
-    fun agregar(
+    /** Valida en el teléfono antes de enviar; la receta solo aparece cuando la API la guarda. */
+    fun validar(
         medicamento: String,
         dosis: String,
         frecuencia: String,
@@ -60,25 +61,29 @@ class GestionarRecetaConsultaUseCase(private val repository: ConsultaRepository)
                 IllegalArgumentException("Medicamento, dosis y frecuencia son campos obligatorios.")
             )
         }
-        val item = RecetaItem(
-            medicamento = medicamento.trim(),
-            dosis = dosis.trim(),
-            frecuencia = frecuencia.trim(),
-            duracion = duracion.trim().ifBlank { "Según evolución" },
-            indicaciones = indicaciones?.trim()?.ifBlank { null },
-            tipo = tipo.ifBlank { "Crónico" }
+        return Result.success(
+            RecetaItem(
+                medicamento = medicamento.trim(),
+                dosis = dosis.trim(),
+                frecuencia = frecuencia.trim(),
+                duracion = duracion.trim().ifBlank { "Según evolución" },
+                indicaciones = indicaciones?.trim()?.ifBlank { null },
+                tipo = tipo.ifBlank { "Crónico" }
+            )
         )
-        repository.agregarReceta(item)
-        return Result.success(item)
     }
 
-    fun eliminar(recetaId: String) {
-        repository.eliminarReceta(recetaId)
-    }
+    suspend fun guardar(item: RecetaItem): Result<RecetaItem> = repository.agregarReceta(item)
+
+    suspend fun eliminar(recetaId: String): Result<Unit> = repository.eliminarReceta(recetaId)
+}
+
+class GuardarCambiosConsultaUseCase(private val repository: ConsultaRepository) {
+    suspend operator fun invoke(): Result<Unit> = repository.guardarCambios()
 }
 
 class FinalizarConsultaUseCase(private val repository: ConsultaRepository) {
-    suspend operator fun invoke(): String = repository.finalizarConsulta()
+    suspend operator fun invoke(): Result<String> = repository.finalizarConsulta()
 }
 
 class AgendarCitaSeguimientoDoctorUseCase(private val repository: ConsultaRepository) {

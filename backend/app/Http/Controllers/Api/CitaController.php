@@ -17,7 +17,8 @@ class CitaController extends ApiController
 
     public function index(Request $r)
     {
-        $q = Cita::with(['paciente', 'medico', 'consultorio'])->orderByDesc('fecha')->orderBy('hora_inicio');
+        // La consulta (solo su id y si está cerrada) permite a la app retomar una consulta abierta.
+        $q = Cita::with(['paciente', 'medico', 'consultorio', 'consulta:id_consulta,id_cita,fecha_hora_fin'])->orderByDesc('fecha')->orderBy('hora_inicio');
         if ($r->user()->rol === 'MEDICO') {
             $q->where('id_medico', $r->user()->id);
         }

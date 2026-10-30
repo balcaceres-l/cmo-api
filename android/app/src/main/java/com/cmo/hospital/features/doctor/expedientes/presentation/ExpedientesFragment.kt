@@ -61,13 +61,13 @@ class ExpedientesFragment : Fragment() {
             val exp = viewModel.uiState.value.expedienteSeleccionado ?: return@setOnClickListener
             IndicarExamenLabDialogFragment().apply {
                 pacienteFijo = exp.paciente
-                onConfirmarOrden = { examenes, prioridad, obs, estadoInicial, _ ->
+                examenesDisponibles = viewModel.catalogoExamenes()
+                onConfirmarOrden = { examenes, prioridad, obs, _ ->
                     viewModel.emitirOrdenDesdeExpediente(
                         paciente = exp.paciente,
                         examenes = examenes,
                         prioridad = prioridad,
-                        obs = obs,
-                        estadoInicial = estadoInicial
+                        obs = obs
                     )
                 }
             }.show(childFragmentManager, "dialog_indicar_lab_expediente")
@@ -198,8 +198,8 @@ class ExpedientesFragment : Fragment() {
                     binding = cardBinding,
                     orden = orden,
                     showPatientLine = false
-                ) { ordenId, nuevoEstado ->
-                    viewModel.cambiarEstadoOrdenLab(ordenId, nuevoEstado)
+                ) { orden ->
+                    viewModel.cancelarOrdenLab(orden)
                 }
                 binding.containerOrdenesExpediente.addView(cardBinding.root)
             }

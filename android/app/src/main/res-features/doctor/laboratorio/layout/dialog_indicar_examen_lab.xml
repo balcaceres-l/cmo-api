@@ -49,7 +49,7 @@
                     android:id="@+id/tvLabDialogSubtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Sincronización automática con Expediente y LIS"
+                    android:text="La orden queda Pendiente hasta que el laboratorio la inicie"
                     android:textAppearance="@style/TextAppearance.Huc.BodySm" />
             </LinearLayout>
         </LinearLayout>
@@ -125,23 +125,6 @@
                 android:textAllCaps="false" />
         </LinearLayout>
 
-        <!-- Estado Inicial LIS -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/huc_space_md"
-            android:text="ESTADO INICIAL EN LIS"
-            android:textAppearance="@style/TextAppearance.Huc.LabelSm"
-            android:textColor="@color/huc_primary_container" />
-
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupEstadoInicialLab"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            app:selectionRequired="true"
-            app:singleSelection="true" />
-
         <!-- Catálogo de Exámenes -->
         <TextView
             android:layout_width="wrap_content"
@@ -161,22 +144,15 @@
             android:paddingHorizontal="10dp"
             android:paddingVertical="4dp" />
 
-        <!-- Examen personalizado -->
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.Huc.TextInputLayout"
+        <TextView
+            android:id="@+id/tvLabCatalogoVacio"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/huc_space_sm"
-            android:hint="Otro examen específico (opcional)">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etLabOtroExamen"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textCapSentences"
-                android:maxLines="1"
-                android:textAppearance="@style/TextAppearance.Huc.BodyMd" />
-        </com.google.android.material.textfield.TextInputLayout>
+            android:layout_marginTop="4dp"
+            android:text="No se pudo cargar el catálogo de exámenes. Verifique la conexión con la API."
+            android:textAppearance="@style/TextAppearance.Huc.BodySm"
+            android:textColor="@color/huc_error"
+            android:visibility="gone" />
 
         <!-- Observaciones clínicas -->
         <com.google.android.material.textfield.TextInputLayout
