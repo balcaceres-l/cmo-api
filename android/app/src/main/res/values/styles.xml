@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Tipografía Institucional HUC Móvil (Manrope + Public Sans) -->
+    <!-- Tipografía Institucional Centro Médico de Occidente / CMO (Manrope + Public Sans) -->
     <style name="TextAppearance.Huc.HeadlineMd" parent="TextAppearance.Material3.HeadlineMedium">
         <item name="fontFamily">@font/manrope_bold</item>
         <item name="android:fontFamily">@font/manrope_bold</item>
@@ -75,7 +75,7 @@
         <item name="android:textSize">11sp</item>
     </style>
 
-    <!-- Widgets Reutilizables HUC -->
+    <!-- Widgets Reutilizables CMO -->
     <style name="Widget.Huc.Card" parent="Widget.Material3.CardView.Elevated">
         <item name="cardBackgroundColor">@color/huc_surface_lowest</item>
         <item name="cardCornerRadius">@dimen/huc_radius_default</item>

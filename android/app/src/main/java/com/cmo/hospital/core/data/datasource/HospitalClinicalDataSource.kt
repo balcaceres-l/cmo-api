@@ -117,7 +117,7 @@ class HospitalClinicalDataSource(
         if (!yaExiste) {
             val nuevo = ExpedienteDetalle(
                 paciente = paciente,
-                cama = ubicacion ?: "Consulta Externa HUC",
+                cama = ubicacion ?: "Consulta Externa CMO",
                 signosVitales = signos ?: SignosVitales(),
                 alergiasCriticas = paciente.alergias?.takeIf { it.isNotBlank() }?.let { listOf(it) }
                     ?: emptyList(),
@@ -129,7 +129,7 @@ class HospitalClinicalDataSource(
                             hora = obtenerHoraActual(),
                             especialidad = "Consulta Externa",
                             diagnostico = motivoReciente,
-                            medico = "Cuerpo Médico HUC",
+                            medico = "Cuerpo Médico CMO",
                             notas = "Cita registrada en agenda hospitalaria."
                         )
                     )
@@ -483,7 +483,7 @@ class HospitalClinicalDataSource(
             prioridad = prioridad,
             horaSalida = obtenerHoraActual(),
             estado = "EN_CURSO",
-            destino = "Hosp. Universitario - Urgencias",
+            destino = "Centro Médico de Occidente - Urgencias",
             minutosLlegada = 15
         )
         try {
@@ -1016,7 +1016,7 @@ class HospitalClinicalDataSource(
             minutosLlegada = 18,
             tripulacionParamedico = "M. Peralta (Par.)",
             tripulacionChofer = "G. Soto (Chofer)",
-            destino = "Hosp. Universitario - Ala B",
+            destino = "Centro Médico de Occidente - Ala B",
             reportes = listOf(
                 ReporteAmbulancia(
                     estadoPaciente = "CRITICO",

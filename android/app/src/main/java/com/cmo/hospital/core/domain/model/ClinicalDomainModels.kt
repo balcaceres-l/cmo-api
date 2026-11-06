@@ -57,7 +57,7 @@ data class SignosVitales(
 }
 
 /**
- * Clasificación de Triage Manchester del prototipo institucional HUC Móvil.
+ * Clasificación de Triage Manchester institucional Centro Médico de Occidente / CMO.
  */
 enum class NivelTriageManchester(
     val nivel: Int,
@@ -470,7 +470,7 @@ data class ServicioAmbulanciaDetalle(
     val estado: String = "EN_CURSO",
     @SerializedName("tripulacion_paramedico") val tripulacionParamedico: String? = "M. Peralta (Par.)",
     @SerializedName("tripulacion_chofer") val tripulacionChofer: String? = "G. Soto (Chofer)",
-    val destino: String? = "Hosp. Universitario - Urgencias",
+    val destino: String? = "Centro Médico de Occidente - Urgencias",
     @SerializedName("minutos_llegada") val minutosLlegada: Int? = null,
     val reportes: List<ReporteAmbulancia> = emptyList()
 )

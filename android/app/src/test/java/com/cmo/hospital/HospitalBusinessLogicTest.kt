@@ -188,7 +188,7 @@ class HospitalBusinessLogicTest {
         assertEquals("120/80 mmHg", signosCompletos.presionTexto)
     }
 
-    // ─── Nuevos Tests Clean Architecture & Prototipo HUC Móvil ───────────────
+    // ─── Nuevos Tests Clean Architecture & CMO ──────────────────────────────
 
     @Test
     fun testTriageManchester4NivelesYAnonimizacionLey19628() {

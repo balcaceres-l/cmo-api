@@ -128,7 +128,7 @@ class GenerarBrazaleteQrUseCase {
                 codigoCama = ubicacion,
                 nivelTriage = nivelTriage,
                 protegidoLey19628 = protegidoLey19628,
-                firmaCriptografica = "SHA256-HUC-${uuid.takeLast(10)}"
+                firmaCriptografica = "SHA256-CMO-${uuid.takeLast(10)}"
             )
         )
     }

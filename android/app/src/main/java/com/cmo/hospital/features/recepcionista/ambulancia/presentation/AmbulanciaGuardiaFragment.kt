@@ -47,7 +47,7 @@ class AmbulanciaGuardiaFragment : Fragment() {
 
         HucMicroBannerBinder.bind(
             binding = binding.microBannerAmbulancia,
-            title = "Hospital Universitario Central - Guardia & Flota",
+            title = "Centro Médico de Occidente - Guardia & Flota",
             subtitle = "Coordinación Prehospitalaria Alfa-1 y Dotación en Turno",
             badgeText = "24/7 Activo",
             iconRes = R.drawable.ic_ambulance
@@ -133,7 +133,7 @@ class AmbulanciaGuardiaFragment : Fragment() {
                             binding.tvMisionPacienteYDesc.text =
                                 "${srv.pacienteNombre ?: "Paciente"} • ${srv.descripcion ?: "Traslado urgente"}"
                             binding.tvMisionDireccionYDestino.text =
-                                "Origen: ${srv.direccion ?: "N/D"} → ${srv.destino ?: "Urgencias HUC"}"
+                                "Origen: ${srv.direccion ?: "N/D"} → ${srv.destino ?: "Urgencias CMO"}"
                             binding.tvMisionTripulacion.text =
                                 "Tripulación: ${srv.tripulacionParamedico ?: "M. Peralta"} • ${srv.tripulacionChofer ?: "G. Soto"}"
                         } else {

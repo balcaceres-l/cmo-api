@@ -58,7 +58,7 @@ class CitasFragment : Fragment() {
 
         HucMicroBannerBinder.bind(
             binding = binding.microBannerCitas,
-            title = "Hospital Universitario Central - Consultorios",
+            title = "Centro Médico de Occidente - Consultorios",
             subtitle = "Admisión Externa • Puesto 04 • Bloques 30 min",
             badgeText = "Puesto 04"
         )

@@ -9,7 +9,7 @@ import com.cmo.hospital.R
 import com.cmo.hospital.databinding.CompHucToastBinding
 
 /**
- * Controlador del banner/toast flotante inferior inspirado en el prototipo HTML HUC Móvil.
+ * Controlador del banner/toast flotante inferior Centro Médico de Occidente / CMO.
  */
 class HucToastManager(
     private val binding: CompHucToastBinding

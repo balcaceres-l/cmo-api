@@ -53,7 +53,7 @@ class AdmisionFragment : Fragment() {
         // Micro-banner idéntico al prototipo HTML
         HucMicroBannerBinder.bind(
             binding = binding.microBannerAdmision,
-            title = "Hospital Universitario Central - Admisión",
+            title = "Centro Médico de Occidente - Admisión",
             subtitle = "Puesto de Admisión Activo • Turno Matutino",
             badgeText = "Online"
         )
@@ -309,7 +309,7 @@ class AdmisionFragment : Fragment() {
                                 .show(childFragmentManager, "dialog_brazalete_qr")
                         }
 
-                        // 7. Toast HUC Móvil
+                        // 7. Toast institucional CMO
                         if (!st.toastTitle.isNullOrBlank() && !st.toastMessage.isNullOrBlank()) {
                             val toastHost = parentFragment as? RecepcionistaToastHost
                             if (st.toastIsError) {

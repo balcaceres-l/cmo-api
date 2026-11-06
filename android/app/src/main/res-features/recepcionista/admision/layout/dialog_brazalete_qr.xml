@@ -96,7 +96,7 @@
             android:layout_marginTop="6dp"
             android:textColor="@color/huc_outline"
             android:textSize="11sp"
-            tools:text="Firma Criptográfica: SHA256-HUC-90A12C" />
+            tools:text="Firma Criptográfica: SHA256-CMO-90A12C" />
     </LinearLayout>
 
     <com.google.android.material.button.MaterialButton

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Paleta Institucional HUC Móvil (Material 3 / Prototipo HTML) -->
+    <!-- Paleta Institucional Centro Médico de Occidente / CMO (Material 3 / Prototipo HTML) -->
     <color name="huc_primary">#00342B</color>
     <color name="huc_on_primary">#FFFFFF</color>
     <color name="huc_primary_container">#004D40</color>

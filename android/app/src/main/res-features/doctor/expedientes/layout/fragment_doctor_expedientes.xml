@@ -53,7 +53,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Trazabilidad de lectura de historia clínica electrónica HUC"
+                    android:text="Trazabilidad de lectura de historia clínica electrónica CMO"
                     android:textAppearance="@style/TextAppearance.Huc.BodySm"
                     android:textColor="@color/huc_on_primary_container" />
             </LinearLayout>
