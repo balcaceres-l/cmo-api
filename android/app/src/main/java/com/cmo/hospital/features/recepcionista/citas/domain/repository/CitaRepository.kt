@@ -1,7 +1,12 @@
 package com.cmo.hospital.features.recepcionista.citas.domain.repository
 
+import com.cmo.hospital.core.domain.model.BloqueAgenda
 import com.cmo.hospital.core.domain.model.Cita
+import com.cmo.hospital.core.domain.model.ConsultorioInfo
+import com.cmo.hospital.core.domain.model.Paciente
+import com.cmo.hospital.core.domain.model.ProgramacionCita
 import com.cmo.hospital.core.domain.model.SignosVitales
+import com.cmo.hospital.core.domain.model.User
 import kotlinx.coroutines.flow.StateFlow
 
 interface CitaRepository {
@@ -10,20 +15,18 @@ interface CitaRepository {
 
     suspend fun refreshCitas(): List<Cita>
 
-    suspend fun agendarCita(
-        especialidad: String,
-        medicoNombre: String,
-        pacienteNombre: String,
-        dui: String,
-        fechaNacimiento: String?,
-        fecha: String,
-        horaInicio: String,
-        motivo: String,
-        box: String
-    ): Result<Cita>
+    // Catálogos de la agenda
+    suspend fun medicos(): Result<List<User>>
+    suspend fun consultorios(): Result<List<ConsultorioInfo>>
+    suspend fun disponibilidad(idMedico: String, fecha: String): Result<List<BloqueAgenda>>
+    suspend fun buscarPacientes(texto: String): Result<List<Paciente>>
 
-    suspend fun marcarLlegada(citaId: String)
-    suspend fun cancelarCita(citaId: String, motivo: String)
+    // Ciclo de la cita en la API
+    suspend fun agendarCita(idPaciente: String, programacion: ProgramacionCita, motivo: String): Result<Cita>
+    suspend fun confirmarCita(citaId: String, programacion: ProgramacionCita): Result<Cita>
+    suspend fun reprogramarCita(citaId: String, programacion: ProgramacionCita): Result<Cita>
+    suspend fun marcarLlegada(citaId: String): Result<Cita>
+    suspend fun cancelarCita(citaId: String, motivo: String): Result<Cita>
 
     suspend fun registrarTriajeOPasarAConsulta(
         citaId: String,

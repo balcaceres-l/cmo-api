@@ -174,15 +174,20 @@ class HospitalClinicalDataSource(
                 run {
                     val normalized = remoteList.mapIndexed { idx, raw ->
                         val safeId: String = (raw.id as String?) ?: "c-rem-$idx"
-                        val hi = raw.horaInicio.take(5)
-                        val hf = raw.horaFin?.take(5) ?: Cita.calcularFin30Minutos(hi)
+                        // Una solicitud del paciente (SOLICITADA) llega sin fecha, hora ni médico:
+                        // Gson deja esos campos en null aunque el modelo no lo admita.
+                        val hi = (raw.horaInicio as String?)?.take(5).orEmpty()
+                        val hf = raw.horaFin?.take(5)
+                            ?: hi.takeIf { it.isNotEmpty() }?.let { Cita.calcularFin30Minutos(it) }
                         val citaNorm = raw.copy(
                             id = safeId,
+                            fecha = (raw.fecha as String?)?.take(10).orEmpty(),
                             horaInicio = hi,
                             horaFin = hf,
-                            medicoNombre = raw.medico?.nombreCompleto ?: raw.medicoNombre ?: "Dr. Alejandro Restrepo",
-                            especialidad = raw.medico?.cargo ?: raw.especialidad ?: "Medicina General",
-                            consultorio = raw.consultorio ?: ConsultorioInfo("cs-1", "Consultorio General", "Box 03")
+                            idMedico = raw.idMedico ?: raw.medico?.id,
+                            medicoNombre = raw.medico?.nombreCompleto ?: "Médico por asignar",
+                            especialidad = raw.medico?.cargo ?: "Consulta externa",
+                            consultorio = raw.consultorio
                         )
                         citaNorm.paciente?.let { pInfo ->
                             val pac = Paciente(
@@ -259,24 +264,69 @@ class HospitalClinicalDataSource(
         prependCita(nuevaCita)
     }
 
-    suspend fun marcarLlegada(citaId: String) {
-        try {
-            apiService?.registrarLlegada(citaId)
-        } catch (_: Exception) {
-        }
-        _citasState.value = _citasState.value.map {
-            if (it.id == citaId) it.copy(estado = "EN_ESPERA") else it
-        }
+    // Agenda de recepción: todo pasa por la API. Si falla, la lista no cambia y
+    // el error llega a la pantalla; tras cada cambio se recarga la lista para
+    // traer paciente, médico y consultorio ya resueltos por el servidor.
+
+    private fun sinApi(): Result<Nothing> =
+        Result.failure(IllegalStateException("La API no está configurada en esta compilación."))
+
+    private suspend fun alCambiarCita(resultado: Result<Cita>): Result<Cita> {
+        val cita = resultado.getOrElse { return Result.failure(it) }
+        syncCitasFromRemote()
+        return Result.success(_citasState.value.firstOrNull { it.id == cita.id } ?: cita)
     }
 
-    suspend fun cancelarCita(citaId: String, motivo: String) {
-        try {
-            apiService?.cancelarCita(citaId, mapOf("motivo_cancelacion" to motivo))
-        } catch (_: Exception) {
-        }
-        _citasState.value = _citasState.value.map {
-            if (it.id == citaId) it.copy(estado = "CANCELADA") else it
-        }
+    suspend fun getMedicosAgenda(): Result<List<User>> {
+        val api = apiService ?: return sinApi()
+        return llamarApi { api.getMedicos() }.map { it.data }
+    }
+
+    suspend fun getConsultorios(): Result<List<ConsultorioInfo>> {
+        val api = apiService ?: return sinApi()
+        return llamarApi { api.getConsultorios() }
+    }
+
+    suspend fun getDisponibilidad(idMedico: String, fecha: String): Result<List<BloqueAgenda>> {
+        val api = apiService ?: return sinApi()
+        return llamarApi { api.getDisponibilidad(idMedico, fecha) }
+    }
+
+    suspend fun buscarPacientes(texto: String): Result<List<Paciente>> {
+        val api = apiService ?: return sinApi()
+        return llamarApi { api.getPacientes(query = texto, perPage = 8) }.map { it.data }
+    }
+
+    suspend fun agendarCita(
+        idPaciente: String,
+        programacion: ProgramacionCita,
+        motivo: String
+    ): Result<Cita> {
+        val api = apiService ?: return sinApi()
+        val cuerpo = programacion.aMapa() + mapOf("id_paciente" to idPaciente, "motivo" to motivo)
+        return alCambiarCita(llamarApi { api.agendarCita(cuerpo) })
+    }
+
+    suspend fun reprogramarCita(citaId: String, programacion: ProgramacionCita): Result<Cita> {
+        val api = apiService ?: return sinApi()
+        return alCambiarCita(llamarApi { api.reprogramarCita(citaId, programacion.aMapa()) })
+    }
+
+    suspend fun confirmarCita(citaId: String, programacion: ProgramacionCita): Result<Cita> {
+        val api = apiService ?: return sinApi()
+        return alCambiarCita(llamarApi { api.confirmarCita(citaId, programacion.aMapa()) })
+    }
+
+    suspend fun marcarLlegada(citaId: String): Result<Cita> {
+        val api = apiService ?: return sinApi()
+        return alCambiarCita(llamarApi { api.registrarLlegada(citaId) })
+    }
+
+    suspend fun cancelarCita(citaId: String, motivo: String): Result<Cita> {
+        val api = apiService ?: return sinApi()
+        return alCambiarCita(
+            llamarApi { api.cancelarCita(citaId, mapOf("motivo_cancelacion" to motivo)) }
+        )
     }
 
     fun actualizarTriajeOPasarAConsulta(

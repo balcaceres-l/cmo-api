@@ -61,7 +61,12 @@ import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.Solicit
 import com.cmo.hospital.features.recepcionista.ambulancia.presentation.AmbulanciaGuardiaViewModel
 import com.cmo.hospital.features.recepcionista.citas.data.repository.CitaRepositoryImpl
 import com.cmo.hospital.features.recepcionista.citas.domain.repository.CitaRepository
-import com.cmo.hospital.features.recepcionista.citas.domain.usecase.AgendarCitaCascadaUseCase
+import com.cmo.hospital.features.recepcionista.citas.domain.usecase.AgendarCitaUseCase
+import com.cmo.hospital.features.recepcionista.citas.domain.usecase.BuscarPacientesParaCitaUseCase
+import com.cmo.hospital.features.recepcionista.citas.domain.usecase.CargarCatalogosAgendaUseCase
+import com.cmo.hospital.features.recepcionista.citas.domain.usecase.ConfirmarCitaUseCase
+import com.cmo.hospital.features.recepcionista.citas.domain.usecase.GetDisponibilidadUseCase
+import com.cmo.hospital.features.recepcionista.citas.domain.usecase.ReprogramarCitaUseCase
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.CancelarCitaUseCase
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.ControlarLlamadorSalaUseCase
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.GetCitasFlowUseCase
@@ -123,7 +128,12 @@ class AppContainer(context: Context) {
             getCitasFlowUseCase = GetCitasFlowUseCase(citaRepository),
             getTurnoEnBoxFlowUseCase = GetTurnoEnBoxFlowUseCase(citaRepository),
             refreshCitasUseCase = RefreshCitasUseCase(citaRepository),
-            agendarCitaCascadaUseCase = AgendarCitaCascadaUseCase(citaRepository),
+            cargarCatalogosAgendaUseCase = CargarCatalogosAgendaUseCase(citaRepository),
+            getDisponibilidadUseCase = GetDisponibilidadUseCase(citaRepository),
+            buscarPacientesParaCitaUseCase = BuscarPacientesParaCitaUseCase(citaRepository),
+            agendarCitaUseCase = AgendarCitaUseCase(citaRepository),
+            confirmarCitaUseCase = ConfirmarCitaUseCase(citaRepository),
+            reprogramarCitaUseCase = ReprogramarCitaUseCase(citaRepository),
             marcarLlegadaCitaUseCase = MarcarLlegadaCitaUseCase(citaRepository),
             cancelarCitaUseCase = CancelarCitaUseCase(citaRepository),
             registrarTriajeYPasarConsultaUseCase = RegistrarTriajeYPasarConsultaUseCase(citaRepository),

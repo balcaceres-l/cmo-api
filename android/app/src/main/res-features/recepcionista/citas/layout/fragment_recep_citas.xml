@@ -20,7 +20,7 @@
             android:id="@+id/microBannerCitas"
             layout="@layout/comp_huc_micro_banner" />
 
-        <!-- Llamador Activo (Sala Central) con Anonimización Ley 19.628 -->
+        <!-- Llamador activo (sala central) con nombre anonimizado -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -131,7 +131,7 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Tarjeta Desplegable: Agendar Cita en Cascada (Especialidad -> Médico -> 30 min) -->
+        <!-- Tarjeta desplegable: agendar cita contra la agenda real de la API -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -167,13 +167,13 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Agendar Nueva Cita (Bloque 30 min)"
+                        android:text="Agendar nueva cita"
                         android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Cascada Especialidad → Médico • Anti-solapamiento estricto"
+                        android:text="Paciente → médico → horario libre según su turno"
                         android:textAppearance="@style/TextAppearance.Huc.BodySm" />
                 </LinearLayout>
 
@@ -203,7 +203,50 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="1. Especialidad Clínica"
+                    android:text="1. Paciente registrado"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelMd"
+                    android:textColor="@color/huc_on_surface_variant" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilCitaPacienteBuscar"
+                    style="@style/Widget.Huc.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:hint="Buscar por nombre, DUI o expediente *"
+                    app:endIconMode="clear_text">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etCitaPacienteBuscar"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPersonName" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupPacientes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    app:singleSelection="true" />
+
+                <TextView
+                    android:id="@+id/tvCitaPacienteSeleccionado"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_surface_low_16"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="8dp"
+                    android:text="Ningún paciente seleccionado"
+                    android:textColor="@color/huc_on_surface_variant"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="2. Especialidad"
                     android:textAppearance="@style/TextAppearance.Huc.LabelMd"
                     android:textColor="@color/huc_on_surface_variant" />
 
@@ -217,203 +260,42 @@
                         android:id="@+id/chipGroupEspecialidades"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        app:selectionRequired="true"
                         app:singleLine="true"
                         app:singleSelection="true" />
                 </HorizontalScrollView>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:text="2. Médico Asignado"
-                    android:textAppearance="@style/TextAppearance.Huc.LabelMd"
-                    android:textColor="@color/huc_on_surface_variant" />
-
-                <HorizontalScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:scrollbars="none">
-
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/chipGroupMedicos"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:selectionRequired="true"
-                        app:singleLine="true"
-                        app:singleSelection="true" />
-                </HorizontalScrollView>
+                <include
+                    android:id="@+id/selectorAgenda"
+                    layout="@layout/comp_selector_agenda" />
 
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilCitaMotivo"
                     style="@style/Widget.Huc.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:hint="Nombre Completo del Paciente *">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etCitaPacienteNombre"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="textPersonName" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="4dp"
-                        android:layout_weight="1"
-                        android:hint="DNI / DUI">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etCitaDui"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="text" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:layout_weight="1"
-                        android:hint="Fecha Nac. (AAAA-MM-DD)">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etCitaFechaNac"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="date" />
-                    </com.google.android.material.textfield.TextInputLayout>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="4dp"
-                        android:layout_weight="1"
-                        android:hint="Fecha Cita (AAAA-MM-DD)">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etCitaFecha"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="date"
-                            android:text="2026-10-29" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:layout_weight="1"
-                        android:hint="Consultorio / Box">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etCitaBox"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="text"
-                            android:text="Box 03" />
-                    </com.google.android.material.textfield.TextInputLayout>
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="3. Bloque Fijo de 30 Minutos"
-                    android:textAppearance="@style/TextAppearance.Huc.LabelMd"
-                    android:textColor="@color/huc_on_surface_variant" />
-
-                <HorizontalScrollView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:scrollbars="none">
-
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/chipGroupBloques30m"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:selectionRequired="true"
-                        app:singleLine="true"
-                        app:singleSelection="true" />
-                </HorizontalScrollView>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:background="@drawable/bg_surface_low_16"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="8dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Horario asignado:"
-                        android:textColor="@color/huc_on_surface_variant"
-                        android:textSize="12sp" />
-
-                    <TextView
-                        android:id="@+id/tvCitaBloqueResumen"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="09:30 - 10:00 (30 min)"
-                        android:textColor="@color/huc_primary_container"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <!-- Banner estricto anti-solapamiento -->
-                <TextView
-                    android:id="@+id/tvCitaConflictoWarning"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_error_container_16"
-                    android:padding="10dp"
-                    android:text="⛔ Horario ocupado: El médico seleccionado ya tiene una cita en este bloque. Por ningún motivo se permiten citas duplicadas."
-                    android:textColor="@color/huc_on_error_container"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    android:visibility="gone" />
-
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Huc.TextInputLayout"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:hint="Motivo Clínico de Consulta *">
+                    android:hint="Motivo de la cita *">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etCitaMotivo"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="textMultiLine"
+                        android:inputType="textMultiLine|textCapSentences"
                         android:minLines="2" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <TextView
+                    android:id="@+id/tvCitaFormError"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_error_container_16"
+                    android:padding="10dp"
+                    android:textColor="@color/huc_on_error_container"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:text="El médico no tiene turno a esa hora." />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnConfirmarAgendarCita"
@@ -421,7 +303,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:layout_marginTop="12dp"
-                    android:text="Confirmar Cita (Bloque 30 Min)"
+                    android:text="Agendar cita"
                     app:icon="@drawable/ic_check_circle"
                     app:iconGravity="textStart" />
             </LinearLayout>

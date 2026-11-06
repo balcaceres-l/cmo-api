@@ -9,13 +9,16 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.cmo.hospital.R
 import com.cmo.hospital.core.domain.model.Cita
+import com.cmo.hospital.core.domain.model.EstadoCita
 import com.cmo.hospital.databinding.ItemCitaRecepcionBinding
 
 class CitasRecepcionAdapter(
     private val onRegistrarLlegada: (Cita) -> Unit,
     private val onAbrirTriaje: (Cita) -> Unit,
     private val onPasarDirectoAConsulta: (Cita) -> Unit,
-    private val onCancelarCita: (Cita) -> Unit
+    private val onCancelarCita: (Cita) -> Unit,
+    private val onConfirmarSolicitud: (Cita) -> Unit,
+    private val onReprogramar: (Cita) -> Unit
 ) : ListAdapter<Cita, CitasRecepcionAdapter.CitaViewHolder>(DiffCallback) {
 
     object DiffCallback : DiffUtil.ItemCallback<Cita>() {
@@ -42,16 +45,15 @@ class CitasRecepcionAdapter(
 
         fun bind(cita: Cita) {
             val ctx = binding.root.context
-            val horario = if (!cita.horaFin.isNullOrBlank()) {
-                "${cita.horaInicio} - ${cita.horaFin}"
-            } else {
-                cita.horaInicio
+            binding.tvItemCitaHorario.text = when {
+                cita.horaInicio.isBlank() -> "Sin horario"
+                cita.horaFin.isNullOrBlank() -> "${cita.fecha} • ${cita.horaInicio}"
+                else -> "${cita.fecha} • ${cita.horaInicio}-${cita.horaFin}"
             }
-            binding.tvItemCitaHorario.text = horario
-            binding.tvItemCitaBox.text = cita.consultorio?.codigo ?: "Box 03"
+            binding.tvItemCitaBox.text = cita.consultorio?.codigo ?: "Sin consultorio"
             binding.tvItemCitaPaciente.text = cita.paciente?.nombreCompleto ?: "Paciente HUC"
             binding.tvItemCitaMedicoYExp.text =
-                "Exp: ${cita.paciente?.numeroExpediente ?: "N/D"} • ${cita.medicoNombre ?: "Médico"} (${cita.especialidad ?: "Consulta"})"
+                "Exp: ${cita.paciente?.numeroExpediente ?: "N/D"} • ${cita.medicoNombre ?: "Médico por asignar"} (${cita.especialidad ?: "Consulta"})"
             binding.tvItemCitaMotivo.text = cita.motivo ?: "Consulta programada"
 
             // Resumen de signos vitales si existen
@@ -72,8 +74,12 @@ class CitasRecepcionAdapter(
             }
 
             // Badge de estado
-            binding.tvItemCitaEstado.text = cita.estado
+            binding.tvItemCitaEstado.text = EstadoCita.etiqueta(cita.estado)
             when (cita.estado) {
+                "SOLICITADA" -> {
+                    binding.tvItemCitaEstado.setBackgroundResource(R.drawable.bg_pill_tertiary_fixed)
+                    binding.tvItemCitaEstado.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_tertiary_fixed))
+                }
                 "EN_ATENCION" -> {
                     binding.tvItemCitaEstado.setBackgroundResource(R.drawable.bg_pill_primary_fixed)
                     binding.tvItemCitaEstado.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_primary_fixed))
@@ -97,6 +103,8 @@ class CitasRecepcionAdapter(
             }
 
             // Acciones dinámicas por estado
+            binding.actionsCitaSolicitada.visibility =
+                if (cita.estado == EstadoCita.SOLICITADA) View.VISIBLE else View.GONE
             binding.actionsCitaAgendada.visibility =
                 if (cita.estado == "AGENDADA") View.VISIBLE else View.GONE
             binding.actionsCitaEnEspera.visibility =
@@ -106,6 +114,9 @@ class CitasRecepcionAdapter(
 
             binding.btnCitaRegistrarLlegada.setOnClickListener { onRegistrarLlegada(cita) }
             binding.btnCitaCancelarAgendada.setOnClickListener { onCancelarCita(cita) }
+            binding.btnCitaReprogramar.setOnClickListener { onReprogramar(cita) }
+            binding.btnCitaConfirmarSolicitud.setOnClickListener { onConfirmarSolicitud(cita) }
+            binding.btnCitaRechazarSolicitud.setOnClickListener { onCancelarCita(cita) }
             binding.btnCitaTriajeSignos.setOnClickListener { onAbrirTriaje(cita) }
             binding.btnCitaPasarConsulta.setOnClickListener { onPasarDirectoAConsulta(cita) }
             binding.btnCitaCancelarEspera.setOnClickListener { onCancelarCita(cita) }

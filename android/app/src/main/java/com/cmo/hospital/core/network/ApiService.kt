@@ -23,7 +23,9 @@ interface ApiService {
 
     // Citas y Turnos de Atención (30 min)
     @GET("citas")
-    suspend fun getCitas(): Response<ApiResponse<PaginatedData<Cita>>>
+    suspend fun getCitas(
+        @Query("per_page") perPage: Int = 100
+    ): Response<ApiResponse<PaginatedData<Cita>>>
 
     @POST("citas")
     suspend fun agendarCita(
@@ -40,6 +42,35 @@ interface ApiService {
         @Path("id") id: String,
         @Body motivo: Map<String, String>
     ): Response<ApiResponse<Cita>>
+
+    @PATCH("citas/{id}/reprogramar")
+    suspend fun reprogramarCita(
+        @Path("id") id: String,
+        @Body request: Map<String, Any?>
+    ): Response<ApiResponse<Cita>>
+
+    /** Convierte una solicitud del paciente (SOLICITADA) en cita AGENDADA. */
+    @PATCH("citas/{id}/confirmar")
+    suspend fun confirmarCita(
+        @Path("id") id: String,
+        @Body request: Map<String, Any?>
+    ): Response<ApiResponse<Cita>>
+
+    // Agenda: catálogos para programar citas
+    @GET("medicos")
+    suspend fun getMedicos(
+        @Query("per_page") perPage: Int = 100
+    ): Response<ApiResponse<PaginatedData<User>>>
+
+    @GET("consultorios")
+    suspend fun getConsultorios(): Response<ApiResponse<List<ConsultorioInfo>>>
+
+    /** Bloques libres del médico ese día (dentro de su turno y sin solapes). */
+    @GET("agenda/disponibilidad")
+    suspend fun getDisponibilidad(
+        @Query("id_medico") idMedico: String,
+        @Query("fecha") fecha: String
+    ): Response<ApiResponse<List<BloqueAgenda>>>
 
     // Pacientes y Expedientes
     @GET("pacientes")
