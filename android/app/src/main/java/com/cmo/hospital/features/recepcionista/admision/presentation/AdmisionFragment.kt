@@ -50,14 +50,6 @@ class AdmisionFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Micro-banner idéntico al prototipo HTML
-        HucMicroBannerBinder.bind(
-            binding = binding.microBannerAdmision,
-            title = "Centro Médico de Occidente - Admisión",
-            subtitle = "Puesto de Admisión Activo • Turno Matutino",
-            badgeText = "Online"
-        )
-
         // Encabezados reutilizables de los 3 pasos
         binding.stepHeader1.ivStepIcon.setImageResource(R.drawable.ic_badge)
         binding.stepHeader1.tvStepTitle.text = "Datos de Filiación"

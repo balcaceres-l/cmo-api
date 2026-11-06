@@ -15,16 +15,10 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Micro-Banner Institucional Web Mirroring (Idéntico al Prototipo HTML) -->
-        <include
-            android:id="@+id/microBannerAdmision"
-            layout="@layout/comp_huc_micro_banner" />
-
         <!-- Header del Módulo y Toggle Ley de Protección / Anonimización (Ley 19.628) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
             android:background="@drawable/bg_card_rounded_16"
             android:elevation="1dp"
             android:orientation="vertical"

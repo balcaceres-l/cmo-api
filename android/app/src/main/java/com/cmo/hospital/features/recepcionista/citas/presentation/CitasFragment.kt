@@ -56,15 +56,7 @@ class CitasFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        HucMicroBannerBinder.bind(
-            binding = binding.microBannerCitas,
-            title = "Centro Médico de Occidente - Consultorios",
-            subtitle = "Admisión Externa • Puesto 04 • Bloques 30 min",
-            badgeText = "Puesto 04"
-        )
-
         setupRecyclerView()
-        setupLlamadorSala()
         setupFormularioCascada()
         observeState()
     }
@@ -84,11 +76,6 @@ class CitasFragment : Fragment() {
         )
         binding.rvCitasRecepcion.layoutManager = LinearLayoutManager(requireContext())
         binding.rvCitasRecepcion.adapter = citasAdapter
-    }
-
-    private fun setupLlamadorSala() {
-        binding.btnCallerReLlamar.setOnClickListener { viewModel.reLlamarEnSala() }
-        binding.btnCallerSiguiente.setOnClickListener { viewModel.llamarSiguienteEnSala() }
     }
 
     private fun setupFormularioCascada() {
@@ -277,22 +264,6 @@ class CitasFragment : Fragment() {
                         citasAdapter.submitList(lista)
                         binding.tvCitasTotalBadge.text = "${lista.size} citas"
                         actualizarChipsBloques30m()
-                    }
-                }
-
-                launch {
-                    viewModel.turnoEnBox.collect { turno ->
-                        if (turno != null) {
-                            binding.tvCallerBoxBadge.text = turno.consultorio?.codigo ?: "Box 03"
-                            val rawName = turno.paciente?.nombreCompleto ?: "Paciente en Box"
-                            binding.tvCallerPatientAnon.text = Paciente.anonimizarNombre(rawName)
-                            binding.tvCallerDetail.text =
-                                "${turno.horaInicio} • ${turno.especialidad ?: "Medicina General"} • ${turno.medicoNombre ?: "Médico"}"
-                        } else {
-                            binding.tvCallerBoxBadge.text = "Sala Libre"
-                            binding.tvCallerPatientAnon.text = "Sin turno activo"
-                            binding.tvCallerDetail.text = "Presione 'Siguiente a Box' para llamar paciente"
-                        }
                     }
                 }
 
