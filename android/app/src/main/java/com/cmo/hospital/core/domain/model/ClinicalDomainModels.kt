@@ -451,47 +451,46 @@ data class ExpedienteDetalle(
     val ordenesLaboratorio: List<OrdenLaboratorioItem> = emptyList()
 )
 
+/** Reporte clínico enviado desde la ambulancia en camino (tabla reporte_ambulancia). */
 data class ReporteAmbulancia(
-    val id: String = UUID.randomUUID().toString(),
-    @SerializedName("estado_paciente") val estadoPaciente: String = "ESTABLE",
+    @SerializedName("id_reporte") val id: String? = null,
+    @SerializedName("estado_paciente") val estadoPaciente: String,
     val observaciones: String? = null,
-    @SerializedName("minutos_llegada") val minutosLlegada: Int? = null,
-    @SerializedName("creado_en") val creadoEn: String? = null
+    @SerializedName("llegada_estimada") val llegadaEstimada: String? = null,
+    val fecha: String? = null
 )
 
+/** Servicio (traslado) de la ambulancia, tal como lo devuelve la API. */
 data class ServicioAmbulanciaDetalle(
-    val id: String,
+    @SerializedName("id_servicio") val id: String,
     @SerializedName("paciente_nombre") val pacienteNombre: String? = null,
     val direccion: String? = null,
     val descripcion: String? = null,
-    val prioridad: String = "ALTA",
+    val prioridad: String = "MEDIA",
+    val estado: String = "EN_CURSO", // EN_CURSO, FINALIZADO, CANCELADO
+    @SerializedName("hora_solicitud") val horaSolicitud: String? = null,
     @SerializedName("hora_salida") val horaSalida: String? = null,
-    @SerializedName("hora_llegada") val horaLlegada: String? = null,
-    val estado: String = "EN_CURSO",
-    @SerializedName("tripulacion_paramedico") val tripulacionParamedico: String? = "M. Peralta (Par.)",
-    @SerializedName("tripulacion_chofer") val tripulacionChofer: String? = "G. Soto (Chofer)",
-    val destino: String? = "Hosp. Universitario - Urgencias",
-    @SerializedName("minutos_llegada") val minutosLlegada: Int? = null,
-    val reportes: List<ReporteAmbulancia> = emptyList()
+    @SerializedName("hora_cierre") val horaCierre: String? = null,
+    val notas: String? = null,
+    @SerializedName("ultimo_reporte") val ultimoReporte: ReporteAmbulancia? = null
 )
 
+/** La única ambulancia del hospital (GET /ambulancia trae solo el servicio en curso). */
 data class AmbulanciaRecurso(
-    val id: String = "amb-1",
-    val placa: String = "P-123456",
+    @SerializedName("id_ambulancia") val id: String? = null,
+    val placa: String = "",
     val estado: String = "DISPONIBLE", // DISPONIBLE, EN_SERVICIO, EN_MANTENIMIENTO
-    @SerializedName("servicio_activo") val servicioActivo: ServicioAmbulanciaDetalle? = null
-)
+    val servicios: List<ServicioAmbulanciaDetalle> = emptyList()
+) {
+    val servicioActivo: ServicioAmbulanciaDetalle?
+        get() = servicios.firstOrNull { it.estado == "EN_CURSO" }
+}
 
-data class PersonalGuardia(
-    val id: String,
-    @SerializedName("nombre_completo") val nombreCompleto: String,
-    val rol: String, // MEDICO, RECEPCIONISTA
-    val cargo: String,
-    @SerializedName("hora_inicio") val horaInicio: String,
-    @SerializedName("hora_fin") val horaFin: String,
-    val area: String,
-    val estado: String = "Activo",
-    @SerializedName("relevo_en") val relevoEn: String? = null
+/** Médico con turno en curso (GET /publico/medicos-de-turno). */
+data class MedicoDeTurno(
+    val nombre: String,
+    val cargo: String? = null,
+    val area: String? = null
 )
 
 data class DatosDocumentoEscaneado(

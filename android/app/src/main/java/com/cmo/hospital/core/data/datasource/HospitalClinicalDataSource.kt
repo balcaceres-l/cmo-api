@@ -39,9 +39,6 @@ class HospitalClinicalDataSource(
     )
     val turnoEnBox: StateFlow<Cita?> = _turnoEnBox.asStateFlow()
 
-    private val _ambulanciaState = MutableStateFlow(seedInitialAmbulancia())
-    val ambulanciaState: StateFlow<AmbulanciaRecurso> = _ambulanciaState.asStateFlow()
-
     // Sin consulta de ejemplo: la consulta real se abre o retoma desde una cita de la API.
     private val _consultaActiva = MutableStateFlow(ConsultaActiva.vacia())
     val consultaActiva: StateFlow<ConsultaActiva> = _consultaActiva.asStateFlow()
@@ -58,13 +55,9 @@ class HospitalClinicalDataSource(
     private val _expedienteSolicitado = MutableStateFlow<String?>(null)
     val expedienteSolicitado: StateFlow<String?> = _expedienteSolicitado.asStateFlow()
 
-    private val _personalGuardia = seedPersonalGuardia()
-
     init {
         _citasState.value.forEach { registrarPacienteDeCitaEnExpedientes(it) }
     }
-
-    fun getPersonalGuardia(): List<PersonalGuardia> = _personalGuardia
 
     private fun registrarPacienteDeCitaEnExpedientes(cita: Cita) {
         val pInfo = cita.paciente ?: return
@@ -448,48 +441,6 @@ class HospitalClinicalDataSource(
     suspend fun trasladarPaciente(idIngreso: String, idCamaDestino: String): Result<Unit> {
         val api = apiService ?: return sinApi()
         return alCambiarCamas(llamarApi { api.trasladarPaciente(idIngreso, mapOf("id_cama" to idCamaDestino)) })
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Ambulancia Alfa-1
-    // ─────────────────────────────────────────────────────────────────────────
-
-    fun cambiarEstadoAmbulancia(nuevoEstado: String) {
-        _ambulanciaState.value = _ambulanciaState.value.copy(estado = nuevoEstado)
-    }
-
-    suspend fun despacharAmbulancia(
-        direccion: String,
-        paciente: String,
-        descripcion: String,
-        prioridad: String
-    ) {
-        val servicio = ServicioAmbulanciaDetalle(
-            id = "serv-" + System.currentTimeMillis().toString().takeLast(4),
-            pacienteNombre = paciente.ifBlank { "Emergencia Prehospitalaria" },
-            direccion = direccion,
-            descripcion = descripcion.ifBlank { "Despacho Código Rojo" },
-            prioridad = prioridad,
-            horaSalida = obtenerHoraActual(),
-            estado = "EN_CURSO",
-            destino = "Hosp. Universitario - Urgencias",
-            minutosLlegada = 15
-        )
-        try {
-            apiService?.despacharAmbulancia(
-                mapOf(
-                    "direccion" to direccion,
-                    "paciente_nombre" to servicio.pacienteNombre,
-                    "descripcion" to servicio.descripcion,
-                    "prioridad" to prioridad
-                )
-            )
-        } catch (_: Exception) {
-        }
-        _ambulanciaState.value = _ambulanciaState.value.copy(
-            estado = "EN_SERVICIO",
-            servicioActivo = servicio
-        )
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -958,41 +909,6 @@ class HospitalClinicalDataSource(
             medicoNombre = "Dr. Alejandro Restrepo",
             especialidad = "Medicina Interna"
         )
-    )
-
-    private fun seedInitialAmbulancia(): AmbulanciaRecurso = AmbulanciaRecurso(
-        id = "amb-1",
-        placa = "P-123456",
-        estado = "EN_SERVICIO",
-        servicioActivo = ServicioAmbulanciaDetalle(
-            id = "srv-991",
-            pacienteNombre = "Adulto mayor politraumatizado",
-            direccion = "Av. Libertador #412",
-            descripcion = "Traslado UCI Coronario urgente",
-            prioridad = "CRITICA",
-            horaSalida = "12:20",
-            minutosLlegada = 18,
-            tripulacionParamedico = "M. Peralta (Par.)",
-            tripulacionChofer = "G. Soto (Chofer)",
-            destino = "Hosp. Universitario - Ala B",
-            reportes = listOf(
-                ReporteAmbulancia(
-                    estadoPaciente = "CRITICO",
-                    observaciones = "Paciente con soporte O2 alto flujo y monitoreo ECG activo.",
-                    minutosLlegada = 18,
-                    creadoEn = "12:24"
-                )
-            )
-        )
-    )
-
-    private fun seedPersonalGuardia(): List<PersonalGuardia> = listOf(
-        PersonalGuardia("1", "Dr. Alejandro Restrepo", "MEDICO", "Urgencias / Med. Interna", "07:00", "15:00", "Box 03", "Activo", "2h 18m"),
-        PersonalGuardia("2", "Dra. Sofía Valenzuela", "MEDICO", "Alergista / Ambulatorio", "08:30", "14:30", "Box 02", "En Consulta", "Cierre 14:00"),
-        PersonalGuardia("3", "Lic. Mariana Gómez", "RECEPCIONISTA", "Enfermera Jefe 3ª Planta VIP", "07:00", "19:00", "Planta 3", "Ronda Médica", "Turno 12h"),
-        PersonalGuardia("4", "Enf. Carlos Duarte", "RECEPCIONISTA", "Asistente 2ª Planta Semiprivada", "07:00", "15:00", "Planta 2", "Activo", "2h 18m"),
-        PersonalGuardia("5", "Roberto Morales", "RECEPCIONISTA", "Recepcionista Admisión Central", "07:00", "15:00", "Admisión", "En Mostrador", "2h 18m"),
-        PersonalGuardia("6", "Dr. Fernando Castro", "MEDICO", "Médico de Emergencia", "07:00", "19:00", "Ambulancia Alfa-1", "En Traslado", "En ruta")
     )
 
     private fun seedInitialOrdenesLab(): List<OrdenLaboratorioItem> = listOf(

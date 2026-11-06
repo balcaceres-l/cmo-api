@@ -121,9 +121,9 @@ interface ApiService {
         @Body request: Map<String, Any?>
     ): Response<ApiResponse<Map<String, Any?>>>
 
-    // Ambulancia Única (Tiempo Real y Bitácora)
+    // Ambulancia (única unidad): estado, servicio en curso, reportes y bitácora
     @GET("ambulancia")
-    suspend fun getAmbulancia(): Response<ApiResponse<Map<String, Any>>>
+    suspend fun getAmbulancia(): Response<ApiResponse<AmbulanciaRecurso>>
 
     @GET("publico/ambulancia")
     suspend fun getAmbulanciaPublica(): Response<ApiResponse<Map<String, Any>>>
@@ -136,17 +136,19 @@ interface ApiService {
     @PATCH("ambulancia/servicios/{id}/finalizar")
     suspend fun finalizarServicioAmbulancia(
         @Path("id") id: String,
-        @Body notas: Map<String, String>
-    ): Response<ApiResponse<Unit>>
+        @Body notas: Map<String, Any?>
+    ): Response<ApiResponse<ServicioAmbulanciaDetalle>>
 
     @POST("ambulancia/servicios/{id}/reportes")
     suspend fun reportarDesdeAmbulancia(
         @Path("id") id: String,
-        @Body request: ReporteAmbulancia
+        @Body request: Map<String, Any?>
     ): Response<ApiResponse<ReporteAmbulancia>>
 
     @GET("ambulancia/servicios")
-    suspend fun getBitacoraAmbulancia(): Response<ApiResponse<PaginatedData<ServicioAmbulanciaDetalle>>>
+    suspend fun getBitacoraAmbulancia(
+        @Query("per_page") perPage: Int = 15
+    ): Response<ApiResponse<PaginatedData<ServicioAmbulanciaDetalle>>>
 
     // Consulta Médica, CIE-10 y Recetas Digitales
     @POST("citas/{id}/consulta")
@@ -222,5 +224,5 @@ interface ApiService {
     suspend fun getMisTurnos(): Response<ApiResponse<List<Map<String, Any>>>>
 
     @GET("publico/medicos-de-turno")
-    suspend fun getMedicosDeTurno(): Response<ApiResponse<List<Map<String, Any>>>>
+    suspend fun getMedicosDeTurno(): Response<ApiResponse<List<MedicoDeTurno>>>
 }

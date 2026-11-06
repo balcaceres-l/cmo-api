@@ -57,11 +57,13 @@ import com.cmo.hospital.features.recepcionista.admision.domain.usecase.Trasladar
 import com.cmo.hospital.features.recepcionista.admision.presentation.AdmisionViewModel
 import com.cmo.hospital.features.recepcionista.ambulancia.data.repository.AmbulanciaGuardiaRepositoryImpl
 import com.cmo.hospital.features.recepcionista.ambulancia.domain.repository.AmbulanciaGuardiaRepository
-import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.CambiarEstadoAmbulanciaUseCase
-import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.GetAmbulanciaFlowUseCase
-import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.GetPersonalGuardiaFiltradoUseCase
+import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.CargarPanelAmbulanciaUseCase
+import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.EnviarReporteAmbulanciaUseCase
+import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.FinalizarServicioAmbulanciaUseCase
+import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.ObservarAmbulanciaEnVivoUseCase
 import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.SolicitarDespachoAmbulanciaUseCase
 import com.cmo.hospital.features.recepcionista.ambulancia.presentation.AmbulanciaGuardiaViewModel
+import com.cmo.hospital.core.realtime.ReverbClient
 import com.cmo.hospital.features.recepcionista.citas.data.repository.CitaRepositoryImpl
 import com.cmo.hospital.features.recepcionista.citas.domain.repository.CitaRepository
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.AgendarCitaUseCase
@@ -109,7 +111,7 @@ class AppContainer(context: Context) {
         LaboratorioRecepcionRepositoryImpl(apiService)
     val admisionRepository: AdmisionRepository = AdmisionRepositoryImpl(clinicalDataSource)
     val ambulanciaRepository: AmbulanciaGuardiaRepository =
-        AmbulanciaGuardiaRepositoryImpl(clinicalDataSource)
+        AmbulanciaGuardiaRepositoryImpl(apiService, ReverbClient())
     val consultaRepository: ConsultaRepository = ConsultaRepositoryImpl(clinicalDataSource)
     val inicioDoctorRepository: InicioDoctorRepository = InicioDoctorRepositoryImpl(clinicalDataSource)
     val expedientesRepository: ExpedientesRepository = ExpedientesRepositoryImpl(clinicalDataSource)
@@ -169,10 +171,11 @@ class AppContainer(context: Context) {
 
     fun createAmbulanciaGuardiaViewModel(): AmbulanciaGuardiaViewModel =
         AmbulanciaGuardiaViewModel(
-            getAmbulanciaFlowUseCase = GetAmbulanciaFlowUseCase(ambulanciaRepository),
-            cambiarEstadoAmbulanciaUseCase = CambiarEstadoAmbulanciaUseCase(ambulanciaRepository),
+            cargarPanelAmbulanciaUseCase = CargarPanelAmbulanciaUseCase(ambulanciaRepository),
             solicitarDespachoAmbulanciaUseCase = SolicitarDespachoAmbulanciaUseCase(ambulanciaRepository),
-            getPersonalGuardiaFiltradoUseCase = GetPersonalGuardiaFiltradoUseCase(ambulanciaRepository)
+            finalizarServicioAmbulanciaUseCase = FinalizarServicioAmbulanciaUseCase(ambulanciaRepository),
+            enviarReporteAmbulanciaUseCase = EnviarReporteAmbulanciaUseCase(ambulanciaRepository),
+            observarAmbulanciaEnVivoUseCase = ObservarAmbulanciaEnVivoUseCase(ambulanciaRepository)
         )
 
     fun createInicioDoctorViewModel(): InicioDoctorViewModel =
