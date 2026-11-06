@@ -54,11 +54,11 @@ class VipBedsAdapter(
                     binding.tvVipBedCode.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_surface))
                     binding.dotVipBedStatus.backgroundTintList =
                         ColorStateList.valueOf(ContextCompat.getColor(ctx, R.color.huc_error))
-                    binding.tvVipBedState.text = "Ocupada"
+                    // Recepción ve el paciente; sin permiso solo "Ocupada".
+                    binding.tvVipBedState.text = cama.paciente?.nombreCompleto?.substringBefore(' ') ?: "Ocupada"
                     binding.tvVipBedState.setTextColor(ContextCompat.getColor(ctx, R.color.huc_error))
                     binding.ivVipBedCheck.visibility = View.GONE
-                    binding.vipBedCardRoot.isClickable = false
-                    binding.vipBedCardRoot.setOnClickListener(null)
+                    binding.vipBedCardRoot.setOnClickListener { onSelectBed(cama) }
                 }
                 isSelected -> {
                     binding.vipBedCardRoot.setBackgroundResource(R.drawable.bg_bed_vip_selected)

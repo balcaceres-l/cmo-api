@@ -82,11 +82,10 @@ class SemiPrivateRoomsAdapter(
                     container.alpha = 0.76f
                     dot.backgroundTintList =
                         ColorStateList.valueOf(ContextCompat.getColor(ctx, R.color.huc_error))
-                    label.text = "Cama $letra (Ocup.)"
+                    label.text = cama.paciente?.nombreCompleto?.substringBefore(' ')?.let { "$letra: $it" } ?: "Cama $letra (Ocup.)"
                     label.setTextColor(ContextCompat.getColor(ctx, R.color.huc_error))
                     check.visibility = View.GONE
-                    container.isClickable = false
-                    container.setOnClickListener(null)
+                    container.setOnClickListener { onSelectBed(cama) }
                 }
                 isSelected -> {
                     container.setBackgroundResource(R.drawable.bg_bed_semi_selected)

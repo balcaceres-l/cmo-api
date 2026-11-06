@@ -106,13 +106,20 @@ interface ApiService {
 
     @POST("ingresos")
     suspend fun ingresarPaciente(
-        @Body request: IngresoPacienteRequest
-    ): Response<ApiResponse<Map<String, Any>>>
+        @Body request: Map<String, Any?>
+    ): Response<ApiResponse<Map<String, Any?>>>
 
     @PATCH("ingresos/{id}/alta")
     suspend fun altaPaciente(
         @Path("id") id: String
-    ): Response<ApiResponse<Unit>>
+    ): Response<ApiResponse<Map<String, Any?>>>
+
+    /** Da de alta la cama actual y ocupa la de destino en una sola transacción. */
+    @PATCH("ingresos/{id}/trasladar")
+    suspend fun trasladarPaciente(
+        @Path("id") id: String,
+        @Body request: Map<String, Any?>
+    ): Response<ApiResponse<Map<String, Any?>>>
 
     // Ambulancia Única (Tiempo Real y Bitácora)
     @GET("ambulancia")

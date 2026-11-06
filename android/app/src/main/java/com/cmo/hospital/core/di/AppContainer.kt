@@ -47,10 +47,13 @@ import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.GetOrdenesLab
 import com.cmo.hospital.features.doctor.laboratorio.presentation.LaboratorioViewModel
 import com.cmo.hospital.features.recepcionista.admision.data.repository.AdmisionRepositoryImpl
 import com.cmo.hospital.features.recepcionista.admision.domain.repository.AdmisionRepository
-import com.cmo.hospital.features.recepcionista.admision.domain.usecase.GenerarBrazaleteQrUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.BuscarPacientesIngresoUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.CargarMedicosTratantesUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.DarAltaUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.IngresarPacienteUseCase
 import com.cmo.hospital.features.recepcionista.admision.domain.usecase.ObserveCapacidadCamasUseCase
-import com.cmo.hospital.features.recepcionista.admision.domain.usecase.RegistrarIngresoPacienteUseCase
-import com.cmo.hospital.features.recepcionista.admision.domain.usecase.SimularEscanerDocumentoUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.RefrescarCamasUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.TrasladarPacienteUseCase
 import com.cmo.hospital.features.recepcionista.admision.presentation.AdmisionViewModel
 import com.cmo.hospital.features.recepcionista.ambulancia.data.repository.AmbulanciaGuardiaRepositoryImpl
 import com.cmo.hospital.features.recepcionista.ambulancia.domain.repository.AmbulanciaGuardiaRepository
@@ -156,9 +159,12 @@ class AppContainer(context: Context) {
     fun createAdmisionViewModel(): AdmisionViewModel =
         AdmisionViewModel(
             observeCapacidadCamasUseCase = ObserveCapacidadCamasUseCase(admisionRepository),
-            simularEscanerDocumentoUseCase = SimularEscanerDocumentoUseCase(),
-            registrarIngresoPacienteUseCase = RegistrarIngresoPacienteUseCase(admisionRepository),
-            generarBrazaleteQrUseCase = GenerarBrazaleteQrUseCase()
+            refrescarCamasUseCase = RefrescarCamasUseCase(admisionRepository),
+            cargarMedicosTratantesUseCase = CargarMedicosTratantesUseCase(admisionRepository),
+            buscarPacientesIngresoUseCase = BuscarPacientesIngresoUseCase(admisionRepository),
+            ingresarPacienteUseCase = IngresarPacienteUseCase(admisionRepository),
+            darAltaUseCase = DarAltaUseCase(admisionRepository),
+            trasladarPacienteUseCase = TrasladarPacienteUseCase(admisionRepository)
         )
 
     fun createAmbulanciaGuardiaViewModel(): AmbulanciaGuardiaViewModel =

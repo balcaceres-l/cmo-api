@@ -27,7 +27,8 @@ import java.time.format.DateTimeFormatter
 class HospitalClinicalDataSource(
     private val apiService: ApiService? = null
 ) {
-    private val _camasState = MutableStateFlow(seedInitialCamas())
+    // Sin camas de ejemplo: el mapa se carga desde GET /habitaciones.
+    private val _camasState = MutableStateFlow<List<Cama>>(emptyList())
     val camasState: StateFlow<List<Cama>> = _camasState.asStateFlow()
 
     private val _citasState = MutableStateFlow(seedInitialCitas())
@@ -377,7 +378,7 @@ class HospitalClinicalDataSource(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Admisión, 17 Camas & Emergencia Directa
+    // Camas e ingresos hospitalarios (17 camas: 5 VIP en planta 3, 12 semiprivadas en planta 2)
     // ─────────────────────────────────────────────────────────────────────────
 
     fun construirCapacidadHospitalaria(): CapacidadHospitalaria {
@@ -406,109 +407,47 @@ class HospitalClinicalDataSource(
         )
     }
 
-    suspend fun registrarEIngresarPaciente(
-        paciente: Paciente,
-        signosVitales: SignosVitales?,
-        codigoCama: String?,
-        motivoIngreso: String,
-        esEmergenciaDirecta: Boolean
-    ): Result<Paciente> {
-        val expedienteGenerado = paciente.numeroExpediente
-            ?: Paciente.generarNumeroExpediente(paciente.nombreCompleto, 2026, (_expedientes.value.size + 5))
-        val pacienteConExp = paciente.copy(
-            id = paciente.id ?: ("p-" + System.currentTimeMillis().toString().takeLast(5)),
-            numeroExpediente = expedienteGenerado
+    /** Mapa de camas real: GET /habitaciones devuelve las habitaciones agrupadas por planta. */
+    suspend fun syncCamasFromRemote(): Result<List<Cama>> {
+        val api = apiService ?: return sinApi()
+        return llamarApi { api.getHabitaciones() }.map { plantas ->
+            val camas = plantas.flatten().flatMap { it.camas }.sortedBy { it.codigo }
+            _camasState.value = camas
+            camas
+        }
+    }
+
+    private suspend fun alCambiarCamas(resultado: Result<*>): Result<Unit> {
+        resultado.exceptionOrNull()?.let { return Result.failure(it) }
+        syncCamasFromRemote()
+        return Result.success(Unit)
+    }
+
+    suspend fun ingresarPaciente(
+        idPaciente: String,
+        cama: Cama,
+        idMedico: String,
+        motivo: String
+    ): Result<Unit> {
+        val api = apiService ?: return sinApi()
+        val cuerpo = mapOf(
+            "id_paciente" to idPaciente,
+            "tipo" to if (cama.esVip) "VIP" else "SEMIPRIVADA",
+            "id_cama" to cama.id,
+            "id_medico" to idMedico,
+            "motivo" to motivo
         )
+        return alCambiarCamas(llamarApi { api.ingresarPaciente(cuerpo) })
+    }
 
-        if (!codigoCama.isNullOrBlank()) {
-            val cama = _camasState.value.find { it.codigo == codigoCama }
-            if (cama == null || !cama.estaDisponible) {
-                return Result.failure(
-                    IllegalStateException("Sobrecupo bloqueado: La cama $codigoCama no está disponible.")
-                )
-            }
-            _camasState.value = _camasState.value.map {
-                if (it.codigo == codigoCama) {
-                    it.copy(
-                        estado = "OCUPADA",
-                        paciente = PacienteInfo(
-                            id = pacienteConExp.id,
-                            nombreCompleto = pacienteConExp.nombreCompleto,
-                            numeroExpediente = pacienteConExp.numeroExpediente,
-                            dui = pacienteConExp.dui,
-                            sexo = pacienteConExp.sexo,
-                            fechaNacimiento = pacienteConExp.fechaNacimiento,
-                            protegido = pacienteConExp.protegido
-                        )
-                    )
-                } else it
-            }
-        }
+    suspend fun darAlta(idIngreso: String): Result<Unit> {
+        val api = apiService ?: return sinApi()
+        return alCambiarCamas(llamarApi { api.altaPaciente(idIngreso) })
+    }
 
-        // Registrar o actualizar ficha en Expedientes Clínicos
-        val nuevoExp = ExpedienteDetalle(
-            paciente = pacienteConExp,
-            cama = when {
-                esEmergenciaDirecta -> "Box 03 (Urgencia Directa • ${pacienteConExp.nivelTriage.titulo})"
-                !codigoCama.isNullOrBlank() -> "Cama $codigoCama (${if (codigoCama.startsWith("VIP")) "Planta 3 VIP" else "Planta 2 Semiprivada"})"
-                else -> "Admisión Ambulatoria"
-            },
-            signosVitales = signosVitales ?: SignosVitales(),
-            alergiasCriticas = pacienteConExp.alergias?.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList(),
-            comorbilidades = listOf("Triage: ${pacienteConExp.nivelTriage.titulo}"),
-            atencionesPrevias = listOf(
-                AtencionHistorica(
-                    fecha = "Hoy",
-                    hora = obtenerHoraActual(),
-                    especialidad = if (esEmergenciaDirecta) "Urgencias Adultos" else "Admisión Hospitalaria",
-                    diagnostico = motivoIngreso,
-                    medico = "Dr. Alejandro Restrepo",
-                    notas = "Previsión: ${pacienteConExp.prevision ?: "Fonasa Tramo D"}"
-                )
-            )
-        )
-        _expedientes.value = listOf(nuevoExp) + _expedientes.value
-
-        if (esEmergenciaDirecta) {
-            val citaEmergencia = Cita(
-                id = "c-eme-" + System.currentTimeMillis().toString().takeLast(4),
-                fecha = LocalDate.now().toString(),
-                horaInicio = "Ahora",
-                horaFin = null,
-                estado = "EN_ATENCION",
-                motivo = "EMERGENCIA (${pacienteConExp.nivelTriage.titulo}): $motivoIngreso",
-                paciente = PacienteInfo(
-                    id = pacienteConExp.id,
-                    nombreCompleto = pacienteConExp.nombreCompleto,
-                    numeroExpediente = pacienteConExp.numeroExpediente,
-                    dui = pacienteConExp.dui,
-                    sexo = pacienteConExp.sexo,
-                    fechaNacimiento = pacienteConExp.fechaNacimiento,
-                    protegido = pacienteConExp.protegido
-                ),
-                consultorio = ConsultorioInfo("cs-box3", "Box Urgencias 03", "Box 03"),
-                signosVitales = signosVitales
-            )
-            _citasState.value = listOf(citaEmergencia) + _citasState.value
-            _turnoEnBox.value = citaEmergencia
-            iniciarConsultaDesdeCita(citaEmergencia, pacienteConExp)
-        }
-
-        try {
-            apiService?.registrarPaciente(
-                mapOf(
-                    "nombre_completo" to pacienteConExp.nombreCompleto,
-                    "dui" to pacienteConExp.dui,
-                    "fecha_nacimiento" to pacienteConExp.fechaNacimiento,
-                    "sexo" to pacienteConExp.sexo,
-                    "telefono" to pacienteConExp.telefono,
-                    "direccion" to pacienteConExp.direccion
-                )
-            )
-        } catch (_: Exception) {
-        }
-
-        return Result.success(pacienteConExp)
+    suspend fun trasladarPaciente(idIngreso: String, idCamaDestino: String): Result<Unit> {
+        val api = apiService ?: return sinApi()
+        return alCambiarCamas(llamarApi { api.trasladarPaciente(idIngreso, mapOf("id_cama" to idCamaDestino)) })
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -952,37 +891,6 @@ class HospitalClinicalDataSource(
     // ─────────────────────────────────────────────────────────────────────────
     // Datos Semilla Clínicos (17 camas estrictas, citas, consulta y LIS)
     // ─────────────────────────────────────────────────────────────────────────
-
-    private fun seedInitialCamas(): List<Cama> {
-        val vips = (301..305).map { num ->
-            val cod = "VIP-$num"
-            val ocupada = num != 302
-            Cama(
-                id = "cama-$cod",
-                codigo = cod,
-                estado = if (ocupada) "OCUPADA" else "DISPONIBLE",
-                paciente = if (ocupada) {
-                    PacienteInfo("p-$num", "Paciente VIP $num", "PV-2026-0$num", "0482910$num-1", "M")
-                } else null
-            )
-        }
-
-        val semis = (201..206).flatMap { num ->
-            listOf("A", "B").map { letra ->
-                val cod = "HAB-$num-$letra"
-                val ocupada = !(num == 202 && letra == "B") && !(num == 205 && letra == "A")
-                Cama(
-                    id = "cama-$cod",
-                    codigo = cod,
-                    estado = if (ocupada) "OCUPADA" else "DISPONIBLE",
-                    paciente = if (ocupada) {
-                        PacienteInfo("p-$num-$letra", "Paciente $cod", "PH-2026-$num", "023910$num-4", "F")
-                    } else null
-                )
-            }
-        }
-        return vips + semis
-    }
 
     private fun seedInitialCitas(): List<Cita> = listOf(
         Cita(

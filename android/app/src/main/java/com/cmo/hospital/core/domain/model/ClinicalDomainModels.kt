@@ -256,6 +256,8 @@ data class Cama(
     @SerializedName(value = "id", alternate = ["id_cama"]) val id: String = "",
     val codigo: String,
     val estado: String = "DISPONIBLE", // DISPONIBLE, OCUPADA
+    /** Ingreso activo (solo lo reciben recepción, admin y el médico tratante). */
+    @SerializedName("id_ingreso") val idIngreso: String? = null,
     val paciente: PacienteInfo? = null
 ) {
     val esVip: Boolean get() = codigo.startsWith("VIP-")
