@@ -2,6 +2,7 @@ package com.cmo.hospital
 
 import com.cmo.hospital.core.data.datasource.HospitalClinicalDataSource
 import com.cmo.hospital.core.domain.model.*
+import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.features.doctor.inicio.data.repository.InicioDoctorRepositoryImpl
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.ConstruirPacientesMedicoUseCase
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.IniciarORetomarConsultaMedicoUseCase
@@ -10,6 +11,8 @@ import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.EmitirOrdenLa
 import com.cmo.hospital.features.recepcionista.admision.data.repository.AdmisionRepositoryImpl
 import com.cmo.hospital.features.recepcionista.admision.domain.usecase.GenerarBrazaleteQrUseCase
 import com.cmo.hospital.features.recepcionista.admision.domain.usecase.RegistrarIngresoPacienteUseCase
+import com.cmo.hospital.features.recepcionista.citas.data.repository.CitaRepositoryImpl
+import com.cmo.hospital.features.recepcionista.citas.domain.usecase.AgendarCitaCascadaUseCase
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
@@ -333,5 +336,104 @@ class HospitalBusinessLogicTest {
         val resInicio = iniciarUseCase("c-102")
         assertTrue(resInicio.isFailure)
         assertTrue(dataSource.consultaActiva.value.finalizada)
+    }
+
+    @Test
+    fun testDateUtilsConversionFormats() {
+        assertEquals("2026-10-29", DateUtils.toIsoDate("29/10/2026"))
+        assertEquals("2026-05-04", DateUtils.toIsoDate("04/05/2026"))
+        assertEquals("2026-10-29", DateUtils.toIsoDate("2026-10-29"))
+
+        assertEquals("29/10/2026", DateUtils.toUiDate("2026-10-29"))
+        assertEquals("04/05/2026", DateUtils.toUiDate("2026-05-04"))
+        assertEquals("29/10/2026", DateUtils.toUiDate("29/10/2026"))
+    }
+
+    @Test
+    fun testFiltrosCitasPorEstadoYDoctor() {
+        val lista = listOf(
+            Cita(
+                id = "c-1",
+                fecha = "2026-10-29",
+                horaInicio = "09:00",
+                horaFin = "09:30",
+                estado = "AGENDADA",
+                medicoNombre = "Dr. Alejandro Restrepo"
+            ),
+            Cita(
+                id = "c-2",
+                fecha = "2026-10-29",
+                horaInicio = "10:00",
+                horaFin = "10:30",
+                estado = "EN_ESPERA",
+                medicoNombre = "Dra. Sofía Mendoza"
+            ),
+            Cita(
+                id = "c-3",
+                fecha = "2026-10-29",
+                horaInicio = "11:00",
+                horaFin = "11:30",
+                estado = "EN_ATENCION",
+                medicoNombre = "Dr. Alejandro Restrepo"
+            ),
+            Cita(
+                id = "c-4",
+                fecha = "2026-10-29",
+                horaInicio = "14:00",
+                horaFin = "14:30",
+                estado = "CANCELADA",
+                medicoNombre = "Dr. Alejandro Restrepo"
+            )
+        )
+
+        // Filtro por estado: Pendientes -> AGENDADA
+        val pendientes = lista.filter {
+            it.estado.equals("AGENDADA", ignoreCase = true) || it.estado.equals("PENDIENTE", ignoreCase = true)
+        }
+        assertEquals(1, pendientes.size)
+        assertEquals("c-1", pendientes.first().id)
+
+        // Filtro por doctor: "Sofía"
+        val sofiaCitas = lista.filter {
+            it.medicoNombre?.contains("Sofía", ignoreCase = true) == true
+        }
+        assertEquals(1, sofiaCitas.size)
+        assertEquals("c-2", sofiaCitas.first().id)
+
+        // Filtro combinado: Dr. Alejandro + EN_ATENCION
+        val enAtencionAlejandro = lista.filter {
+            it.estado.equals("EN_ATENCION", ignoreCase = true) &&
+                (it.medicoNombre?.contains("Alejandro", ignoreCase = true) == true)
+        }
+        assertEquals(1, enAtencionAlejandro.size)
+        assertEquals("c-3", enAtencionAlejandro.first().id)
+    }
+
+    @Test
+    fun testAgendarCitaSinConsultorio() = runTest {
+        val dataSource = HospitalClinicalDataSource(apiService = null)
+        val citaRepo = CitaRepositoryImpl(dataSource)
+        val agendarUseCase = AgendarCitaCascadaUseCase(citaRepo)
+
+        val res = agendarUseCase(
+            especialidad = "Cardiología",
+            medicoNombre = "Dra. Camila Morales",
+            pacienteNombre = "Roberto Gómez",
+            dui = "09876543-2",
+            fechaNacimiento = "1985-06-15",
+            fecha = "2026-11-15",
+            horaInicio = "10:00",
+            motivo = "Evaluación cardiovascular"
+        )
+
+        assertTrue(res.isSuccess)
+        val cita = res.getOrThrow()
+        assertNull("El consultorio no debe guardarse en la app móvil al agendar", cita.consultorio)
+        assertEquals("Dra. Camila Morales", cita.medicoNombre)
+        assertEquals("Cardiología", cita.especialidad)
+        assertEquals("Roberto Gómez", cita.paciente?.nombreCompleto)
+        assertEquals("AGENDADA", cita.estado)
+        assertEquals("10:00", cita.horaInicio)
+        assertEquals("10:30", cita.horaFin)
     }
 }
