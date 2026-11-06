@@ -47,4 +47,28 @@ class HabitacionesTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors('id_medico');
         $this->postJson('/api/v1/ingresos', $datos)->assertCreated();
     }
+
+    public function test_mapa_de_camas_incluye_ids_para_operar_desde_las_apps(): void
+    {
+        $this->seed(HabitacionSeeder::class);
+        $medico = User::factory()->create(['rol' => 'MEDICO']);
+        $p = Paciente::create(['numero_expediente' => 'EXP-2026-999993', 'nombre_completo' => 'P', 'fecha_nacimiento' => '2000-01-01', 'sexo' => 'F', 'fecha_registro' => now()]);
+        HistorialClinico::create(['id_paciente' => $p->id_paciente]);
+        $vip = Cama::where('codigo', 'VIP-301')->first();
+        $ingreso = app(AsignacionCamaService::class)->asignar($p, 'VIP', $vip->id_cama, $medico, 'Prueba', $medico);
+
+        Sanctum::actingAs(User::factory()->create(['rol' => 'RECEPCIONISTA']));
+        $cama = collect($this->getJson('/api/v1/habitaciones')->assertOk()->json('data'))->flatten(1)
+            ->flatMap(fn ($h) => $h['camas'])->firstWhere('codigo', 'VIP-301');
+        $this->assertSame($vip->id_cama, $cama['id_cama']);
+        $this->assertSame($ingreso->id_ingreso, $cama['id_ingreso']);
+
+        // Un médico que no es el tratante ve la cama ocupada, pero no el ingreso ni el paciente.
+        Sanctum::actingAs(User::factory()->create(['rol' => 'MEDICO']));
+        $cama = collect($this->getJson('/api/v1/habitaciones')->json('data'))->flatten(1)
+            ->flatMap(fn ($h) => $h['camas'])->firstWhere('codigo', 'VIP-301');
+        $this->assertSame('OCUPADA', $cama['estado']);
+        $this->assertNull($cama['id_ingreso']);
+        $this->assertNull($cama['paciente']);
+    }
 }
