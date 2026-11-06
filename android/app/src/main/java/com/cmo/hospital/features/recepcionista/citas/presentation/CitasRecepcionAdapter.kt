@@ -51,7 +51,6 @@ class CitasRecepcionAdapter(
                 else cita.horaInicio
             }
             binding.tvItemCitaHorario.text = horario
-            binding.tvItemCitaBox.text = cita.consultorio?.codigo ?: "Box 03"
             binding.tvItemCitaPaciente.text = cita.paciente?.nombreCompleto ?: "Paciente"
             binding.tvItemCitaMedicoYExp.text =
                 "Exp: ${cita.paciente?.numeroExpediente ?: "N/D"} • ${cita.medicoNombre ?: "Médico"} (${cita.especialidad ?: "Consulta"})"

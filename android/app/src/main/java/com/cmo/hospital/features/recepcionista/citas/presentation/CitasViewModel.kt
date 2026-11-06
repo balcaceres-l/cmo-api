@@ -6,8 +6,11 @@ import com.cmo.hospital.core.domain.model.Cita
 import com.cmo.hospital.core.domain.model.SignosVitales
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class CitasUiEvent(
@@ -30,6 +33,37 @@ class CitasViewModel(
     val citas: StateFlow<List<Cita>> = getCitasFlowUseCase()
     val turnoEnBox: StateFlow<Cita?> = getTurnoEnBoxFlowUseCase()
 
+    private val _filtroEstado = MutableStateFlow("Todas")
+    val filtroEstado: StateFlow<String> = _filtroEstado.asStateFlow()
+
+    private val _filtroDoctor = MutableStateFlow("Todos los Médicos")
+    val filtroDoctor: StateFlow<String> = _filtroDoctor.asStateFlow()
+
+    val citasFiltradas: StateFlow<List<Cita>> = combine(
+        citas,
+        _filtroEstado,
+        _filtroDoctor
+    ) { lista, estado, doctor ->
+        lista.filter { cita ->
+            val matchEstado = when (estado) {
+                "Todas" -> true
+                "Pendientes" -> cita.estado.equals("AGENDADA", ignoreCase = true) || cita.estado.equals("PENDIENTE", ignoreCase = true)
+                "En Espera" -> cita.estado.equals("EN_ESPERA", ignoreCase = true) || cita.estado.equals("CONFIRMADA", ignoreCase = true)
+                "En Atención" -> cita.estado.equals("EN_ATENCION", ignoreCase = true)
+                "Atendidas" -> cita.estado.equals("ATENDIDA", ignoreCase = true) || cita.estado.equals("FINALIZADA", ignoreCase = true)
+                "Canceladas" -> cita.estado.equals("CANCELADA", ignoreCase = true)
+                else -> true
+            }
+            val matchDoctor = if (doctor == "Todos los Médicos" || doctor.isBlank()) {
+                true
+            } else {
+                (cita.medicoNombre?.contains(doctor, ignoreCase = true) == true) ||
+                    (cita.medico?.nombreCompleto?.contains(doctor, ignoreCase = true) == true)
+            }
+            matchEstado && matchDoctor
+        }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
     private val _uiEvent = MutableStateFlow<CitasUiEvent?>(null)
     val uiEvent: StateFlow<CitasUiEvent?> = _uiEvent.asStateFlow()
 
@@ -37,6 +71,14 @@ class CitasViewModel(
         viewModelScope.launch {
             refreshCitasUseCase()
         }
+    }
+
+    fun setFiltroEstado(estado: String) {
+        _filtroEstado.value = estado
+    }
+
+    fun setFiltroDoctor(doctor: String) {
+        _filtroDoctor.value = doctor
     }
 
     fun agendarCita(
@@ -48,7 +90,6 @@ class CitasViewModel(
         fecha: String,
         horaInicio: String,
         motivo: String,
-        box: String,
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
@@ -60,8 +101,7 @@ class CitasViewModel(
                 fechaNacimiento = fechaNacimiento,
                 fecha = fecha,
                 horaInicio = horaInicio,
-                motivo = motivo,
-                box = box
+                motivo = motivo
             )
             res.fold(
                 onSuccess = { cita ->

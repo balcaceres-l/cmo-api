@@ -22,8 +22,7 @@ class CitaRepositoryImpl(
         fechaNacimiento: String?,
         fecha: String,
         horaInicio: String,
-        motivo: String,
-        box: String
+        motivo: String
     ): Result<Cita> {
         if (Cita.hayConflictoHorario(citasFlow.value, medicoNombre, fecha, horaInicio)) {
             return Result.failure(
@@ -54,11 +53,7 @@ class CitaRepositoryImpl(
                 sexo = "M",
                 fechaNacimiento = fechaNacimiento
             ),
-            consultorio = ConsultorioInfo(
-                id = "cs-1",
-                nombre = "$especialidad ($box)",
-                codigo = box
-            )
+            consultorio = null
         )
         dataSource.agendarCitaRemotaOLocal(nuevaCita)
         return Result.success(nuevaCita)

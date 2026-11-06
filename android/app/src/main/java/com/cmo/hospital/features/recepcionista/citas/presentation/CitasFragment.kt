@@ -15,10 +15,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cmo.hospital.CmoApplication
 import com.cmo.hospital.R
-import com.cmo.hospital.components.HucMicroBannerBinder
 import com.cmo.hospital.core.domain.model.CatalogoClinico
 import com.cmo.hospital.core.domain.model.Cita
-import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.core.ui.simpleViewModelFactory
 import com.cmo.hospital.databinding.FragmentRecepCitasBinding
@@ -44,6 +42,8 @@ class CitasFragment : Fragment() {
         CatalogoClinico.CATALOGO_ESPECIALIDADES[especialidadSeleccionada]?.first().orEmpty()
     private var horaSeleccionada = "09:30"
 
+    private val estadosFiltro = listOf("Todas", "Pendientes", "En Espera", "En Atención", "Atendidas", "Canceladas")
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -57,6 +57,7 @@ class CitasFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupRecyclerView()
+        setupFiltros()
         setupFormularioCascada()
         observeState()
     }
@@ -76,6 +77,46 @@ class CitasFragment : Fragment() {
         )
         binding.rvCitasRecepcion.layoutManager = LinearLayoutManager(requireContext())
         binding.rvCitasRecepcion.adapter = citasAdapter
+    }
+
+    private fun setupFiltros() {
+        // 1. Chips de filtro por estado
+        binding.chipGroupFiltroEstadoCitas.isSingleSelection = true
+        binding.chipGroupFiltroEstadoCitas.removeAllViews()
+        estadosFiltro.forEachIndexed { index, estado ->
+            val chip = Chip(requireContext()).apply {
+                text = estado
+                isCheckable = true
+                isChecked = (index == 0)
+                textSize = 12f
+                id = View.generateViewId()
+                setOnClickListener {
+                    viewModel.setFiltroEstado(estado)
+                }
+            }
+            binding.chipGroupFiltroEstadoCitas.addView(chip)
+        }
+
+        // 2. Dropdown de filtro por doctor
+        actualizarDropdownFiltroDoctores(emptyList())
+        binding.actvFiltroDoctor.setOnItemClickListener { _, _, position, _ ->
+            val seleccion = binding.actvFiltroDoctor.adapter?.getItem(position)?.toString().orEmpty()
+            viewModel.setFiltroDoctor(seleccion)
+        }
+        binding.actvFiltroDoctor.doAfterTextChanged { text ->
+            val doc = text?.toString().orEmpty().trim()
+            viewModel.setFiltroDoctor(doc)
+        }
+    }
+
+    private fun actualizarDropdownFiltroDoctores(citas: List<Cita>) {
+        val doctoresCitas = citas.mapNotNull { it.medicoNombre?.ifBlank { null } }
+        val doctoresCatalogo = CatalogoClinico.CATALOGO_ESPECIALIDADES.values.flatten()
+        val todosDoctores = listOf("Todos los Médicos") + (doctoresCitas + doctoresCatalogo).distinct().sorted()
+        binding.actvFiltroDoctor.setSimpleItems(todosDoctores.toTypedArray())
+        if (binding.actvFiltroDoctor.text.isNullOrBlank()) {
+            binding.actvFiltroDoctor.setText("Todos los Médicos", false)
+        }
     }
 
     private fun setupFormularioCascada() {
@@ -98,6 +139,19 @@ class CitasFragment : Fragment() {
         }
 
         poblarMedicosDeEspecialidad(especialidadSeleccionada)
+
+        binding.actvCitaMedico.setOnItemClickListener { _, _, position, _ ->
+            val doctores = CatalogoClinico.CATALOGO_ESPECIALIDADES[especialidadSeleccionada].orEmpty()
+            medicoSeleccionado = doctores.getOrNull(position) ?: binding.actvCitaMedico.text?.toString().orEmpty()
+            actualizarChipsBloques30m()
+        }
+        binding.actvCitaMedico.doAfterTextChanged { text ->
+            val current = text?.toString().orEmpty().trim()
+            if (current.isNotEmpty() && current != medicoSeleccionado) {
+                medicoSeleccionado = current
+                actualizarChipsBloques30m()
+            }
+        }
 
         if (binding.etCitaFecha.text.isNullOrBlank()) {
             binding.etCitaFecha.setText(DateUtils.todayUi())
@@ -130,7 +184,6 @@ class CitasFragment : Fragment() {
                 fecha = fechaCitaIso,
                 horaInicio = horaSeleccionada,
                 motivo = binding.etCitaMotivo.text?.toString().orEmpty(),
-                box = binding.etCitaBox.text?.toString().orEmpty(),
                 onSuccess = {
                     binding.etCitaPacienteNombre.text?.clear()
                     binding.etCitaDui.text?.clear()
@@ -148,15 +201,8 @@ class CitasFragment : Fragment() {
     private fun poblarMedicosDeEspecialidad(especialidad: String) {
         val doctores = CatalogoClinico.CATALOGO_ESPECIALIDADES[especialidad].orEmpty()
         medicoSeleccionado = doctores.firstOrNull().orEmpty()
-        binding.chipGroupMedicos.removeAllViews()
-        doctores.forEachIndexed { index, doc ->
-            val chip = createSelectableChip(doc, index == 0)
-            chip.setOnClickListener {
-                medicoSeleccionado = doc
-                actualizarChipsBloques30m()
-            }
-            binding.chipGroupMedicos.addView(chip)
-        }
+        binding.actvCitaMedico.setSimpleItems(doctores.toTypedArray())
+        binding.actvCitaMedico.setText(medicoSeleccionado, false)
     }
 
     private fun actualizarChipsBloques30m() {
@@ -260,9 +306,16 @@ class CitasFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    viewModel.citas.collect { lista ->
-                        citasAdapter.submitList(lista)
-                        binding.tvCitasTotalBadge.text = "${lista.size} citas"
+                    viewModel.citasFiltradas.collect { listaFiltrada ->
+                        citasAdapter.submitList(listaFiltrada)
+                        binding.tvCitasTotalBadge.text = "${listaFiltrada.size} citas"
+                        binding.tvCitasEmpty.visibility = if (listaFiltrada.isEmpty()) View.VISIBLE else View.GONE
+                    }
+                }
+
+                launch {
+                    viewModel.citas.collect { listaTotal ->
+                        actualizarDropdownFiltroDoctores(listaTotal)
                         actualizarChipsBloques30m()
                     }
                 }

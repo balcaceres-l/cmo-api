@@ -26,8 +26,7 @@ class AgendarCitaCascadaUseCase(private val repository: CitaRepository) {
         fechaNacimiento: String?,
         fecha: String,
         horaInicio: String,
-        motivo: String,
-        box: String
+        motivo: String
     ): Result<Cita> {
         if (pacienteNombre.isBlank()) {
             return Result.failure(IllegalArgumentException("Ingrese el nombre completo del paciente."))
@@ -50,8 +49,7 @@ class AgendarCitaCascadaUseCase(private val repository: CitaRepository) {
             fechaNacimiento = fechaNacimiento?.trim()?.ifBlank { null },
             fecha = fecha.trim(),
             horaInicio = horaInicio,
-            motivo = motivo.trim(),
-            box = box.trim().ifBlank { "Box 03" }
+            motivo = motivo.trim()
         )
     }
 }

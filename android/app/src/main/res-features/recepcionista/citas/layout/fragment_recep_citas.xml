@@ -109,24 +109,25 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:text="2. Médico Asignado"
+                    android:text="2. Médico Asignado *"
                     android:textAppearance="@style/TextAppearance.Huc.LabelMd"
                     android:textColor="@color/huc_on_surface_variant" />
 
-                <HorizontalScrollView
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilCitaMedico"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:scrollbars="none">
+                    android:hint="Seleccione o busque médico"
+                    app:startIconDrawable="@drawable/ic_person">
 
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/chipGroupMedicos"
-                        android:layout_width="wrap_content"
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                        android:id="@+id/actvCitaMedico"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        app:selectionRequired="true"
-                        app:singleLine="true"
-                        app:singleSelection="true" />
-                </HorizontalScrollView>
+                        android:inputType="text" />
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.Huc.TextInputLayout"
@@ -179,43 +180,21 @@
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <LinearLayout
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Huc.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:orientation="horizontal">
+                    android:hint="Fecha de la Cita * (DD/MM/AAAA)"
+                    app:endIconMode="custom"
+                    app:endIconDrawable="@drawable/ic_event">
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="0dp"
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etCitaFecha"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginEnd="4dp"
-                        android:layout_weight="1"
-                        android:hint="Fecha Cita (DD/MM/AAAA)">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etCitaFecha"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="date" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:layout_weight="1"
-                        android:hint="Consultorio / Box">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etCitaBox"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="text"
-                            android:text="Box 03" />
-                    </com.google.android.material.textfield.TextInputLayout>
-                </LinearLayout>
+                        android:inputType="date" />
+                </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -336,6 +315,53 @@
                 android:textStyle="bold"
                 tools:text="4 citas" />
         </LinearLayout>
+
+        <!-- Filtros de la Agenda: Estado y Doctor -->
+        <HorizontalScrollView
+            android:id="@+id/scrollFiltrosEstadoCitas"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:scrollbars="none">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupFiltroEstadoCitas"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:selectionRequired="true"
+                app:singleLine="true"
+                app:singleSelection="true" />
+        </HorizontalScrollView>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilFiltroDoctor"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Filtrar por Médico Asignado"
+            app:startIconDrawable="@drawable/ic_search">
+
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/actvFiltroDoctor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                android:text="Todos los Médicos" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:id="@+id/tvCitasEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_surface_low_16"
+            android:gravity="center"
+            android:padding="20dp"
+            android:text="No se encontraron citas con los filtros seleccionados."
+            android:textAppearance="@style/TextAppearance.Huc.BodySm"
+            android:textColor="@color/huc_on_surface_variant"
+            android:visibility="gone" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvCitasRecepcion"

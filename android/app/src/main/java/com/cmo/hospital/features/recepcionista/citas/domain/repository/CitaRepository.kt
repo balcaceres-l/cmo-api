@@ -18,8 +18,7 @@ interface CitaRepository {
         fechaNacimiento: String?,
         fecha: String,
         horaInicio: String,
-        motivo: String,
-        box: String
+        motivo: String
     ): Result<Cita>
 
     suspend fun marcarLlegada(citaId: String)
