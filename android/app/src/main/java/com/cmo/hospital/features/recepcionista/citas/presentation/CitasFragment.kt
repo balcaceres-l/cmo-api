@@ -19,6 +19,7 @@ import com.cmo.hospital.components.HucMicroBannerBinder
 import com.cmo.hospital.core.domain.model.CatalogoClinico
 import com.cmo.hospital.core.domain.model.Cita
 import com.cmo.hospital.core.domain.model.Paciente
+import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.core.ui.simpleViewModelFactory
 import com.cmo.hospital.databinding.FragmentRecepCitasBinding
 import com.cmo.hospital.features.recepcionista.shell.presentation.RecepcionistaToastHost
@@ -111,17 +112,35 @@ class CitasFragment : Fragment() {
 
         poblarMedicosDeEspecialidad(especialidadSeleccionada)
 
+        if (binding.etCitaFecha.text.isNullOrBlank()) {
+            binding.etCitaFecha.setText(DateUtils.todayUi())
+        }
+        binding.etCitaFecha.setOnClickListener {
+            DateUtils.showDatePicker(this, binding.etCitaFecha.text?.toString()) { seleccionada ->
+                binding.etCitaFecha.setText(seleccionada)
+            }
+        }
+        binding.etCitaFechaNac.setOnClickListener {
+            DateUtils.showDatePicker(this, binding.etCitaFechaNac.text?.toString(), title = "Fecha de Nacimiento") { seleccionada ->
+                binding.etCitaFechaNac.setText(seleccionada)
+            }
+        }
         binding.etCitaFecha.doAfterTextChanged { actualizarChipsBloques30m() }
         actualizarChipsBloques30m()
 
         binding.btnConfirmarAgendarCita.setOnClickListener {
+            val fechaNacUi = binding.etCitaFechaNac.text?.toString()?.trim()
+            val fechaNacIso = if (!fechaNacUi.isNullOrBlank()) DateUtils.toIsoDate(fechaNacUi) else null
+            val fechaCitaUi = binding.etCitaFecha.text?.toString().orEmpty()
+            val fechaCitaIso = DateUtils.toIsoDate(fechaCitaUi)
+
             viewModel.agendarCita(
                 especialidad = especialidadSeleccionada,
                 medicoNombre = medicoSeleccionado,
                 pacienteNombre = binding.etCitaPacienteNombre.text?.toString().orEmpty(),
                 dui = binding.etCitaDui.text?.toString().orEmpty(),
-                fechaNacimiento = binding.etCitaFechaNac.text?.toString(),
-                fecha = binding.etCitaFecha.text?.toString().orEmpty(),
+                fechaNacimiento = fechaNacIso,
+                fecha = fechaCitaIso,
                 horaInicio = horaSeleccionada,
                 motivo = binding.etCitaMotivo.text?.toString().orEmpty(),
                 box = binding.etCitaBox.text?.toString().orEmpty(),
@@ -130,6 +149,7 @@ class CitasFragment : Fragment() {
                     binding.etCitaDui.text?.clear()
                     binding.etCitaFechaNac.text?.clear()
                     binding.etCitaMotivo.text?.clear()
+                    binding.etCitaFecha.setText(DateUtils.todayUi())
                     formAbierto = false
                     binding.containerFormAgendar.visibility = View.GONE
                     binding.tvToggleAgendarLabel.text = "+ Abrir"

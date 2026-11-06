@@ -36,8 +36,9 @@ class CitasMedicoAdapter(
             val fin = cita.horaFin ?: Cita.calcularFin30Minutos(cita.horaInicio)
             binding.tvCitaDocHorario.text =
                 if (cita.horaInicio == "Ahora") "URGENCIA • Ahora" else "${cita.horaInicio} - $fin"
+            val fechaUi = com.cmo.hospital.core.ui.DateUtils.toUiDate(cita.fecha)
             binding.tvCitaDocFechaBox.text =
-                "${cita.fecha} • ${cita.consultorio?.codigo ?: "Box 03"}"
+                "$fechaUi • ${cita.consultorio?.codigo ?: "Box 03"}"
 
             val pac = cita.paciente
             val nombre = pac?.nombreCompleto ?: "Paciente HUC"

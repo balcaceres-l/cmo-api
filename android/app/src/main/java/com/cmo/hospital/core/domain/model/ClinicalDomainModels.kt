@@ -236,9 +236,11 @@ data class Cita(
             horaInicio: String,
             citaIdExcluir: String? = null
         ): Boolean {
+            val fechaIso = com.cmo.hospital.core.ui.DateUtils.toIsoDate(fecha)
             return citasExistentes.any { cita ->
                 if (cita.id == citaIdExcluir || cita.estado == "CANCELADA") return@any false
-                val coincideFecha = cita.fecha == fecha
+                val coincideFecha = cita.fecha == fecha ||
+                    com.cmo.hospital.core.ui.DateUtils.toIsoDate(cita.fecha) == fechaIso
                 val coincideHora = cita.horaInicio == horaInicio
                 val coincideMedico = medicoNombre.isNullOrBlank() ||
                     cita.medicoNombre.isNullOrBlank() ||

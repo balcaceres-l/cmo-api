@@ -8,6 +8,7 @@ import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.DialogFragment
 import com.cmo.hospital.R
 import com.cmo.hospital.core.domain.model.Paciente
+import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.databinding.DialogPacienteFormBinding
 import com.cmo.hospital.features.recepcionista.pacientes.domain.repository.PacienteForm
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -39,7 +40,7 @@ class PacienteFormDialogFragment(
 
         paciente?.let { p ->
             binding.etPacFormNombre.setText(p.nombreCompleto)
-            binding.etPacFormNacimiento.setText(p.fechaNacimiento.orEmpty())
+            binding.etPacFormNacimiento.setText(DateUtils.toUiDate(p.fechaNacimiento))
             binding.etPacFormDui.setText(p.dui.orEmpty())
             binding.etPacFormTelefono.setText(p.telefono.orEmpty())
             binding.etPacFormDireccion.setText(p.direccion.orEmpty())
@@ -77,10 +78,11 @@ class PacienteFormDialogFragment(
         }
 
         binding.etPacFormNacimiento.setOnClickListener {
-            val actual = runCatching { LocalDate.parse(binding.etPacFormNacimiento.text.toString()) }
+            val isoActual = DateUtils.toIsoDate(binding.etPacFormNacimiento.text?.toString())
+            val actual = runCatching { LocalDate.parse(isoActual) }
                 .getOrDefault(LocalDate.now().minusYears(30))
             DatePickerDialog(requireContext(), { _, y, m, d ->
-                binding.etPacFormNacimiento.setText(LocalDate.of(y, m + 1, d).toString())
+                binding.etPacFormNacimiento.setText(DateUtils.toUiDate(LocalDate.of(y, m + 1, d).toString()))
             }, actual.year, actual.monthValue - 1, actual.dayOfMonth).apply {
                 datePicker.maxDate = System.currentTimeMillis()
             }.show()
@@ -90,7 +92,7 @@ class PacienteFormDialogFragment(
             limpiarErrores()
             val form = PacienteForm(
                 nombreCompleto = binding.etPacFormNombre.text?.toString().orEmpty(),
-                fechaNacimiento = binding.etPacFormNacimiento.text?.toString().orEmpty(),
+                fechaNacimiento = DateUtils.toIsoDate(binding.etPacFormNacimiento.text?.toString().orEmpty()),
                 sexo = if (binding.toggleSexo.checkedButtonId == R.id.btnSexoM) "M" else "F",
                 dui = binding.etPacFormDui.text?.toString(),
                 telefono = binding.etPacFormTelefono.text?.toString(),

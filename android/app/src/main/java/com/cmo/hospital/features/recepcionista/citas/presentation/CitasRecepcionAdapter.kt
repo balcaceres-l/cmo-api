@@ -42,10 +42,13 @@ class CitasRecepcionAdapter(
 
         fun bind(cita: Cita) {
             val ctx = binding.root.context
+            val fechaUi = com.cmo.hospital.core.ui.DateUtils.toUiDate(cita.fecha)
             val horario = if (!cita.horaFin.isNullOrBlank()) {
-                "${cita.horaInicio} - ${cita.horaFin}"
+                if (fechaUi.isNotBlank()) "$fechaUi • ${cita.horaInicio} - ${cita.horaFin}"
+                else "${cita.horaInicio} - ${cita.horaFin}"
             } else {
-                cita.horaInicio
+                if (fechaUi.isNotBlank()) "$fechaUi • ${cita.horaInicio}"
+                else cita.horaInicio
             }
             binding.tvItemCitaHorario.text = horario
             binding.tvItemCitaBox.text = cita.consultorio?.codigo ?: "Box 03"

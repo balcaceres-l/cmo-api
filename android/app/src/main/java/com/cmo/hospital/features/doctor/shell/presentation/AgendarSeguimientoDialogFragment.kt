@@ -10,6 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import com.cmo.hospital.CmoApplication
 import com.cmo.hospital.core.domain.model.Cita
 import com.cmo.hospital.core.domain.model.Paciente
+import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.databinding.DialogAgendarSeguimientoBinding
 import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -35,9 +36,16 @@ class AgendarSeguimientoDialogFragment : DialogFragment() {
             .map { it.paciente }
             .distinctBy { it.numeroExpediente ?: it.nombreCompleto }
 
-        val fechaDefault = LocalDate.now().plusDays(7).toString()
-        binding.etSegFecha.setText(fechaDefault)
+        val fechaDefaultIso = LocalDate.now().plusDays(7).toString()
+        val fechaDefaultUi = DateUtils.toUiDate(fechaDefaultIso)
+        binding.etSegFecha.setText(fechaDefaultUi)
         binding.tvSegMedicoInfo.text = "$medicoNombre • $especialidad (Bloques 30m)"
+
+        binding.etSegFecha.setOnClickListener {
+            DateUtils.showDatePicker(this, binding.etSegFecha.text?.toString()) { seleccionada ->
+                binding.etSegFecha.setText(seleccionada)
+            }
+        }
 
         pacienteSeleccionado = pacientePreseleccionado ?: pacientes.firstOrNull()
         pacientes.forEach { pac ->
@@ -82,7 +90,7 @@ class AgendarSeguimientoDialogFragment : DialogFragment() {
             }
         }
 
-        renderizarBloques(fechaDefault)
+        renderizarBloques(fechaDefaultUi)
         binding.etSegFecha.doAfterTextChanged { editable ->
             renderizarBloques(editable?.toString().orEmpty())
         }
@@ -95,7 +103,8 @@ class AgendarSeguimientoDialogFragment : DialogFragment() {
                 binding.tvSegErrorInline.visibility = View.VISIBLE
                 return@setOnClickListener
             }
-            val fecha = binding.etSegFecha.text?.toString()?.trim().orEmpty()
+            val fechaUi = binding.etSegFecha.text?.toString()?.trim().orEmpty()
+            val fecha = DateUtils.toIsoDate(fechaUi)
             val hora = horaSeleccionada.orEmpty()
             val motivo = binding.etSegMotivo.text?.toString()?.trim().orEmpty()
 

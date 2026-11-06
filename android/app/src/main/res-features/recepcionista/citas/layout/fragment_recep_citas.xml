@@ -286,7 +286,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="4dp"
                         android:layout_weight="1"
-                        android:hint="Fecha Nac. (AAAA-MM-DD)">
+                        android:hint="Fecha Nac. (DD/MM/AAAA)">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etCitaFechaNac"
@@ -308,14 +308,13 @@
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="4dp"
                         android:layout_weight="1"
-                        android:hint="Fecha Cita (AAAA-MM-DD)">
+                        android:hint="Fecha Cita (DD/MM/AAAA)">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etCitaFecha"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="date"
-                            android:text="2026-10-29" />
+                            android:inputType="date" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
