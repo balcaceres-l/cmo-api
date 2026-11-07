@@ -13,6 +13,7 @@ import com.cmo.hospital.features.recepcionista.admision.domain.usecase.GenerarBr
 import com.cmo.hospital.features.recepcionista.admision.domain.usecase.RegistrarIngresoPacienteUseCase
 import com.cmo.hospital.features.recepcionista.citas.data.repository.CitaRepositoryImpl
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.AgendarCitaCascadaUseCase
+import com.cmo.hospital.features.recepcionista.pacientes.presentation.DuiTextWatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
@@ -435,5 +436,142 @@ class HospitalBusinessLogicTest {
         assertEquals("AGENDADA", cita.estado)
         assertEquals("10:00", cita.horaInicio)
         assertEquals("10:30", cita.horaFin)
+    }
+
+    @Test
+    fun testDuiElSalvadorFormatoYValidacion() {
+        val duiRegex = Regex("""^\d{8}-\d$""")
+        val duiValido = "04829102-1"
+        val duiInvalido1 = "048291021"
+        val duiInvalido2 = "0482-1"
+        val duiInvalidoLetras = "0482910A-1"
+
+        assertTrue(duiValido.matches(duiRegex))
+        assertFalse(duiInvalido1.matches(duiRegex))
+        assertFalse(duiInvalido2.matches(duiRegex))
+        assertFalse(duiInvalidoLetras.matches(duiRegex))
+
+        assertEquals("04829102-1", DuiTextWatcher.formatear("048291021"))
+        assertEquals("04829102-1", DuiTextWatcher.formatear("04829102-1"))
+        assertEquals("0482", DuiTextWatcher.formatear("0482"))
+    }
+
+    @Test
+    fun testCalculoEdadYMinoridadMenorDe18Anios() {
+        val pacienteMenor = Paciente(
+            nombreCompleto = "Sofía Niña",
+            fechaNacimiento = "2015-04-12"
+        )
+        assertTrue("Paciente nacida en 2015 debe ser menor de 18 años", pacienteMenor.edad < 18)
+
+        val pacienteAdulto = Paciente(
+            nombreCompleto = "Roberto Adulto",
+            fechaNacimiento = "1990-08-20"
+        )
+        assertTrue("Paciente nacido en 1990 debe ser mayor o igual a 18 años", pacienteAdulto.edad >= 18)
+    }
+
+    @Test
+    fun testRegistroIngresoPacienteConTutorMenorYContactoDesglosado() = runTest {
+        val dataSource = HospitalClinicalDataSource(apiService = null)
+        val repo = AdmisionRepositoryImpl(dataSource)
+        val useCase = RegistrarIngresoPacienteUseCase(repo)
+
+        val tutor = ResponsableMenor(
+            tipoDocumento = "DUI",
+            documento = "01234567-8",
+            nombreCompleto = "María Elena Flores",
+            telefono = "7890-1234",
+            parentesco = "Madre"
+        )
+
+        val res = useCase(
+            dni = "09876543-2",
+            nombres = "Mateo",
+            apellidos = "Pérez",
+            fechaNacimiento = "2012-03-15",
+            tipoDocumento = "DUI",
+            prevision = "Particular",
+            contactoEmergencia = "María Flores (Madre) 7890-1234",
+            responsableMenor = tutor,
+            motivoIngreso = "Apendicitis aguda en estudio",
+            nivelTriage = NivelTriageManchester.NIVEL_II_NARANJA,
+            esEmergenciaDirecta = false,
+            codigoCamaSeleccionada = "VIP-302",
+            signosVitales = null
+        )
+
+        assertTrue(res.isSuccess)
+        val paciente = res.getOrThrow()
+        assertEquals("Mateo Pérez", paciente.nombreCompleto)
+        assertTrue(paciente.edad < 18)
+        assertNotNull(paciente.responsableMenor)
+        assertEquals("María Elena Flores", paciente.responsableMenor?.nombreCompleto)
+        assertEquals("Madre", paciente.responsableMenor?.parentesco)
+        assertEquals("01234567-8", paciente.responsableMenor?.documento)
+        assertEquals("VIP-302", repo.camasFlow.value.first { it.codigo == "VIP-302" }.codigo)
+        assertEquals("OCUPADA", repo.camasFlow.value.first { it.codigo == "VIP-302" }.estado)
+    }
+
+    @Test
+    fun testHabitacionesDetalladasMapeoYMetricas() {
+        val dataSource = HospitalClinicalDataSource(apiService = null)
+        val repo = AdmisionRepositoryImpl(dataSource)
+        val habitaciones = repo.obtenerHabitacionesDetalladas()
+
+        assertEquals(11, habitaciones.size)
+
+        val vips = habitaciones.filter { it.tipo.contains("VIP") }
+        assertEquals(5, vips.size)
+        vips.forEach { assertEquals(1, it.totalCamas) }
+
+        val semis = habitaciones.filter { it.tipo.contains("Semiprivada") }
+        assertEquals(6, semis.size)
+        semis.forEach { assertEquals(2, it.totalCamas) }
+
+        val totalCamasEnHabitaciones = habitaciones.sumOf { it.totalCamas }
+        assertEquals(17, totalCamasEnHabitaciones)
+
+        val habVip302 = habitaciones.first { it.codigo == "VIP-302" }
+        assertTrue("VIP-302 debe estar disponible inicialmente", habVip302.estaDisponible)
+        assertTrue(habVip302.estaCompletamenteDisponible)
+
+        val habOcupada = habitaciones.first { it.codigo == "VIP-301" }
+        assertTrue("VIP-301 debe estar ocupada inicialmente", habOcupada.estaCompletamenteOcupada)
+        assertNotNull("La cama ocupada debe tener información del paciente", habOcupada.camas.first().paciente)
+    }
+
+    @Test
+    fun testFiltrosHabitacionesTipoYDisponibilidad() {
+        val dataSource = HospitalClinicalDataSource(apiService = null)
+        val repo = AdmisionRepositoryImpl(dataSource)
+        val todas = repo.obtenerHabitacionesDetalladas()
+
+        // 1. Filtro Tipo = VIP
+        val vips = todas.filter { it.tipo.contains("VIP", ignoreCase = true) }
+        assertEquals(5, vips.size)
+
+        // 2. Filtro Tipo = Semiprivadas
+        val semis = todas.filter { it.tipo.contains("Semiprivada", ignoreCase = true) }
+        assertEquals(6, semis.size)
+
+        // 3. Filtro Disponibilidad = Disponibles
+        val disponibles = todas.filter { it.estaDisponible }
+        assertTrue("Deben existir habitaciones con disponibilidad", disponibles.isNotEmpty())
+        disponibles.forEach { assertTrue(it.camasDisponibles > 0) }
+
+        // 4. Filtro Disponibilidad = 100% Ocupadas
+        val ocupadas = todas.filter { it.estaCompletamenteOcupada }
+        assertTrue("Deben existir habitaciones ocupadas", ocupadas.isNotEmpty())
+        ocupadas.forEach { assertEquals(0, it.camasDisponibles) }
+
+        // 5. Filtro Combinado: Semiprivadas + Con Disponibilidad
+        val semisDisponibles = todas.filter {
+            it.tipo.contains("Semiprivada", ignoreCase = true) && it.estaDisponible
+        }
+        semisDisponibles.forEach {
+            assertTrue(it.tipo.contains("Semiprivada"))
+            assertTrue(it.estaDisponible)
+        }
     }
 }
