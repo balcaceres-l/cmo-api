@@ -18,6 +18,10 @@ import com.cmo.hospital.R
 import com.cmo.hospital.components.HucMicroBannerBinder
 import com.cmo.hospital.core.domain.model.EstadoSemaforo
 import com.cmo.hospital.core.domain.model.Paciente
+import com.cmo.hospital.core.domain.model.ResumenTurnos
+import com.cmo.hospital.core.domain.model.TurnoPersonal
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import com.cmo.hospital.core.ui.simpleViewModelFactory
 import com.cmo.hospital.databinding.FragmentDoctorInicioBinding
 import com.cmo.hospital.features.doctor.shell.presentation.DoctorShellHost
@@ -145,6 +149,9 @@ class InicioDoctorFragment : Fragment() {
                     }
                 }
                 launch {
+                    viewModel.turnos.collect { res -> renderTurnos(res) }
+                }
+                launch {
                     viewModel.toastEvent.collect { evt ->
                         if (evt != null) {
                             val host = parentFragment as? DoctorShellHost
@@ -158,6 +165,24 @@ class InicioDoctorFragment : Fragment() {
                     }
                 }
             }
+        }
+    }
+
+    private fun renderTurnos(res: Result<ResumenTurnos>?) {
+        val formato = DateTimeFormatter.ofPattern("EEE d MMM", Locale("es"))
+        fun texto(t: TurnoPersonal) =
+            "${t.fecha.format(formato)} • ${t.horaInicio}–${t.horaFin}${t.area?.let { " • $it" }.orEmpty()}"
+        val resumen = res?.getOrNull()
+        binding.tvTurnoActual.text = when {
+            res == null -> "Cargando turnos…"
+            resumen == null -> "No se pudieron cargar los turnos: ${res.exceptionOrNull()?.message}"
+            resumen.actual != null -> "● En turno ahora: ${texto(resumen.actual)}"
+            else -> "Sin turno en este momento: solo puede abrir consultas durante su turno."
+        }
+        binding.tvTurnosProximos.text = when {
+            resumen == null -> ""
+            resumen.proximos.isEmpty() -> "No tiene turnos próximos registrados."
+            else -> "Próximos:\n" + resumen.proximos.joinToString("\n") { texto(it) }
         }
     }
 

@@ -46,14 +46,14 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Acceso Clínico Auditado • Ley 19.628"
+                    android:text="Acceso clínico restringido"
                     android:textAppearance="@style/TextAppearance.Huc.TitleSm"
                     android:textColor="@color/huc_primary_fixed" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Trazabilidad de lectura de historia clínica electrónica HUC"
+                    android:text="Solo ve los expedientes de los pacientes que atiende."
                     android:textAppearance="@style/TextAppearance.Huc.BodySm"
                     android:textColor="@color/huc_on_primary_container" />
             </LinearLayout>
@@ -192,7 +192,7 @@
                         android:background="@drawable/bg_pill_tertiary_fixed"
                         android:paddingHorizontal="10dp"
                         android:paddingVertical="4dp"
-                        android:text="Protegido Ley 19.628"
+                        android:text="Protegido"
                         android:textAppearance="@style/TextAppearance.Huc.LabelSm"
                         android:textColor="@color/huc_on_tertiary_fixed"
                         android:visibility="gone" />
@@ -211,7 +211,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="45 años • DNI: 14.891.203-K • Sangre: O+"
+                    android:text="45 años • DUI: 01234567-8 • Sangre: O+"
                     android:textAppearance="@style/TextAppearance.Huc.BodySm" />
 
                 <TextView
@@ -282,10 +282,19 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnExpEditarAntecedentes"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Editar antecedentes" />
             </LinearLayout>
 
-            <!-- Signos Vitales Registrados -->
+            <!-- Signos vitales: la API no los guarda todavía, la tarjeta queda oculta. -->
             <LinearLayout
+                android:id="@+id/cardSignosExpediente"
+                android:visibility="gone"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/huc_space_md"

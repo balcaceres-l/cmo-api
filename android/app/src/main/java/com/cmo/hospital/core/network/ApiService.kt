@@ -98,7 +98,14 @@ interface ApiService {
     @GET("pacientes/{id}/expediente")
     suspend fun getExpediente(
         @Path("id") id: String
-    ): Response<ApiResponse<Map<String, Any>>>
+    ): Response<ApiResponse<ExpedienteDto>>
+
+    /** Antecedentes del historial clínico (solo médico tratante o administrador). */
+    @PUT("pacientes/{id}/historial")
+    suspend fun actualizarHistorial(
+        @Path("id") id: String,
+        @Body request: Map<String, Any?>
+    ): Response<ApiResponse<HistorialDto>>
 
     // Habitaciones y Camas Hospitalarias (17 camas estrictas)
     @GET("habitaciones")
@@ -221,7 +228,9 @@ interface ApiService {
 
     // Turnos y Personal de Guardia
     @GET("mi/turnos")
-    suspend fun getMisTurnos(): Response<ApiResponse<List<Map<String, Any>>>>
+    suspend fun getMisTurnos(
+        @Query("per_page") perPage: Int = 100
+    ): Response<ApiResponse<PaginatedData<TurnoDto>>>
 
     @GET("publico/medicos-de-turno")
     suspend fun getMedicosDeTurno(): Response<ApiResponse<List<MedicoDeTurno>>>

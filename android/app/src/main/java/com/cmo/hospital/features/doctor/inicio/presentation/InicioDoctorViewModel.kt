@@ -39,8 +39,13 @@ class InicioDoctorViewModel(
     private val sincronizarPanelMedicoUseCase: SincronizarPanelMedicoUseCase,
     private val iniciarORetomarConsultaMedicoUseCase: IniciarORetomarConsultaMedicoUseCase,
     private val abrirExpedientePacienteUseCase: AbrirExpedientePacienteUseCase,
-    private val construirPacientesMedicoUseCase: ConstruirPacientesMedicoUseCase
+    private val construirPacientesMedicoUseCase: ConstruirPacientesMedicoUseCase,
+    private val resumirMisTurnosUseCase: ResumirMisTurnosUseCase? = null
 ) : ViewModel() {
+
+    /** Turnos del médico; el texto de error se muestra en la misma tarjeta. */
+    private val _turnos = MutableStateFlow<Result<com.cmo.hospital.core.domain.model.ResumenTurnos>?>(null)
+    val turnos: StateFlow<Result<com.cmo.hospital.core.domain.model.ResumenTurnos>?> = _turnos.asStateFlow()
 
     private val _segmento = MutableStateFlow(SegmentoInicioMedico.MIS_CITAS)
     private val _filtroCitas = MutableStateFlow("Todas")
@@ -106,6 +111,9 @@ class InicioDoctorViewModel(
     fun refrescarDatos() {
         viewModelScope.launch {
             sincronizarPanelMedicoUseCase()
+        }
+        resumirMisTurnosUseCase?.let { resumir ->
+            viewModelScope.launch { _turnos.value = resumir() }
         }
     }
 

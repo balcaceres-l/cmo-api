@@ -209,6 +209,45 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Mis turnos: GET /mi/turnos -->
+        <LinearLayout
+            android:id="@+id/cardMisTurnos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_card_rounded_16"
+            android:elevation="1dp"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mis turnos"
+                android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
+
+            <TextView
+                android:id="@+id/tvTurnoActual"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_surface_low_16"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:text="Cargando turnos…"
+                android:textColor="@color/huc_on_surface"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvTurnosProximos"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:lineSpacingExtra="2dp"
+                android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+        </LinearLayout>
+
         <!-- Tarjeta Principal con Selector Segmentado: Mis Citas | Mis Pacientes -->
         <LinearLayout
             android:layout_width="match_parent"

@@ -130,3 +130,20 @@ class ConstruirPacientesMedicoUseCase {
         }
     }
 }
+
+/** Turno en curso y los próximos 5, a partir de GET /mi/turnos. */
+class ResumirMisTurnosUseCase(
+    private val repository: InicioDoctorRepository,
+    private val ahora: () -> java.time.LocalDateTime = { java.time.LocalDateTime.now() }
+) {
+    suspend operator fun invoke(): Result<com.cmo.hospital.core.domain.model.ResumenTurnos> =
+        repository.misTurnos().map { turnos ->
+            val momento = ahora()
+            val vigentes = turnos.filter { it.fin > momento }.sortedBy { it.inicio }
+            val actual = vigentes.firstOrNull { it.inicio <= momento }
+            com.cmo.hospital.core.domain.model.ResumenTurnos(
+                actual = actual,
+                proximos = vigentes.filter { it != actual }.take(5)
+            )
+        }
+}

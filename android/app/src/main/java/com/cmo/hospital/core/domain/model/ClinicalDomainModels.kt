@@ -448,7 +448,10 @@ data class ExpedienteDetalle(
     val alergiasCriticas: List<String> = emptyList(),
     val comorbilidades: List<String> = emptyList(),
     val atencionesPrevias: List<AtencionHistorica> = emptyList(),
-    val ordenesLaboratorio: List<OrdenLaboratorioItem> = emptyList()
+    val ordenesLaboratorio: List<OrdenLaboratorioItem> = emptyList(),
+    /** Texto libre del historial clínico (PUT /pacientes/{id}/historial). */
+    val antecedentesPersonales: String? = null,
+    val antecedentesFamiliares: String? = null
 )
 
 /** Reporte clínico enviado desde la ambulancia en camino (tabla reporte_ambulancia). */

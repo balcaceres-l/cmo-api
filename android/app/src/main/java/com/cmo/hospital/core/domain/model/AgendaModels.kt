@@ -8,6 +8,24 @@ data class BloqueAgenda(
     @SerializedName("hora_fin") val horaFin: String
 )
 
+/** Turno de trabajo del usuario (GET /mi/turnos). Un turno nocturno termina al día siguiente. */
+data class TurnoPersonal(
+    val fecha: java.time.LocalDate,
+    val horaInicio: java.time.LocalTime,
+    val horaFin: java.time.LocalTime,
+    val area: String?
+) {
+    val inicio: java.time.LocalDateTime get() = fecha.atTime(horaInicio)
+    val fin: java.time.LocalDateTime
+        get() = if (horaFin > horaInicio) fecha.atTime(horaFin) else fecha.plusDays(1).atTime(horaFin)
+}
+
+/** Turno en curso (si lo hay) y los siguientes, para el inicio del médico. */
+data class ResumenTurnos(
+    val actual: TurnoPersonal?,
+    val proximos: List<TurnoPersonal>
+)
+
 /** Médico, día, hora y consultorio: lo que piden agendar, confirmar y reprogramar. */
 data class ProgramacionCita(
     val idMedico: String,

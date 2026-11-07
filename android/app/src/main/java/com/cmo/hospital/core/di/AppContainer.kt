@@ -25,8 +25,9 @@ import com.cmo.hospital.features.doctor.consulta.domain.usecase.TickCronometroCo
 import com.cmo.hospital.features.doctor.consulta.presentation.ConsultaViewModel
 import com.cmo.hospital.features.doctor.expedientes.data.repository.ExpedientesRepositoryImpl
 import com.cmo.hospital.features.doctor.expedientes.domain.repository.ExpedientesRepository
-import com.cmo.hospital.features.doctor.expedientes.domain.usecase.FiltrarExpedientesUseCase
-import com.cmo.hospital.features.doctor.expedientes.domain.usecase.GetExpedientesFlowUseCase
+import com.cmo.hospital.features.doctor.expedientes.domain.usecase.BuscarPacientesTratadosUseCase
+import com.cmo.hospital.features.doctor.expedientes.domain.usecase.CargarExpedienteUseCase
+import com.cmo.hospital.features.doctor.expedientes.domain.usecase.GuardarAntecedentesUseCase
 import com.cmo.hospital.features.doctor.expedientes.presentation.ExpedientesViewModel
 import com.cmo.hospital.features.doctor.inicio.data.repository.InicioDoctorRepositoryImpl
 import com.cmo.hospital.features.doctor.inicio.domain.repository.InicioDoctorRepository
@@ -34,6 +35,7 @@ import com.cmo.hospital.features.doctor.inicio.domain.usecase.AbrirExpedientePac
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.ConstruirPacientesMedicoUseCase
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.IniciarORetomarConsultaMedicoUseCase
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.ObserveCitasMedicoUseCase
+import com.cmo.hospital.features.doctor.inicio.domain.usecase.ResumirMisTurnosUseCase
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.ObserveConsultaEnCursoUseCase
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.ObserveExpedientesMedicoUseCase
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.SincronizarPanelMedicoUseCase
@@ -113,8 +115,8 @@ class AppContainer(context: Context) {
     val ambulanciaRepository: AmbulanciaGuardiaRepository =
         AmbulanciaGuardiaRepositoryImpl(apiService, ReverbClient())
     val consultaRepository: ConsultaRepository = ConsultaRepositoryImpl(clinicalDataSource)
-    val inicioDoctorRepository: InicioDoctorRepository = InicioDoctorRepositoryImpl(clinicalDataSource)
-    val expedientesRepository: ExpedientesRepository = ExpedientesRepositoryImpl(clinicalDataSource)
+    val inicioDoctorRepository: InicioDoctorRepository = InicioDoctorRepositoryImpl(clinicalDataSource, apiService)
+    val expedientesRepository: ExpedientesRepository = ExpedientesRepositoryImpl(apiService, clinicalDataSource)
     val laboratorioRepository: LaboratorioRepository = LaboratorioRepositoryImpl(clinicalDataSource)
 
     // ─── Casos de Uso transversales de Sesión & Seguimiento ──────────────────
@@ -186,7 +188,8 @@ class AppContainer(context: Context) {
             sincronizarPanelMedicoUseCase = SincronizarPanelMedicoUseCase(inicioDoctorRepository),
             iniciarORetomarConsultaMedicoUseCase = IniciarORetomarConsultaMedicoUseCase(inicioDoctorRepository),
             abrirExpedientePacienteUseCase = AbrirExpedientePacienteUseCase(inicioDoctorRepository),
-            construirPacientesMedicoUseCase = ConstruirPacientesMedicoUseCase()
+            construirPacientesMedicoUseCase = ConstruirPacientesMedicoUseCase(),
+            resumirMisTurnosUseCase = ResumirMisTurnosUseCase(inicioDoctorRepository)
         )
 
     fun createConsultaViewModel(): ConsultaViewModel =
@@ -205,9 +208,10 @@ class AppContainer(context: Context) {
 
     fun createExpedientesViewModel(): ExpedientesViewModel =
         ExpedientesViewModel(
-            getExpedientesFlowUseCase = GetExpedientesFlowUseCase(expedientesRepository),
             expedientesRepository = expedientesRepository,
-            filtrarExpedientesUseCase = FiltrarExpedientesUseCase(),
+            buscarPacientesTratadosUseCase = BuscarPacientesTratadosUseCase(expedientesRepository),
+            cargarExpedienteUseCase = CargarExpedienteUseCase(expedientesRepository),
+            guardarAntecedentesUseCase = GuardarAntecedentesUseCase(expedientesRepository),
             emitirOrdenLabUseCase = EmitirOrdenLabUseCase(laboratorioRepository),
             cancelarOrdenLabUseCase = CancelarOrdenLabUseCase(laboratorioRepository)
         )
