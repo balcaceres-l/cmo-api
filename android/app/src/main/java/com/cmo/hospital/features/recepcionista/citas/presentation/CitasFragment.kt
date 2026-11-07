@@ -14,7 +14,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cmo.hospital.CmoApplication
-import com.cmo.hospital.components.HucMicroBannerBinder
 import com.cmo.hospital.core.domain.model.Cita
 import com.cmo.hospital.core.domain.model.EstadoCita
 import com.cmo.hospital.core.domain.model.Paciente
@@ -22,6 +21,7 @@ import com.cmo.hospital.core.domain.model.User
 import com.cmo.hospital.core.ui.simpleViewModelFactory
 import com.cmo.hospital.databinding.FragmentRecepCitasBinding
 import com.cmo.hospital.features.recepcionista.shell.presentation.RecepcionistaToastHost
+import com.google.android.material.chip.Chip
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -56,15 +56,8 @@ class CitasFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        HucMicroBannerBinder.bind(
-            binding = binding.microBannerCitas,
-            title = "Hospital Universitario Central - Consultorios",
-            subtitle = "Admisión externa • Agenda de consulta",
-            badgeText = "Recepción"
-        )
-
         setupRecyclerView()
-        setupLlamadorSala()
+        setupFiltros()
         setupFormulario()
         observeState()
     }
@@ -94,9 +87,36 @@ class CitasFragment : Fragment() {
         binding.rvCitasRecepcion.adapter = citasAdapter
     }
 
-    private fun setupLlamadorSala() {
-        binding.btnCallerReLlamar.setOnClickListener { viewModel.reLlamarEnSala() }
-        binding.btnCallerSiguiente.setOnClickListener { viewModel.llamarSiguienteEnSala() }
+    /** Filtros de la agenda por estado y por médico. */
+    private fun setupFiltros() {
+        val grupo = binding.chipGroupFiltroEstadoCitas
+        grupo.isSingleSelection = true
+        grupo.removeAllViews()
+        CitasViewModel.FILTROS_ESTADO.forEach { estado ->
+            grupo.addView(Chip(requireContext()).apply {
+                id = View.generateViewId()
+                text = estado
+                isCheckable = true
+                isChecked = estado == viewModel.filtroEstado.value
+                textSize = 12f
+                setOnClickListener { viewModel.setFiltroEstado(estado) }
+            })
+        }
+        actualizarDropdownFiltroDoctores(emptyList())
+        binding.actvFiltroDoctor.setOnItemClickListener { _, _, position, _ ->
+            viewModel.setFiltroDoctor(binding.actvFiltroDoctor.adapter?.getItem(position)?.toString().orEmpty())
+        }
+        binding.actvFiltroDoctor.doAfterTextChanged { viewModel.setFiltroDoctor(it?.toString().orEmpty().trim()) }
+    }
+
+    private fun actualizarDropdownFiltroDoctores(citas: List<Cita>) {
+        val medicosApi = viewModel.agenda.value.medicos.map { it.nombreCompleto }
+        val enCitas = citas.mapNotNull { c -> c.medicoNombre?.takeIf { it.isNotBlank() && c.idMedico != null } }
+        val opciones = listOf(CitasViewModel.TODOS_LOS_MEDICOS) + (medicosApi + enCitas).distinct().sorted()
+        binding.actvFiltroDoctor.setSimpleItems(opciones.toTypedArray())
+        if (binding.actvFiltroDoctor.text.isNullOrBlank()) {
+            binding.actvFiltroDoctor.setText(CitasViewModel.TODOS_LOS_MEDICOS, false)
+        }
     }
 
     private fun setupFormulario() {
@@ -261,14 +281,20 @@ class CitasFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
+                    viewModel.citasFiltradas.collect { filtradas ->
+                        citasAdapter.submitList(filtradas)
+                        binding.tvCitasEmpty.visibility = if (filtradas.isEmpty()) View.VISIBLE else View.GONE
+                    }
+                }
+
+                launch {
                     viewModel.citas.collect { lista ->
-                        val ordenadas = EstadoCita.ordenarParaMostrador(lista)
-                        citasAdapter.submitList(ordenadas)
                         val solicitudes = lista.count { it.estado == EstadoCita.SOLICITADA }
                         binding.tvCitasTotalBadge.text = buildString {
                             append("${lista.size} citas")
                             if (solicitudes > 0) append(" • $solicitudes por confirmar")
                         }
+                        actualizarDropdownFiltroDoctores(lista)
                     }
                 }
 
@@ -280,7 +306,6 @@ class CitasFragment : Fragment() {
                             pintarEspecialidades(estado.medicos)
                             selector.mostrarMedicos(medicosFiltrados(estado.medicos))
                         }
-                        selector.mostrarConsultorios(estado.consultorios)
                         if (estado.catalogosError != null) {
                             binding.selectorAgenda.tvAgendaAviso.text =
                                 "No se pudo cargar la agenda: ${estado.catalogosError}"
@@ -297,22 +322,6 @@ class CitasFragment : Fragment() {
                 launch {
                     viewModel.errorProgramacion.collect { error ->
                         if (error?.origen == OrigenProgramacion.FORMULARIO) mostrarErrorFormulario(error)
-                    }
-                }
-
-                launch {
-                    viewModel.turnoEnBox.collect { turno ->
-                        if (turno != null) {
-                            binding.tvCallerBoxBadge.text = turno.consultorio?.codigo ?: "Consultorio"
-                            val rawName = turno.paciente?.nombreCompleto ?: "Paciente"
-                            binding.tvCallerPatientAnon.text = Paciente.anonimizarNombre(rawName)
-                            binding.tvCallerDetail.text =
-                                "${turno.horaInicio} • ${turno.especialidad ?: "Consulta externa"} • ${turno.medicoNombre ?: "Médico"}"
-                        } else {
-                            binding.tvCallerBoxBadge.text = "Sala libre"
-                            binding.tvCallerPatientAnon.text = "Sin turno activo"
-                            binding.tvCallerDetail.text = "Presione 'Siguiente a Box' para llamar paciente"
-                        }
                     }
                 }
 

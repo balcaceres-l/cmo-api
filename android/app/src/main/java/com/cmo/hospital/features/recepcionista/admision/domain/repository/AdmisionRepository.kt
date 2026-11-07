@@ -2,6 +2,7 @@ package com.cmo.hospital.features.recepcionista.admision.domain.repository
 
 import com.cmo.hospital.core.domain.model.Cama
 import com.cmo.hospital.core.domain.model.CapacidadHospitalaria
+import com.cmo.hospital.core.domain.model.HabitacionDetalleUi
 import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.core.domain.model.User
 import kotlinx.coroutines.flow.StateFlow
@@ -11,6 +12,7 @@ interface AdmisionRepository {
     val camasFlow: StateFlow<List<Cama>>
 
     fun obtenerCapacidadActual(): CapacidadHospitalaria
+    fun obtenerHabitacionesDetalladas(): List<HabitacionDetalleUi>
 
     suspend fun refrescarCamas(): Result<List<Cama>>
     suspend fun medicos(): Result<List<User>>

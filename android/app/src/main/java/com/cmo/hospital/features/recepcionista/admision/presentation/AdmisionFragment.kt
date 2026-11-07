@@ -24,6 +24,7 @@ import com.cmo.hospital.databinding.FragmentRecepAdmisionBinding
 import com.cmo.hospital.features.recepcionista.citas.presentation.chipAgenda
 import com.cmo.hospital.features.recepcionista.shell.presentation.RecepcionistaToastHost
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.launch
 
 /** Camas: ingreso hospitalario, alta y traslado contra la API. */
@@ -39,6 +40,7 @@ class AdmisionFragment : Fragment() {
 
     private lateinit var vipBedsAdapter: VipBedsAdapter
     private lateinit var semiRoomsAdapter: SemiPrivateRoomsAdapter
+    private lateinit var habitacionesAdapter: HabitacionesDetalleAdapter
 
     private var pacienteSeleccionado: Paciente? = null
 
@@ -56,7 +58,7 @@ class AdmisionFragment : Fragment() {
 
         HucMicroBannerBinder.bind(
             binding = binding.microBannerAdmision,
-            title = "Hospital Universitario Central - Hospitalización",
+            title = "Centro Médico de Occidente - Hospitalización",
             subtitle = "Planta 2 semiprivadas • Planta 3 VIP",
             badgeText = "17 camas"
         )
@@ -69,7 +71,9 @@ class AdmisionFragment : Fragment() {
         binding.stepHeader2.tvStepTitle.text = "Cama"
         binding.stepHeader2.tvStepBadge.text = "Paso 2 de 2"
 
+        setupTabs()
         setupCamas()
+        setupHabitaciones()
         setupFormulario()
         observeState()
     }
@@ -88,6 +92,65 @@ class AdmisionFragment : Fragment() {
         semiRoomsAdapter = SemiPrivateRoomsAdapter(::alTocarCama)
         binding.rvSalasSemiprivadas.layoutManager = LinearLayoutManager(requireContext())
         binding.rvSalasSemiprivadas.adapter = semiRoomsAdapter
+    }
+
+    /** Pestañas: 0 = ingreso a cama, 1 = vista de habitaciones. */
+    private fun setupTabs() {
+        binding.tabLayoutAdmision.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                val enIngreso = tab?.position != 1
+                binding.scrollTabRegistro.visibility = if (enIngreso) View.VISIBLE else View.GONE
+                binding.layoutTabHabitaciones.visibility = if (enIngreso) View.GONE else View.VISIBLE
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab?) = Unit
+            override fun onTabReselected(tab: TabLayout.Tab?) = Unit
+        })
+    }
+
+    private fun setupHabitaciones() {
+        habitacionesAdapter = HabitacionesDetalleAdapter { cama ->
+            if (cama.estaDisponible) {
+                // Una cama libre se elige para el ingreso y se vuelve a la pestaña 1.
+                if (viewModel.uiState.value.codigoCamaSeleccionada != cama.codigo) viewModel.alternarCama(cama)
+                binding.tabLayoutAdmision.getTabAt(0)?.select()
+                binding.scrollTabRegistro.post {
+                    binding.scrollTabRegistro.smoothScrollTo(0, binding.cardPaso3Camas.top)
+                }
+            } else {
+                abrirAccionesCama(cama)
+            }
+        }
+        binding.rvHabitacionesDetalle.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvHabitacionesDetalle.adapter = habitacionesAdapter
+
+        binding.chipGroupFiltroHabTipo.setOnCheckedStateChangeListener { _, checkedIds ->
+            viewModel.setFiltroTipoHabitacion(
+                when (checkedIds.firstOrNull()) {
+                    R.id.chipFiltroHabVip -> "VIP"
+                    R.id.chipFiltroHabSemi -> "Semiprivadas"
+                    else -> "Todas"
+                }
+            )
+        }
+        binding.chipGroupFiltroHabOcup.setOnCheckedStateChangeListener { _, checkedIds ->
+            viewModel.setFiltroOcupacionHabitacion(
+                when (checkedIds.firstOrNull()) {
+                    R.id.chipFiltroOcupDisp -> "Disponibles"
+                    R.id.chipFiltroOcupLlenas -> "Ocupadas"
+                    else -> "Todas"
+                }
+            )
+        }
+        binding.etBuscarHabitacion.doAfterTextChanged { s ->
+            viewModel.setQueryBusquedaHabitacion(s?.toString().orEmpty().trim())
+        }
+        binding.btnResetFiltrosHabitaciones.setOnClickListener {
+            binding.etBuscarHabitacion.text?.clear()
+            binding.chipFiltroHabTodas.isChecked = true
+            binding.chipFiltroOcupTodas.isChecked = true
+            viewModel.resetFiltrosHabitaciones()
+        }
     }
 
     private fun alTocarCama(cama: Cama) {
@@ -213,6 +276,9 @@ class AdmisionFragment : Fragment() {
         vipBedsAdapter.submit(cap.vipCamas, seleccion)
         semiRoomsAdapter.submit(cap.salasSemiprivadas, seleccion)
         binding.tvSelectedBedPill.text = seleccion ?: "Ninguna"
+        binding.tvHabCapacidadOcupadasPill.text = "${cap.ocupadas} ocupadas"
+        binding.progressHospitalCapacityTab2.progress = cap.porcentajeOcupacion
+        binding.tvHabCapacidadDisponibles.text = "${cap.disponibles} camas disponibles"
     }
 
     private fun avisar(titulo: String, mensaje: String, esError: Boolean) {
@@ -240,6 +306,27 @@ class AdmisionFragment : Fragment() {
                         }
                         binding.btnConfirmarIngreso.isEnabled = !st.enviando
                         binding.btnConfirmarIngreso.text = if (st.enviando) "Ingresando…" else "Ingresar paciente"
+                    }
+                }
+                launch {
+                    viewModel.habitaciones.collect { todas ->
+                        binding.chipFiltroHabTodas.text = "Todas (${todas.size})"
+                        binding.chipFiltroHabVip.text = "VIP Individual (${todas.count { it.tipo.contains("VIP", true) }})"
+                        binding.chipFiltroHabSemi.text = "Semiprivadas (${todas.count { it.tipo.contains("Semiprivada", true) }})"
+                        binding.chipFiltroOcupTodas.text = "Cualquier estado (${todas.size})"
+                        binding.chipFiltroOcupDisp.text = "Con disponibilidad (${todas.count { it.estaDisponible }})"
+                        binding.chipFiltroOcupLlenas.text = "100% ocupadas (${todas.count { it.estaCompletamenteOcupada }})"
+                    }
+                }
+                launch {
+                    viewModel.habitacionesFiltradas.collect { lista ->
+                        habitacionesAdapter.submitList(lista)
+                        binding.tvHabitacionesEmpty.visibility = if (lista.isEmpty()) View.VISIBLE else View.GONE
+                        binding.tvFiltrosActivosBadge.text = "${lista.size} de ${viewModel.habitaciones.value.size} habitaciones"
+                        val hayFiltro = viewModel.filtroTipoHabitacion.value != "Todas" ||
+                            viewModel.filtroOcupacionHabitacion.value != "Todas" ||
+                            viewModel.queryBusquedaHabitacion.value.isNotBlank()
+                        binding.btnResetFiltrosHabitaciones.visibility = if (hayFiltro) View.VISIBLE else View.GONE
                     }
                 }
                 launch {

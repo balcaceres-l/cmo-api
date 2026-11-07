@@ -5,7 +5,7 @@ import android.content.res.ColorStateList
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentManager
 import com.cmo.hospital.R
-import com.cmo.hospital.core.domain.model.ConsultorioInfo
+import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.core.domain.model.ProgramacionCita
 import com.cmo.hospital.core.domain.model.User
 import com.cmo.hospital.databinding.CompSelectorAgendaBinding
@@ -18,7 +18,7 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 
 /**
- * Maneja el bloque médico → fecha → consultorio → horario libre. Cada vez que
+ * Maneja el bloque médico → fecha → horario libre. Cada vez que
  * cambian médico o fecha pide la disponibilidad a la API mediante
  * [onPedirDisponibilidad]; los bloques que muestra son solo los que devolvió.
  */
@@ -31,32 +31,31 @@ class SelectorAgendaController(
         private set
     var fecha: String = LocalDate.now().toString()
         private set
-    var idConsultorio: String? = null
-        private set
     var horaInicio: String? = null
         private set
 
     private var medicos: List<User> = emptyList()
-    private var consultorios: List<ConsultorioInfo> = emptyList()
     private var ultimaDisponibilidad: DisponibilidadUi? = null
     private var ultimaPedida: Pair<String?, String>? = null
 
     private val ctx: Context get() = binding.root.context
 
     init {
-        binding.etAgendaFecha.setText(fecha)
+        binding.etAgendaFecha.setText(DateUtils.toUiDate(fecha))
         binding.etAgendaFecha.setOnClickListener { abrirCalendario() }
         binding.tilAgendaFecha.setOnClickListener { abrirCalendario() }
         binding.tvAgendaAviso.text = "Seleccione médico y fecha para ver los horarios."
     }
 
-    /** Valores iniciales (p. ej. los de la cita que se reprograma). */
-    fun precargar(idMedico: String?, fecha: String?, idConsultorio: String?) {
+    /**
+     * Valores iniciales (p. ej. los de la cita que se reprograma). El consultorio
+     * no se elige en recepción: al reprogramar, la API conserva el que tenía.
+     */
+    fun precargar(idMedico: String?, fecha: String?) {
         this.idMedico = idMedico
         val previa = fecha?.let { runCatching { LocalDate.parse(it.take(10)) }.getOrNull() }
         if (previa != null && !previa.isBefore(LocalDate.now())) this.fecha = previa.toString()
-        this.idConsultorio = idConsultorio
-        binding.etAgendaFecha.setText(this.fecha)
+        binding.etAgendaFecha.setText(DateUtils.toUiDate(this.fecha))
     }
 
     fun mostrarMedicos(lista: List<User>) {
@@ -67,12 +66,6 @@ class SelectorAgendaController(
         }
         if (idMedico to fecha != ultimaPedida) pedirDisponibilidad()
         pintarMedicos()
-    }
-
-    fun mostrarConsultorios(lista: List<ConsultorioInfo>) {
-        consultorios = lista
-        if (lista.none { it.id == idConsultorio }) idConsultorio = null
-        pintarConsultorios()
     }
 
     fun mostrarDisponibilidad(d: DisponibilidadUi?) {
@@ -106,8 +99,7 @@ class SelectorAgendaController(
     fun programacion(): ProgramacionCita = ProgramacionCita(
         idMedico = idMedico.orEmpty(),
         fecha = fecha,
-        horaInicio = horaInicio.orEmpty(),
-        idConsultorio = idConsultorio
+        horaInicio = horaInicio.orEmpty()
     )
 
     /** Marca el campo de fecha cuando la API o la validación local lo rechazan. */
@@ -136,22 +128,6 @@ class SelectorAgendaController(
         }
     }
 
-    private fun pintarConsultorios() {
-        val grupo = binding.chipGroupConsultorios
-        grupo.removeAllViews()
-        grupo.addView(chip("Sin asignar", idConsultorio == null) {
-            idConsultorio = null
-            pintarConsultorios()
-        })
-        consultorios.forEach { c ->
-            val texto = listOfNotNull(c.codigo, c.nombre).joinToString(" · ")
-            grupo.addView(chip(texto, c.id == idConsultorio) {
-                idConsultorio = c.id
-                pintarConsultorios()
-            })
-        }
-    }
-
     private fun abrirCalendario() {
         if (fragmentManager.findFragmentByTag(TAG_CALENDARIO) != null) return
         val seleccion = LocalDate.parse(fecha).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
@@ -168,7 +144,7 @@ class SelectorAgendaController(
             val elegida = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString()
             if (elegida != fecha) {
                 fecha = elegida
-                binding.etAgendaFecha.setText(elegida)
+                binding.etAgendaFecha.setText(DateUtils.toUiDate(elegida))
                 horaInicio = null
                 pedirDisponibilidad()
             }

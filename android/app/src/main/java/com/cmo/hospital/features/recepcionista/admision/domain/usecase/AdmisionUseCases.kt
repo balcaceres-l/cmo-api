@@ -2,6 +2,7 @@ package com.cmo.hospital.features.recepcionista.admision.domain.usecase
 
 import com.cmo.hospital.core.domain.model.Cama
 import com.cmo.hospital.core.domain.model.CapacidadHospitalaria
+import com.cmo.hospital.core.domain.model.HabitacionDetalleUi
 import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.core.domain.model.User
 import com.cmo.hospital.core.network.ApiValidationException
@@ -14,6 +15,13 @@ class ObserveCapacidadCamasUseCase(
 ) {
     operator fun invoke(): Flow<CapacidadHospitalaria> =
         repository.camasFlow.map { repository.obtenerCapacidadActual() }
+}
+
+class ObserveHabitacionesDetalladasUseCase(
+    private val repository: AdmisionRepository
+) {
+    operator fun invoke(): Flow<List<HabitacionDetalleUi>> =
+        repository.camasFlow.map { repository.obtenerHabitacionesDetalladas() }
 }
 
 class RefrescarCamasUseCase(private val repository: AdmisionRepository) {

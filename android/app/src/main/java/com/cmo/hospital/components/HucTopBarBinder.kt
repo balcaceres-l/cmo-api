@@ -33,7 +33,7 @@ object HucTopBarBinder {
                 onGuardiaClick()
             } else {
                 val popup = PopupMenu(binding.root.context, binding.btnGuardiaPill)
-                val nombre = currentUser?.nombreCompleto ?: "Personal HUC"
+                val nombre = currentUser?.nombreCompleto ?: "Personal CMO"
                 val cargo = currentUser?.cargo ?: currentUser?.rol ?: "Turno Activo"
                 popup.menu.add(0, 1, 0, "● $nombre ($cargo)").isEnabled = false
                 popup.menu.add(0, 2, 1, "Turno Matutino 07:00 - 15:00").isEnabled = false
@@ -43,7 +43,7 @@ object HucTopBarBinder {
 
         binding.btnProfileAction.setOnClickListener {
             val popup = PopupMenu(binding.root.context, binding.btnProfileAction)
-            val nombre = currentUser?.nombreCompleto ?: "Usuario HUC"
+            val nombre = currentUser?.nombreCompleto ?: "Usuario CMO"
             val rol = currentUser?.rol ?: "OPERADOR"
             popup.menu.add(0, 1, 0, "$nombre • $rol").isEnabled = false
             popup.menu.add(0, 2, 1, "Cerrar sesión Sanctum")

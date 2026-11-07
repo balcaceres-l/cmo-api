@@ -55,7 +55,7 @@ class ProgramarCitaDialogFragment : DialogFragment() {
             fragmentManager = childFragmentManager
         ) { idMedico, fecha -> viewModel.cargarDisponibilidad(idMedico, fecha) }
         if (!confirmar && cita != null) {
-            selector.precargar(cita.idMedico, cita.fecha, cita.consultorio?.id)
+            selector.precargar(cita.idMedico, cita.fecha)
         }
 
         binding.btnProgramarCerrar.setOnClickListener { dismiss() }
@@ -77,7 +77,6 @@ class ProgramarCitaDialogFragment : DialogFragment() {
                     viewModel.agenda.collect { estado ->
                         val b = _binding ?: return@collect
                         selector.mostrarMedicos(estado.medicos)
-                        selector.mostrarConsultorios(estado.consultorios)
                         if (estado.catalogosError != null) {
                             b.selectorAgenda.tvAgendaAviso.text = "No se pudo cargar la agenda: ${estado.catalogosError}"
                         } else {

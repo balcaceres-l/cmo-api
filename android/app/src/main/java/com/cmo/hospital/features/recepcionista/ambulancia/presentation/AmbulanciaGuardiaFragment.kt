@@ -59,7 +59,7 @@ class AmbulanciaGuardiaFragment : Fragment() {
 
         HucMicroBannerBinder.bind(
             binding = binding.microBannerAmbulancia,
-            title = "Hospital Universitario Central - Ambulancia",
+            title = "Centro Médico de Occidente - Ambulancia",
             subtitle = "Despacho, reportes en ruta y médicos de turno",
             badgeText = "24/7",
             iconRes = R.drawable.ic_ambulance

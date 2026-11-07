@@ -13,7 +13,7 @@
         android:orientation="vertical"
         android:padding="@dimen/huc_space_md">
 
-        <!-- Micro-Banner Institucional HUC -->
+        <!-- Micro-Banner Institucional CMO -->
         <include
             android:id="@+id/microBannerLab"
             layout="@layout/comp_huc_micro_banner" />

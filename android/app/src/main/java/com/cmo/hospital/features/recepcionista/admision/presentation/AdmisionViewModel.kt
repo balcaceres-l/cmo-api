@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cmo.hospital.core.domain.model.Cama
 import com.cmo.hospital.core.domain.model.CapacidadHospitalaria
+import com.cmo.hospital.core.domain.model.HabitacionDetalleUi
 import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.core.domain.model.User
 import com.cmo.hospital.core.network.ApiValidationException
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -36,6 +38,7 @@ data class AdmisionEvento(val titulo: String, val mensaje: String, val esError: 
 
 class AdmisionViewModel(
     observeCapacidadCamasUseCase: ObserveCapacidadCamasUseCase,
+    observeHabitacionesDetalladasUseCase: ObserveHabitacionesDetalladasUseCase,
     private val refrescarCamasUseCase: RefrescarCamasUseCase,
     private val cargarMedicosTratantesUseCase: CargarMedicosTratantesUseCase,
     private val buscarPacientesIngresoUseCase: BuscarPacientesIngresoUseCase,
@@ -50,6 +53,43 @@ class AdmisionViewModel(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = CapacidadHospitalaria(0, 0, 0, emptyList(), emptyList())
         )
+
+    // ── Pestaña "Vista de habitaciones" (filtros por tipo, ocupación y búsqueda) ──
+    val habitaciones: StateFlow<List<HabitacionDetalleUi>> = observeHabitacionesDetalladasUseCase()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _filtroTipoHabitacion = MutableStateFlow("Todas")
+    val filtroTipoHabitacion: StateFlow<String> = _filtroTipoHabitacion.asStateFlow()
+
+    private val _filtroOcupacionHabitacion = MutableStateFlow("Todas")
+    val filtroOcupacionHabitacion: StateFlow<String> = _filtroOcupacionHabitacion.asStateFlow()
+
+    private val _queryBusquedaHabitacion = MutableStateFlow("")
+    val queryBusquedaHabitacion: StateFlow<String> = _queryBusquedaHabitacion.asStateFlow()
+
+    val habitacionesFiltradas: StateFlow<List<HabitacionDetalleUi>> = combine(
+        habitaciones, _filtroTipoHabitacion, _filtroOcupacionHabitacion, _queryBusquedaHabitacion
+    ) { lista, tipo, ocupacion, query ->
+        filtrarHabitaciones(lista, tipo, ocupacion, query)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    fun setFiltroTipoHabitacion(tipo: String) {
+        _filtroTipoHabitacion.value = tipo
+    }
+
+    fun setFiltroOcupacionHabitacion(ocupacion: String) {
+        _filtroOcupacionHabitacion.value = ocupacion
+    }
+
+    fun setQueryBusquedaHabitacion(query: String) {
+        _queryBusquedaHabitacion.value = query
+    }
+
+    fun resetFiltrosHabitaciones() {
+        _filtroTipoHabitacion.value = "Todas"
+        _filtroOcupacionHabitacion.value = "Todas"
+        _queryBusquedaHabitacion.value = ""
+    }
 
     private val _uiState = MutableStateFlow(AdmisionUiState())
     val uiState: StateFlow<AdmisionUiState> = _uiState.asStateFlow()
@@ -190,5 +230,35 @@ class AdmisionViewModel(
 
     private fun avisarError(titulo: String, err: Throwable) {
         _evento.value = AdmisionEvento(titulo, err.message ?: "Intente de nuevo.", esError = true)
+    }
+
+    companion object {
+        fun filtrarHabitaciones(
+            lista: List<HabitacionDetalleUi>,
+            tipo: String,
+            ocupacion: String,
+            query: String
+        ): List<HabitacionDetalleUi> = lista.filter { hab ->
+            val matchTipo = when (tipo) {
+                "VIP" -> hab.tipo.contains("VIP", ignoreCase = true)
+                "Semiprivadas" -> hab.tipo.contains("Semiprivada", ignoreCase = true)
+                else -> true
+            }
+            val matchOcupacion = when (ocupacion) {
+                "Disponibles" -> hab.estaDisponible
+                "Ocupadas" -> hab.estaCompletamenteOcupada
+                else -> true
+            }
+            val matchQuery = query.isBlank() ||
+                hab.codigo.contains(query, ignoreCase = true) ||
+                hab.tipo.contains(query, ignoreCase = true) ||
+                hab.planta.contains(query, ignoreCase = true) ||
+                hab.camas.any { cama ->
+                    cama.codigo.contains(query, ignoreCase = true) ||
+                        cama.paciente?.nombreCompleto?.contains(query, ignoreCase = true) == true ||
+                        cama.paciente?.numeroExpediente?.contains(query, ignoreCase = true) == true
+                }
+            matchTipo && matchOcupacion && matchQuery
+        }
     }
 }

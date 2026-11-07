@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.cmo.hospital.R
 import com.cmo.hospital.core.domain.model.Cita
 import com.cmo.hospital.core.domain.model.EstadoCita
+import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.databinding.ItemCitaRecepcionBinding
 
 class CitasRecepcionAdapter(
@@ -45,13 +46,13 @@ class CitasRecepcionAdapter(
 
         fun bind(cita: Cita) {
             val ctx = binding.root.context
+            val fechaUi = DateUtils.toUiDate(cita.fecha)
             binding.tvItemCitaHorario.text = when {
-                cita.horaInicio.isBlank() -> "Sin horario"
-                cita.horaFin.isNullOrBlank() -> "${cita.fecha} • ${cita.horaInicio}"
-                else -> "${cita.fecha} • ${cita.horaInicio}-${cita.horaFin}"
+                cita.horaInicio.isBlank() -> "Solicitud sin horario"
+                cita.horaFin.isNullOrBlank() -> "$fechaUi • ${cita.horaInicio}"
+                else -> "$fechaUi • ${cita.horaInicio} - ${cita.horaFin}"
             }
-            binding.tvItemCitaBox.text = cita.consultorio?.codigo ?: "Sin consultorio"
-            binding.tvItemCitaPaciente.text = cita.paciente?.nombreCompleto ?: "Paciente HUC"
+            binding.tvItemCitaPaciente.text = cita.paciente?.nombreCompleto ?: "Paciente"
             binding.tvItemCitaMedicoYExp.text =
                 "Exp: ${cita.paciente?.numeroExpediente ?: "N/D"} • ${cita.medicoNombre ?: "Médico por asignar"} (${cita.especialidad ?: "Consulta"})"
             binding.tvItemCitaMotivo.text = cita.motivo ?: "Consulta programada"

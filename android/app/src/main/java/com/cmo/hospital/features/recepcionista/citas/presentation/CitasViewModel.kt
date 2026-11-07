@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.cmo.hospital.core.domain.model.BloqueAgenda
 import com.cmo.hospital.core.domain.model.Cita
 import com.cmo.hospital.core.domain.model.ConsultorioInfo
+import com.cmo.hospital.core.domain.model.EstadoCita
 import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.core.domain.model.ProgramacionCita
 import com.cmo.hospital.core.domain.model.SignosVitales
@@ -14,8 +15,11 @@ import com.cmo.hospital.features.recepcionista.citas.domain.usecase.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -72,6 +76,30 @@ class CitasViewModel(
 
     val citas: StateFlow<List<Cita>> = getCitasFlowUseCase()
     val turnoEnBox: StateFlow<Cita?> = getTurnoEnBoxFlowUseCase()
+
+    private val _filtroEstado = MutableStateFlow(FILTRO_TODAS)
+    val filtroEstado: StateFlow<String> = _filtroEstado.asStateFlow()
+
+    private val _filtroDoctor = MutableStateFlow(TODOS_LOS_MEDICOS)
+    val filtroDoctor: StateFlow<String> = _filtroDoctor.asStateFlow()
+
+    /** Lista del mostrador (solicitudes y sala de espera primero) con los filtros aplicados. */
+    val citasFiltradas: StateFlow<List<Cita>> = combine(citas, _filtroEstado, _filtroDoctor) { lista, estado, doctor ->
+        EstadoCita.ordenarParaMostrador(lista).filter { cita ->
+            coincideEstado(cita.estado, estado) && (
+                doctor == TODOS_LOS_MEDICOS || doctor.isBlank() ||
+                    cita.medicoNombre?.contains(doctor, ignoreCase = true) == true
+                )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun setFiltroEstado(estado: String) {
+        _filtroEstado.value = estado
+    }
+
+    fun setFiltroDoctor(doctor: String) {
+        _filtroDoctor.value = doctor.ifBlank { TODOS_LOS_MEDICOS }
+    }
 
     private val _agenda = MutableStateFlow(AgendaUiState())
     val agenda: StateFlow<AgendaUiState> = _agenda.asStateFlow()
@@ -291,6 +319,20 @@ class CitasViewModel(
             "el ${cita.fecha} a las ${cita.horaInicio}."
 
     companion object {
+        const val FILTRO_TODAS = "Todas"
+        const val TODOS_LOS_MEDICOS = "Todos los Médicos"
+        val FILTROS_ESTADO = listOf(FILTRO_TODAS, "Solicitadas", "Pendientes", "En Espera", "En Atención", "Atendidas", "Canceladas")
+
+        fun coincideEstado(estadoCita: String, filtro: String): Boolean = when (filtro) {
+            "Solicitadas" -> estadoCita == EstadoCita.SOLICITADA
+            "Pendientes" -> estadoCita == EstadoCita.AGENDADA
+            "En Espera" -> estadoCita == EstadoCita.EN_ESPERA
+            "En Atención" -> estadoCita == EstadoCita.EN_ATENCION
+            "Atendidas" -> estadoCita == EstadoCita.ATENDIDA
+            "Canceladas" -> estadoCita == EstadoCita.CANCELADA || estadoCita == EstadoCita.NO_ASISTIO
+            else -> true
+        }
+
         private val FECHA_ISO = Regex("^\\d{4}-\\d{2}-\\d{2}$")
     }
 }

@@ -1,6 +1,7 @@
 package com.cmo.hospital.core.data.datasource
 
 import com.cmo.hospital.core.data.mapper.aOrdenLaboratorio
+import com.cmo.hospital.core.data.mapper.agruparHabitaciones
 import com.cmo.hospital.core.domain.model.*
 import com.cmo.hospital.core.network.ApiService
 import com.cmo.hospital.core.network.dto.ConsultaDto
@@ -111,7 +112,7 @@ class HospitalClinicalDataSource(
         if (!yaExiste) {
             val nuevo = ExpedienteDetalle(
                 paciente = paciente,
-                cama = ubicacion ?: "Consulta Externa HUC",
+                cama = ubicacion ?: "Consulta Externa CMO",
                 signosVitales = signos ?: SignosVitales(),
                 alergiasCriticas = paciente.alergias?.takeIf { it.isNotBlank() }?.let { listOf(it) }
                     ?: emptyList(),
@@ -123,7 +124,7 @@ class HospitalClinicalDataSource(
                             hora = obtenerHoraActual(),
                             especialidad = "Consulta Externa",
                             diagnostico = motivoReciente,
-                            medico = "Cuerpo Médico HUC",
+                            medico = "Cuerpo Médico CMO",
                             notas = "Cita registrada en agenda hospitalaria."
                         )
                     )
@@ -399,6 +400,9 @@ class HospitalClinicalDataSource(
             salasSemiprivadas = salasUi
         )
     }
+
+    /** Camas agrupadas por habitación para la pestaña Habitaciones (VIP individual o semiprivada A/B). */
+    fun construirHabitacionesDetalladas(): List<HabitacionDetalleUi> = agruparHabitaciones(_camasState.value)
 
     /** Mapa de camas real: GET /habitaciones devuelve las habitaciones agrupadas por planta. */
     suspend fun syncCamasFromRemote(): Result<List<Cama>> {

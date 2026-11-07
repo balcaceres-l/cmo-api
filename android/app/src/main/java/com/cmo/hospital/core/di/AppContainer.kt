@@ -54,6 +54,7 @@ import com.cmo.hospital.features.recepcionista.admision.domain.usecase.CargarMed
 import com.cmo.hospital.features.recepcionista.admision.domain.usecase.DarAltaUseCase
 import com.cmo.hospital.features.recepcionista.admision.domain.usecase.IngresarPacienteUseCase
 import com.cmo.hospital.features.recepcionista.admision.domain.usecase.ObserveCapacidadCamasUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.ObserveHabitacionesDetalladasUseCase
 import com.cmo.hospital.features.recepcionista.admision.domain.usecase.RefrescarCamasUseCase
 import com.cmo.hospital.features.recepcionista.admision.domain.usecase.TrasladarPacienteUseCase
 import com.cmo.hospital.features.recepcionista.admision.presentation.AdmisionViewModel
@@ -163,6 +164,7 @@ class AppContainer(context: Context) {
     fun createAdmisionViewModel(): AdmisionViewModel =
         AdmisionViewModel(
             observeCapacidadCamasUseCase = ObserveCapacidadCamasUseCase(admisionRepository),
+            observeHabitacionesDetalladasUseCase = ObserveHabitacionesDetalladasUseCase(admisionRepository),
             refrescarCamasUseCase = RefrescarCamasUseCase(admisionRepository),
             cargarMedicosTratantesUseCase = CargarMedicosTratantesUseCase(admisionRepository),
             buscarPacientesIngresoUseCase = BuscarPacientesIngresoUseCase(admisionRepository),

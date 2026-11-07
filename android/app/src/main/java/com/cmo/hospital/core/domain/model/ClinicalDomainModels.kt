@@ -57,7 +57,7 @@ data class SignosVitales(
 }
 
 /**
- * Clasificación de Triage Manchester del prototipo institucional HUC Móvil.
+ * Clasificación de Triage Manchester institucional Centro Médico de Occidente / CMO.
  */
 enum class NivelTriageManchester(
     val nivel: Int,
@@ -95,7 +95,9 @@ data class Paciente(
     val protegido: Boolean = false,
     @SerializedName("contacto_emergencia") val contactoEmergencia: String? = null,
     val prevision: String? = null,
-    val nivelTriage: NivelTriageManchester = NivelTriageManchester.NIVEL_III_AMARILLO
+    val nivelTriage: NivelTriageManchester = NivelTriageManchester.NIVEL_III_AMARILLO,
+    @SerializedName("tipo_documento") val tipoDocumento: String? = "DUI",
+    val responsableMenor: ResponsableMenor? = null
 ) {
     val edad: Int
         get() {
@@ -168,7 +170,25 @@ data class PacienteInfo(
     val alergias: String? = null,
     @SerializedName("tipo_sangre") val tipoSangre: String? = null,
     val protegido: Boolean = false
-)
+) {
+    val edad: Int
+        get() {
+            val fn = fechaNacimiento ?: return 0
+            return try {
+                val parts = fn.split("-")
+                if (parts.size == 3) {
+                    val year = parts[0].toIntOrNull() ?: 1990
+                    val month = parts[1].toIntOrNull() ?: 1
+                    val day = parts[2].toIntOrNull() ?: 1
+                    val birthDate = LocalDate.of(year, month, day)
+                    val today = LocalDate.now()
+                    Period.between(birthDate, today).years.coerceAtLeast(0)
+                } else 0
+            } catch (_: Exception) {
+                0
+            }
+        }
+}
 
 data class ConsultaRef(
     @SerializedName("id_consulta") val id: String,
@@ -236,9 +256,11 @@ data class Cita(
             horaInicio: String,
             citaIdExcluir: String? = null
         ): Boolean {
+            val fechaIso = com.cmo.hospital.core.ui.DateUtils.toIsoDate(fecha)
             return citasExistentes.any { cita ->
                 if (cita.id == citaIdExcluir || cita.estado == "CANCELADA") return@any false
-                val coincideFecha = cita.fecha == fecha
+                val coincideFecha = cita.fecha == fecha ||
+                    com.cmo.hospital.core.ui.DateUtils.toIsoDate(cita.fecha) == fechaIso
                 val coincideHora = cita.horaInicio == horaInicio
                 val coincideMedico = medicoNombre.isNullOrBlank() ||
                     cita.medicoNombre.isNullOrBlank() ||
@@ -276,6 +298,29 @@ data class SalaSemiprivadaUi(
     val camaA: Cama,
     val camaB: Cama
 )
+
+data class ResponsableMenor(
+    @SerializedName("tipo_documento") val tipoDocumento: String = "DUI",
+    val documento: String,
+    @SerializedName("nombre_completo") val nombreCompleto: String,
+    val telefono: String,
+    val parentesco: String
+)
+
+data class HabitacionDetalleUi(
+    val codigo: String, // ej. "VIP-301", "HAB-201"
+    val tipo: String, // "VIP Individual" o "Semiprivada"
+    val planta: String, // "3ª Planta" o "2ª Planta"
+    val camas: List<Cama>,
+    val totalCamas: Int,
+    val camasOcupadas: Int,
+    val camasDisponibles: Int
+) {
+    val estaDisponible: Boolean get() = camasDisponibles > 0
+    val estaCompletamenteDisponible: Boolean get() = camasOcupadas == 0
+    val estaCompletamenteOcupada: Boolean get() = camasDisponibles == 0
+    val estaParcialmenteOcupada: Boolean get() = camasOcupadas > 0 && camasDisponibles > 0
+}
 
 data class CapacidadHospitalaria(
     val totalCamas: Int = 17,

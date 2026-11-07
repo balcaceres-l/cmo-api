@@ -510,7 +510,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Recetario Digital HUC"
+                    android:text="Recetario Digital CMO"
                     android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
 
                 <com.google.android.material.button.MaterialButton

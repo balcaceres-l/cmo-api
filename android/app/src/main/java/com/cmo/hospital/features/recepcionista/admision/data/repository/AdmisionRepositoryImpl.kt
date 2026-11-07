@@ -3,6 +3,7 @@ package com.cmo.hospital.features.recepcionista.admision.data.repository
 import com.cmo.hospital.core.data.datasource.HospitalClinicalDataSource
 import com.cmo.hospital.core.domain.model.Cama
 import com.cmo.hospital.core.domain.model.CapacidadHospitalaria
+import com.cmo.hospital.core.domain.model.HabitacionDetalleUi
 import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.core.domain.model.User
 import com.cmo.hospital.features.recepcionista.admision.domain.repository.AdmisionRepository
@@ -16,6 +17,9 @@ class AdmisionRepositoryImpl(
 
     override fun obtenerCapacidadActual(): CapacidadHospitalaria =
         dataSource.construirCapacidadHospitalaria()
+
+    override fun obtenerHabitacionesDetalladas(): List<HabitacionDetalleUi> =
+        dataSource.construirHabitacionesDetalladas()
 
     override suspend fun refrescarCamas(): Result<List<Cama>> = dataSource.syncCamasFromRemote()
 

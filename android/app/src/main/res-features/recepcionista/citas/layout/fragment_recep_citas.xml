@@ -15,127 +15,10 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Micro-Banner Institucional -->
-        <include
-            android:id="@+id/microBannerCitas"
-            layout="@layout/comp_huc_micro_banner" />
-
-        <!-- Llamador activo (sala central) con nombre anonimizado -->
+        <!-- Tarjeta Desplegable: Agendar Cita en Cascada (Especialidad -> Médico -> 30 min) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_card_primary_16"
-            android:elevation="2dp"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_campaign"
-                    app:tint="@color/huc_primary_fixed" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:letterSpacing="0.06"
-                    android:text="LLAMADOR ACTIVO • PANTALLA SALA CENTRAL"
-                    android:textColor="@color/huc_primary_fixed"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvCallerBoxBadge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_pill_primary_container"
-                    android:paddingHorizontal="10dp"
-                    android:paddingVertical="3dp"
-                    android:textColor="@color/huc_primary_fixed"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    tools:text="Box 03" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tvCallerPatientAnon"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:fontFamily="@font/manrope_bold"
-                android:textColor="@color/huc_on_primary"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                tools:text="C. M**** (Protegido)" />
-
-            <TextView
-                android:id="@+id/tvCallerDetail"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textColor="@color/huc_on_primary_container"
-                android:textSize="12sp"
-                tools:text="08:30 • Medicina Interna • Dr. Alejandro Restrepo" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnCallerReLlamar"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
-                    android:layout_height="42dp"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:text="Re-llamar"
-                    android:textColor="@color/huc_primary_fixed"
-                    android:textSize="12sp"
-                    app:backgroundTint="@color/huc_primary_container"
-                    app:cornerRadius="999dp"
-                    app:icon="@drawable/ic_campaign"
-                    app:iconGravity="textStart"
-                    app:iconTint="@color/huc_primary_fixed" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnCallerSiguiente"
-                    style="@style/Widget.Material3.Button"
-                    android:layout_width="0dp"
-                    android:layout_height="42dp"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:text="Siguiente a Box"
-                    android:textColor="@color/huc_on_primary_fixed"
-                    android:textSize="12sp"
-                    app:backgroundTint="@color/huc_primary_fixed"
-                    app:cornerRadius="999dp"
-                    app:icon="@drawable/ic_play"
-                    app:iconGravity="textStart"
-                    app:iconTint="@color/huc_on_primary_fixed" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Tarjeta desplegable: agendar cita contra la agenda real de la API -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
             android:background="@drawable/bg_card_rounded_16"
             android:elevation="1dp"
             android:orientation="vertical"
@@ -336,6 +219,53 @@
                 android:textStyle="bold"
                 tools:text="4 citas" />
         </LinearLayout>
+
+        <!-- Filtros de la Agenda: Estado y Doctor -->
+        <HorizontalScrollView
+            android:id="@+id/scrollFiltrosEstadoCitas"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:scrollbars="none">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupFiltroEstadoCitas"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:selectionRequired="true"
+                app:singleLine="true"
+                app:singleSelection="true" />
+        </HorizontalScrollView>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tilFiltroDoctor"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Filtrar por Médico Asignado"
+            app:startIconDrawable="@drawable/ic_search">
+
+            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                android:id="@+id/actvFiltroDoctor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                android:text="Todos los Médicos" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:id="@+id/tvCitasEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_surface_low_16"
+            android:gravity="center"
+            android:padding="20dp"
+            android:text="No se encontraron citas con los filtros seleccionados."
+            android:textAppearance="@style/TextAppearance.Huc.BodySm"
+            android:textColor="@color/huc_on_surface_variant"
+            android:visibility="gone" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvCitasRecepcion"

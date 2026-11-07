@@ -25,20 +25,7 @@
             android:textColor="@color/huc_primary_container"
             android:textSize="14sp"
             android:textStyle="bold"
-            tools:text="09:00 - 09:30" />
-
-        <TextView
-            android:id="@+id/tvItemCitaBox"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:background="@drawable/bg_surface_container_16"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="2dp"
-            android:textColor="@color/huc_on_surface_variant"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            tools:text="Box 03" />
+            tools:text="29/10/2026 • 09:00 - 09:30" />
 
         <View
             android:layout_width="0dp"
