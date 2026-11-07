@@ -1,915 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/huc_surface"
-    android:clipToPadding="false"
-    android:paddingHorizontal="16dp"
-    android:paddingTop="16dp"
-    android:paddingBottom="88dp">
+    android:orientation="vertical">
 
-    <LinearLayout
+    <!-- ─────────────────────────────────────────────────────────────────────────
+         TabLayout Superior Material 3 (2 Tabs)
+         ───────────────────────────────────────────────────────────────────────── -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabLayoutAdmision"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="48dp"
+        android:background="@color/huc_surface_lowest"
+        android:elevation="2dp"
+        app:tabGravity="fill"
+        app:tabIndicatorColor="@color/huc_primary_container"
+        app:tabIndicatorFullWidth="false"
+        app:tabIndicatorHeight="3dp"
+        app:tabMode="fixed"
+        app:tabSelectedTextColor="@color/huc_primary_container"
+        app:tabTextAppearance="@style/TextAppearance.Huc.TitleSm"
+        app:tabTextColor="@color/huc_on_surface_variant">
 
-        <!-- Header del Módulo y Toggle Ley de Protección / Anonimización (Ley 19.628) -->
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:icon="@drawable/ic_how_to_reg"
+            android:text="Registro e Ingreso" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:icon="@drawable/ic_meeting_room"
+            android:text="Vista de Habitaciones" />
+    </com.google.android.material.tabs.TabLayout>
+
+    <!-- ─────────────────────────────────────────────────────────────────────────
+         TAB 1: Formulario de Registro e Ingreso de Paciente
+         ───────────────────────────────────────────────────────────────────────── -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollTabRegistro"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="88dp"
+        android:visibility="visible">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_card_rounded_16"
-            android:elevation="1dp"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="vertical">
 
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_how_to_reg"
-                    app:tint="@color/huc_secondary" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="5dp"
-                    android:letterSpacing="0.06"
-                    android:text="ADMISIÓN INMEDIATA"
-                    android:textColor="@color/huc_secondary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Recepción &amp; Admisión: Registro e Ingreso de Paciente"
-                android:textAppearance="@style/TextAppearance.Huc.HeadlineSm" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:text="Complete los datos de filiación, triage y asigne unidad censable disponible."
-                android:textAppearance="@style/TextAppearance.Huc.BodySm" />
-
-            <!-- Toggle Paciente Protegido / VIP (Ley 19.628) -->
-            <LinearLayout
-                android:id="@+id/vipWrapper"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:background="@drawable/bg_surface_low_16"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="10dp">
-
-                <FrameLayout
-                    android:id="@+id/vipIconBox"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="@drawable/bg_circle_surface_highest">
-
-                    <ImageView
-                        android:id="@+id/ivVipIcon"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
-                        android:layout_gravity="center"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_visibility"
-                        app:tint="@color/huc_on_surface_variant" />
-                </FrameLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="10dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Ley de Datos / Anonimización"
-                            android:textAppearance="@style/TextAppearance.Huc.TitleSm"
-                            android:textSize="13sp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:background="@drawable/bg_pill_secondary_fixed"
-                            android:paddingHorizontal="6dp"
-                            android:paddingVertical="1dp"
-                            android:text="Ley 19.628"
-                            android:textColor="@color/huc_on_secondary_fixed"
-                            android:textSize="10sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/tvVipDesc"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Nombre visible en pantallas y monitores de sala"
-                        android:textColor="@color/huc_on_surface_variant"
-                        android:textSize="11sp" />
-                </LinearLayout>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchVipLey19628"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Bloque 1: Identificación y Filiación (Paso 1 de 3) -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_card_rounded_16"
-            android:elevation="1dp"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <include
-                android:id="@+id/stepHeader1"
-                layout="@layout/comp_section_step_header" />
-
-            <!-- DNI / Documento con botón de escáner -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="DNI / Cédula de Identidad"
-                android:textAppearance="@style/TextAppearance.Huc.LabelMd"
-                android:textColor="@color/huc_on_surface_variant" />
-
+            <!-- Header del Módulo -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <com.google.android.material.textfield.TextInputLayout
-                    style="@style/Widget.Huc.TextInputLayout"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1"
-                    app:boxBackgroundColor="@color/huc_surface_lowest"
-                    app:hintEnabled="false"
-                    app:startIconDrawable="@drawable/ic_search"
-                    app:startIconTint="@color/huc_outline">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etAdmisionDni"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="Ej: 18.342.981-K"
-                        android:inputType="text"
-                        android:maxLines="1"
-                        android:paddingVertical="12dp" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnEscanearDni"
-                    style="@style/Widget.Material3.Button"
-                    android:layout_width="wrap_content"
-                    android:layout_height="48dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:text="Escanear"
-                    android:textAllCaps="true"
-                    android:textColor="@color/huc_on_primary"
-                    android:textSize="12sp"
-                    app:backgroundTint="@color/huc_primary_container"
-                    app:cornerRadius="16dp"
-                    app:icon="@drawable/ic_document_scanner"
-                    app:iconGravity="textStart" />
-            </LinearLayout>
-
-            <!-- Feedback Registro Civil Digital -->
-            <LinearLayout
-                android:id="@+id/bannerScanFeedback"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/bg_secondary_fixed_8"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="5dp"
-                android:visibility="gone"
-                tools:visibility="visible">
-
-                <ImageView
-                    android:layout_width="14dp"
-                    android:layout_height="14dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_check_circle"
-                    app:tint="@color/huc_on_secondary_fixed" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:text="Datos cargados desde Registro Civil Digital"
-                    android:textColor="@color/huc_on_secondary_fixed"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <!-- Nombres y Apellidos -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:text="Nombres"
-                android:textAppearance="@style/TextAppearance.Huc.LabelMd"
-                android:textColor="@color/huc_on_surface_variant" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Huc.TextInputLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                app:hintEnabled="false">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etAdmisionNombres"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Ej. Camila Antonia"
-                    android:inputType="textPersonName"
-                    android:maxLines="1"
-                    android:paddingVertical="12dp" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Apellidos"
-                android:textAppearance="@style/TextAppearance.Huc.LabelMd"
-                android:textColor="@color/huc_on_surface_variant" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Huc.TextInputLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                app:hintEnabled="false">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etAdmisionApellidos"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Ej. Valenzuela Rojas"
-                    android:inputType="textPersonName"
-                    android:maxLines="1"
-                    android:paddingVertical="12dp" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- Edad y Previsión / Cobertura -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:baselineAligned="false"
-                android:orientation="horizontal">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="0.85"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Edad (años)"
-                        android:textAppearance="@style/TextAppearance.Huc.LabelMd"
-                        android:textColor="@color/huc_on_surface_variant" />
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        app:hintEnabled="false"
-                        app:suffixText="años">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etAdmisionEdad"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:hint="38"
-                            android:inputType="number"
-                            android:maxLines="1"
-                            android:paddingVertical="12dp" />
-                    </com.google.android.material.textfield.TextInputLayout>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1.15"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Previsión / Cobertura"
-                        android:textAppearance="@style/TextAppearance.Huc.LabelMd"
-                        android:textColor="@color/huc_on_surface_variant" />
-
-                    <FrameLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:layout_marginTop="4dp"
-                        android:background="@drawable/bg_spinner_surface_low"
-                        android:paddingHorizontal="8dp">
-
-                        <Spinner
-                            android:id="@+id/spinnerAdmisionPrevision"
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:entries="@array/huc_prevision_options" />
-                    </FrameLayout>
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- Acompañante / Contacto de Emergencia -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Acompañante / Contacto de Emergencia"
-                android:textAppearance="@style/TextAppearance.Huc.LabelMd"
-                android:textColor="@color/huc_on_surface_variant" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Huc.TextInputLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                app:hintEnabled="false"
-                app:startIconDrawable="@drawable/ic_contact_emergency"
-                app:startIconTint="@color/huc_outline">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etAdmisionContacto"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Nombre + Teléfono (+56 9 8765 4321)"
-                    android:inputType="text"
-                    android:maxLines="1"
-                    android:paddingVertical="12dp" />
-            </com.google.android.material.textfield.TextInputLayout>
-        </LinearLayout>
-
-        <!-- Bloque 2: Motivo Clínico, Triage Manchester & Signos Vitales (Paso 2 de 3) -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_card_rounded_16"
-            android:elevation="1dp"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <include
-                android:id="@+id/stepHeader2"
-                layout="@layout/comp_section_step_header" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Motivo Principal de Ingreso"
-                android:textAppearance="@style/TextAppearance.Huc.LabelMd"
-                android:textColor="@color/huc_on_surface_variant" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.Huc.TextInputLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                app:hintEnabled="false">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etAdmisionMotivo"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="top"
-                    android:hint="Describa síntomas agudos, antecedentes o derivación de urgencias..."
-                    android:inputType="textMultiLine"
-                    android:minLines="2"
-                    android:paddingVertical="12dp" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <!-- Selector Triage Manchester 2x2 -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:text="Clasificación de Triage Manchester"
-                android:textAppearance="@style/TextAppearance.Huc.LabelMd"
-                android:textColor="@color/huc_on_surface_variant" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:orientation="horizontal">
-
-                <!-- Nivel I: Rojo -->
-                <LinearLayout
-                    android:id="@+id/btnTriageNivel1"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_surface_container_16"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:padding="10dp">
-
-                    <View
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:background="@drawable/bg_dot_circle"
-                        android:backgroundTint="@color/huc_error" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvTriageTitle1"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Nivel I: Rojo"
-                            android:textColor="@color/huc_on_surface"
-                            android:textSize="13sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Inmediato (0 min)"
-                            android:textColor="@color/huc_on_surface_variant"
-                            android:textSize="11sp" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- Nivel II: Naranja -->
-                <LinearLayout
-                    android:id="@+id/btnTriageNivel2"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_surface_container_16"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:padding="10dp">
-
-                    <View
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:background="@drawable/bg_dot_circle"
-                        android:backgroundTint="@color/huc_on_tertiary_container" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvTriageTitle2"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Nivel II: Naranja"
-                            android:textColor="@color/huc_on_surface"
-                            android:textSize="13sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Muy Urgente (10 min)"
-                            android:textColor="@color/huc_on_surface_variant"
-                            android:textSize="11sp" />
-                    </LinearLayout>
-                </LinearLayout>
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:orientation="horizontal">
-
-                <!-- Nivel III: Amarillo (Por defecto) -->
-                <LinearLayout
-                    android:id="@+id/btnTriageNivel3"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_tertiary_fixed_16"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:padding="10dp">
-
-                    <View
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:background="@drawable/bg_dot_circle"
-                        android:backgroundTint="@color/huc_tertiary_container" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvTriageTitle3"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Nivel III: Amarillo"
-                            android:textColor="@color/huc_on_tertiary_fixed"
-                            android:textSize="13sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Urgente (60 min)"
-                            android:textColor="@color/huc_on_tertiary_fixed_variant"
-                            android:textSize="11sp" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- Nivel IV: Verde -->
-                <LinearLayout
-                    android:id="@+id/btnTriageNivel4"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_surface_container_16"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:padding="10dp">
-
-                    <View
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:background="@drawable/bg_dot_circle"
-                        android:backgroundTint="@color/huc_primary_fixed_dim" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvTriageTitle4"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Nivel IV: Verde"
-                            android:textColor="@color/huc_on_surface"
-                            android:textSize="13sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Estándar (120 min)"
-                            android:textColor="@color/huc_on_surface_variant"
-                            android:textSize="11sp" />
-                    </LinearLayout>
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- Pase Directo de Emergencia a Box + Signos Vitales Opcionales -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/bg_surface_low_16"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="10dp">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="🚨 Pase de Emergencia Directa a Box"
-                        android:textAppearance="@style/TextAppearance.Huc.TitleSm"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text=" Transfiere directo al Médico en Box 03 sin requerir cama previa"
-                        android:textColor="@color/huc_on_surface_variant"
-                        android:textSize="11sp" />
-                </LinearLayout>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchEmergenciaDirecta"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/bannerEmergenciaDirecta"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/bg_tertiary_fixed_16"
-                android:padding="10dp"
-                android:text="⚡ Modo Emergencia Activo: Los signos vitales pueden ser tomados directamente por el Médico en Consulta Activa."
-                android:textColor="@color/huc_on_tertiary_fixed"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:visibility="gone" />
-
-            <!-- Bloque Desplegable de Signos Vitales Opcionales con IMC -->
-            <LinearLayout
-                android:id="@+id/headerToggleSignosAdmision"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_surface_container_16"
-                android:clickable="true"
-                android:focusable="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="9dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Signos Vitales de Triaje (Opcionales)"
-                    android:textAppearance="@style/TextAppearance.Huc.LabelMd"
-                    android:textColor="@color/huc_primary_container" />
-
-                <TextView
-                    android:id="@+id/tvToggleSignosAdmision"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="+ Registrar Signos"
-                    android:textColor="@color/huc_secondary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/containerSignosAdmision"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_card_rounded_16"
+                android:elevation="1dp"
                 android:orientation="vertical"
-                android:visibility="gone">
+                android:padding="16dp">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="4dp"
-                        android:layout_weight="1"
-                        android:hint="PA Sistólica">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etAdmSist"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="number" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:layout_weight="1"
-                        android:hint="PA Diastólica">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etAdmDiast"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="number" />
-                    </com.google.android.material.textfield.TextInputLayout>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="4dp"
-                        android:layout_weight="1"
-                        android:hint="FC (lpm)">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etAdmFc"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="number" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:layout_weight="1"
-                        android:hint="FR (rpm)">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etAdmFr"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="number" />
-                    </com.google.android.material.textfield.TextInputLayout>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="4dp"
-                        android:layout_weight="1"
-                        android:hint="Temp (°C)">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etAdmTemp"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="numberDecimal" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:layout_weight="1"
-                        android:hint="SpO2 (%)">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etAdmSpo2"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="number" />
-                    </com.google.android.material.textfield.TextInputLayout>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:orientation="horizontal">
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="4dp"
-                        android:layout_weight="1"
-                        android:hint="Peso (kg)">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etAdmPeso"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="numberDecimal" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        style="@style/Widget.Huc.TextInputLayout"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:layout_weight="1"
-                        android:hint="Talla (cm)">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etAdmTalla"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="numberDecimal" />
-                    </com.google.android.material.textfield.TextInputLayout>
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/tvAdmImcBadge"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_primary_fixed_16"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="7dp"
-                    android:text="IMC Automático: N/D"
-                    android:textColor="@color/huc_on_primary_fixed"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- Bloque 3: Asignación de Camas con Regla Estricta (17 Camas) (Paso 3 de 3) -->
-        <LinearLayout
-            android:id="@+id/cardPaso3Camas"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_card_rounded_16"
-            android:elevation="1dp"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <include
-                android:id="@+id/stepHeader3"
-                layout="@layout/comp_section_step_header" />
-
-            <!-- Barra de Estado de Ocupación e Indicador Estricto -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_surface_container_16"
-                android:orientation="vertical"
-                android:padding="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
@@ -918,40 +76,199 @@
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:contentDescription="@null"
-                        android:src="@drawable/ic_rule"
-                        app:tint="@color/huc_primary_container" />
+                        android:src="@drawable/ic_how_to_reg"
+                        app:tint="@color/huc_secondary" />
 
                     <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="6dp"
-                        android:layout_weight="1"
-                        android:text="Capacidad Hospitalaria"
-                        android:textAppearance="@style/TextAppearance.Huc.TitleSm" />
-
-                    <TextView
-                        android:id="@+id/tvCapacidadOcupadasPill"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_pill_primary_container"
-                        android:paddingHorizontal="9dp"
-                        android:paddingVertical="3dp"
-                        android:text="14 / 17 Ocupadas"
-                        android:textColor="@color/huc_primary_fixed"
+                        android:layout_marginStart="5dp"
+                        android:letterSpacing="0.06"
+                        android:text="ADMISIÓN INMEDIATA"
+                        android:textColor="@color/huc_secondary"
                         android:textSize="11sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <ProgressBar
-                    android:id="@+id/progressHospitalCapacity"
-                    style="?android:attr/progressBarStyleHorizontal"
+                <TextView
                     android:layout_width="match_parent"
-                    android:layout_height="8dp"
-                    android:layout_marginTop="8dp"
-                    android:max="100"
-                    android:progress="82"
-                    android:progressDrawable="@drawable/bg_progress_hospital_capacity" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Recepción &amp; Admisión: Registro e Ingreso de Paciente"
+                    android:textAppearance="@style/TextAppearance.Huc.HeadlineSm" />
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:text="Complete los datos de filiación, triage y asigne unidad censable disponible."
+                    android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+            </LinearLayout>
+
+            <!-- Bloque 1: Identificación y Filiación (Paso 1 de 3) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_card_rounded_16"
+                android:elevation="1dp"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <include
+                    android:id="@+id/stepHeader1"
+                    layout="@layout/comp_section_step_header" />
+
+                <!-- Selector Tipo de Documento: DUI o Pasaporte -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Tipo de Documento de Identidad"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelMd"
+                    android:textColor="@color/huc_on_surface_variant" />
+
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/toggleTipoDocumento"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    app:checkedButton="@id/btnDocDui"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnDocDui"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="42dp"
+                        android:layout_weight="1"
+                        android:text="DUI (El Salvador)"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnDocPasaporte"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="42dp"
+                        android:layout_weight="1"
+                        android:text="Pasaporte"
+                        android:textSize="12sp" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                <!-- Campo Número de Documento con botón de escáner -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="top"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilAdmisionDocumento"
+                        style="@style/Widget.Huc.TextInputLayout"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:hint="Número de DUI (00000000-0)"
+                        app:errorEnabled="true"
+                        app:startIconDrawable="@drawable/ic_search"
+                        app:startIconTint="@color/huc_outline">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etAdmisionDocumento"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number"
+                            android:maxLines="1" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnEscanearDni"
+                        style="@style/Widget.Material3.Button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="52dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="Escanear"
+                        android:textAllCaps="true"
+                        android:textColor="@color/huc_on_primary"
+                        android:textSize="12sp"
+                        app:backgroundTint="@color/huc_primary_container"
+                        app:cornerRadius="14dp"
+                        app:icon="@drawable/ic_document_scanner"
+                        app:iconGravity="textStart" />
+                </LinearLayout>
+
+                <!-- Feedback Escáner -->
+                <LinearLayout
+                    android:id="@+id/bannerScanFeedback"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="6dp"
+                    android:background="@drawable/bg_secondary_fixed_8"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="5dp"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_check_circle"
+                        app:tint="@color/huc_on_secondary_fixed" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:text="Datos cargados desde escaneo de documento"
+                        android:textColor="@color/huc_on_secondary_fixed"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Nombres y Apellidos -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilAdmisionNombres"
+                    style="@style/Widget.Huc.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="Nombres del Paciente"
+                    app:errorEnabled="true">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etAdmisionNombres"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPersonName|textCapWords"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilAdmisionApellidos"
+                    style="@style/Widget.Huc.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="Apellidos del Paciente"
+                    app:errorEnabled="true">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etAdmisionApellidos"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPersonName|textCapWords"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Fecha de Nacimiento (con DatePicker y cálculo de edad) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -959,230 +276,1457 @@
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
-                    <View
-                        android:layout_width="8dp"
-                        android:layout_height="8dp"
-                        android:background="@drawable/bg_dot_circle"
-                        android:backgroundTint="@color/huc_primary_fixed_dim" />
-
-                    <TextView
-                        android:id="@+id/tvCapacidadDisponibles"
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilAdmisionFechaNac"
+                        style="@style/Widget.Huc.TextInputLayout"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="5dp"
                         android:layout_weight="1"
-                        android:text="3 Camas Disponibles"
-                        android:textColor="@color/huc_on_surface"
-                        android:textSize="11sp"
-                        android:textStyle="bold" />
+                        android:hint="Fecha de Nacimiento (dd/mm/aaaa)"
+                        app:endIconDrawable="@drawable/ic_event"
+                        app:endIconMode="custom"
+                        app:errorEnabled="true">
 
-                    <ImageView
-                        android:layout_width="14dp"
-                        android:layout_height="14dp"
-                        android:contentDescription="@null"
-                        android:src="@drawable/ic_lock"
-                        app:tint="@color/huc_error" />
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etAdmisionFechaNac"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="date"
+                            android:maxLines="1" />
+                    </com.google.android.material.textfield.TextInputLayout>
 
                     <TextView
+                        android:id="@+id/tvEdadCalculadaBadge"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginBottom="8dp"
+                        android:background="@drawable/bg_pill_secondary_fixed"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="6dp"
+                        android:textColor="@color/huc_on_secondary_fixed"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        tools:text="38 años" />
+                </LinearLayout>
+
+                <!-- ─────────────────────────────────────────────────────────────────
+                     Sección Condicional: Paciente Menor de Edad (< 18 años)
+                     ───────────────────────────────────────────────────────────────── -->
+                <LinearLayout
+                    android:id="@+id/containerResponsableMenor"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp"
+                    android:background="@drawable/bg_surface_container_16"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_shield"
+                            app:tint="@color/huc_primary_container" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:layout_weight="1"
+                            android:text="Responsable / Tutor Legal"
+                            android:textAppearance="@style/TextAppearance.Huc.TitleSm"
+                            android:textColor="@color/huc_on_surface" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_pill_tertiary_fixed"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp"
+                            android:text="Menor de 18 años"
+                            android:textColor="@color/huc_on_tertiary_fixed"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Paciente menor de edad. Debe registrarse el tutor legal responsable."
+                        android:textAppearance="@style/TextAppearance.Huc.BodySm"
+                        android:textColor="@color/huc_on_surface_variant" />
+
+                    <!-- Selector Documento Tutor -->
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/toggleTutorTipoDocumento"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        app:checkedButton="@id/btnTutorDocDui"
+                        app:selectionRequired="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTutorDocDui"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="38dp"
+                            android:layout_weight="1"
+                            android:text="DUI Tutor"
+                            android:textSize="11sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnTutorDocPasaporte"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="38dp"
+                            android:layout_weight="1"
+                            android:text="Pasaporte Tutor"
+                            android:textSize="11sp" />
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilTutorDocumento"
+                        style="@style/Widget.Huc.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="Número de DUI del Responsable"
+                        app:errorEnabled="true">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etTutorDocumento"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number"
+                            android:maxLines="1" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilTutorNombre"
+                        style="@style/Widget.Huc.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:hint="Nombre Completo del Responsable"
+                        app:errorEnabled="true">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etTutorNombre"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPersonName|textCapWords"
+                            android:maxLines="1" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilTutorTelefono"
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="4dp"
+                            android:layout_weight="1"
+                            android:hint="Teléfono Tutor"
+                            app:errorEnabled="true">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etTutorTelefono"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="phone"
+                                android:maxLines="1" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilTutorParentesco"
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:layout_weight="1"
+                            android:hint="Parentesco"
+                            app:errorEnabled="true">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etTutorParentesco"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="textCapWords"
+                                android:maxLines="1" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Contacto de Emergencia (3 campos desglosados) -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Contacto de Emergencia"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelMd"
+                    android:textColor="@color/huc_on_surface_variant" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilContactoNombre"
+                    style="@style/Widget.Huc.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:hint="Nombre Completo del Contacto"
+                    app:errorEnabled="true">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etContactoNombre"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPersonName|textCapWords"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilContactoTelefono"
+                        style="@style/Widget.Huc.TextInputLayout"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:hint="Teléfono Contacto"
+                        app:errorEnabled="true">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etContactoTelefono"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="phone"
+                            android:maxLines="1" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilContactoParentesco"
+                        style="@style/Widget.Huc.TextInputLayout"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
                         android:layout_marginStart="4dp"
-                        android:text="Sobrecupo Bloqueado"
-                        android:textColor="@color/huc_error"
+                        android:layout_weight="1"
+                        android:hint="Parentesco"
+                        app:errorEnabled="true">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etContactoParentesco"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textCapWords"
+                            android:maxLines="1" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Bloque 2: Motivo Clínico, Triage Manchester & Signos Vitales (Paso 2 de 3) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_card_rounded_16"
+                android:elevation="1dp"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <include
+                    android:id="@+id/stepHeader2"
+                    layout="@layout/comp_section_step_header" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Motivo Principal de Ingreso"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelMd"
+                    android:textColor="@color/huc_on_surface_variant" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilAdmisionMotivo"
+                    style="@style/Widget.Huc.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:hint="Describa síntomas agudos, antecedentes o derivación..."
+                    app:errorEnabled="true">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etAdmisionMotivo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="top"
+                        android:inputType="textMultiLine"
+                        android:minLines="2" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Selector Triage Manchester 2x2 -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Clasificación de Triage Manchester"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelMd"
+                    android:textColor="@color/huc_on_surface_variant" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal">
+
+                    <!-- Nivel I: Rojo -->
+                    <LinearLayout
+                        android:id="@+id/btnTriageNivel1"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_surface_container_16"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="10dp">
+
+                        <View
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:background="@drawable/bg_dot_circle"
+                            android:backgroundTint="@color/huc_error" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvTriageTitle1"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Nivel I: Rojo"
+                                android:textColor="@color/huc_on_surface"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Inmediato (0 min)"
+                                android:textColor="@color/huc_on_surface_variant"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Nivel II: Naranja -->
+                    <LinearLayout
+                        android:id="@+id/btnTriageNivel2"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_surface_container_16"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="10dp">
+
+                        <View
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:background="@drawable/bg_dot_circle"
+                            android:backgroundTint="@color/huc_on_tertiary_fixed_variant" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvTriageTitle2"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Nivel II: Naranja"
+                                android:textColor="@color/huc_on_surface"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Muy Urgente (10 m)"
+                                android:textColor="@color/huc_on_surface_variant"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <!-- Nivel III: Amarillo -->
+                    <LinearLayout
+                        android:id="@+id/btnTriageNivel3"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_surface_container_16"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="10dp">
+
+                        <View
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:background="@drawable/bg_dot_circle"
+                            android:backgroundTint="@color/huc_on_tertiary_container" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvTriageTitle3"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Nivel III: Amarillo"
+                                android:textColor="@color/huc_on_surface"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Urgente (60 min)"
+                                android:textColor="@color/huc_on_surface_variant"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Nivel IV: Verde -->
+                    <LinearLayout
+                        android:id="@+id/btnTriageNivel4"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_surface_container_16"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="10dp">
+
+                        <View
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:background="@drawable/bg_dot_circle"
+                            android:backgroundTint="@color/huc_primary" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvTriageTitle4"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Nivel IV: Verde"
+                                android:textColor="@color/huc_on_surface"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Estándar (120 min)"
+                                android:textColor="@color/huc_on_surface_variant"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Switch Pase de Emergencia Directa -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:background="@drawable/bg_surface_low_16"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="10dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_local_hospital"
+                        app:tint="@color/huc_error" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="10dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Pase de Emergencia Directa a Box"
+                            android:textAppearance="@style/TextAppearance.Huc.TitleSm"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Deriva directo a Box 03 e inicia consulta activa en 00:00"
+                            android:textColor="@color/huc_on_surface_variant"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchEmergenciaDirecta"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/bannerEmergenciaDirecta"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_error_container_16"
+                    android:orientation="horizontal"
+                    android:padding="10dp"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_warning"
+                        app:tint="@color/huc_on_error_container" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:text="Al activar pase directo, no se asigna cama censable: el paciente ingresa directo a Box."
+                        android:textColor="@color/huc_on_error_container"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <!-- Desplegable Opcional de Signos Vitales -->
+                <LinearLayout
+                    android:id="@+id/headerToggleSignosAdmision"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_surface_low_16"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="10dp">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_medical_services"
+                        app:tint="@color/huc_primary_container" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:text="Signos Vitales Básicos (Opcional en Admisión)"
+                        android:textAppearance="@style/TextAppearance.Huc.TitleSm"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:id="@+id/tvToggleSignosAdmision"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="+ Registrar Signos"
+                        android:textColor="@color/huc_secondary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/containerSignosAdmision"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="4dp"
+                            android:layout_weight="1"
+                            android:hint="P. Sistólica"
+                            app:suffixText="mmHg">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etAdmSist"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="number" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:layout_weight="1"
+                            android:hint="P. Diastólica"
+                            app:suffixText="mmHg">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etAdmDiast"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="number" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="4dp"
+                            android:layout_weight="1"
+                            android:hint="F. Cardíaca"
+                            app:suffixText="lpm">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etAdmFc"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="number" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:layout_weight="1"
+                            android:hint="F. Respirat."
+                            app:suffixText="rpm">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etAdmFr"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="number" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="4dp"
+                            android:layout_weight="1"
+                            android:hint="Temperatura"
+                            app:suffixText="°C">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etAdmTemp"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="numberDecimal" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:layout_weight="1"
+                            android:hint="Sat. O2"
+                            app:suffixText="%">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etAdmSpo2"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="number" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="4dp"
+                            android:layout_weight="1"
+                            android:hint="Peso"
+                            app:suffixText="kg">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etAdmPeso"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="numberDecimal" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:layout_weight="1"
+                            android:hint="Talla"
+                            app:suffixText="cm">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etAdmTalla"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="numberDecimal" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvAdmImcBadge"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/bg_surface_container_16"
+                        android:padding="8dp"
+                        android:text="IMC Automático: Ingrese peso y talla (opcional)"
+                        android:textColor="@color/huc_on_surface_variant"
                         android:textSize="11sp"
                         android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Planta 3: VIP Individuales (VIP-301 a VIP-305) -->
+            <!-- Bloque 3: Asignación de Camas con Regla Estricta (17 Camas) (Paso 3 de 3) -->
             <LinearLayout
+                android:id="@+id/cardPaso3Camas"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_card_rounded_16"
+                android:elevation="1dp"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-                <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_star"
-                    app:tint="@color/huc_secondary" />
+                <include
+                    android:id="@+id/stepHeader3"
+                    layout="@layout/comp_section_step_header" />
 
-                <TextView
-                    android:layout_width="0dp"
+                <!-- Barra de Estado de Ocupación e Indicador Estricto -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:text="3ª Planta • VIP Individual"
-                    android:textAppearance="@style/TextAppearance.Huc.TitleSm" />
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_surface_container_16"
+                    android:orientation="vertical"
+                    android:padding="12dp">
 
-                <TextView
-                    android:id="@+id/tvVipCountLabel"
-                    android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_rule"
+                            app:tint="@color/huc_primary_container" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:layout_weight="1"
+                            android:text="Capacidad Hospitalaria"
+                            android:textAppearance="@style/TextAppearance.Huc.TitleSm" />
+
+                        <TextView
+                            android:id="@+id/tvCapacidadOcupadasPill"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_pill_primary_container"
+                            android:paddingHorizontal="9dp"
+                            android:paddingVertical="3dp"
+                            android:text="14 / 17 Ocupadas"
+                            android:textColor="@color/huc_primary_fixed"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <ProgressBar
+                        android:id="@+id/progressHospitalCapacity"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="8dp"
+                        android:max="100"
+                        android:progress="82"
+                        android:progressDrawable="@drawable/bg_progress_hospital_capacity" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
+                            android:background="@drawable/bg_dot_circle"
+                            android:backgroundTint="@color/huc_primary_fixed_dim" />
+
+                        <TextView
+                            android:id="@+id/tvCapacidadDisponibles"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="5dp"
+                            android:layout_weight="1"
+                            android:text="3 Camas Disponibles"
+                            android:textColor="@color/huc_on_surface"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <ImageView
+                            android:layout_width="14dp"
+                            android:layout_height="14dp"
+                            android:contentDescription="@null"
+                            android:src="@drawable/ic_lock"
+                            app:tint="@color/huc_error" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:text="Sobrecupo Bloqueado"
+                            android:textColor="@color/huc_error"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Planta 3: VIP Individuales (VIP-301 a VIP-305) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="1 Disp. / 5 Totales"
-                    android:textColor="@color/huc_on_surface_variant"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
+                    android:layout_marginTop="14dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_star"
+                        app:tint="@color/huc_secondary" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:text="3ª Planta • VIP Individual"
+                        android:textAppearance="@style/TextAppearance.Huc.TitleSm" />
+
+                    <TextView
+                        android:id="@+id/tvVipCountLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1 Disp. / 5 Totales"
+                        android:textColor="@color/huc_on_surface_variant"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvCamasVip"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:nestedScrollingEnabled="false"
+                    tools:listitem="@layout/item_cama_vip" />
+
+                <!-- Planta 2: Semiprivadas (HAB-201 a HAB-206 A/B) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_meeting_room"
+                        app:tint="@color/huc_primary_container" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:text="2ª Planta • Semiprivadas (A / B)"
+                        android:textAppearance="@style/TextAppearance.Huc.TitleSm" />
+
+                    <TextView
+                        android:id="@+id/tvSemiCountLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="2 Disp. / 12 Totales"
+                        android:textColor="@color/huc_on_surface_variant"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvSalasSemiprivadas"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:nestedScrollingEnabled="false"
+                    tools:listitem="@layout/item_sala_semiprivada" />
+
+                <!-- Cama Asignada Actual Feedback -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:background="@drawable/bg_surface_container_16"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="10dp">
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_single_bed"
+                        app:tint="@color/huc_secondary" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:text="Cama Asignada:"
+                        android:textAppearance="@style/TextAppearance.Huc.LabelMd" />
+
+                    <TextView
+                        android:id="@+id/tvSelectedBedPill"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_card_rounded_16"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp"
+                        android:text="Ninguna seleccionada"
+                        android:textColor="@color/huc_primary_container"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
             </LinearLayout>
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvCamasVip"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:nestedScrollingEnabled="false"
-                tools:listitem="@layout/item_cama_vip" />
-
-            <!-- Planta 2: Semiprivadas (HAB-201 a HAB-206 A/B) -->
+            <!-- Bloque de Trazabilidad y Seguridad QR -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_meeting_room"
-                    app:tint="@color/huc_primary_container" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:text="2ª Planta • Semiprivadas (A / B)"
-                    android:textAppearance="@style/TextAppearance.Huc.TitleSm" />
-
-                <TextView
-                    android:id="@+id/tvSemiCountLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="2 Disp. / 12 Totales"
-                    android:textColor="@color/huc_on_surface_variant"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvSalasSemiprivadas"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:nestedScrollingEnabled="false"
-                tools:listitem="@layout/item_sala_semiprivada" />
-
-            <!-- Cama Asignada Actual Feedback -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:background="@drawable/bg_surface_container_16"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_card_rounded_16"
+                android:elevation="1dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:padding="10dp">
+                android:padding="16dp">
 
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_single_bed"
-                    app:tint="@color/huc_secondary" />
+                <FrameLayout
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/bg_surface_container_16">
 
-                <TextView
+                    <ImageView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_qr_code"
+                        app:tint="@color/huc_primary" />
+                </FrameLayout>
+
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
+                    android:layout_marginStart="14dp"
                     android:layout_weight="1"
-                    android:text="Cama Asignada:"
-                    android:textAppearance="@style/TextAppearance.Huc.LabelMd" />
+                    android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/tvSelectedBedPill"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_card_rounded_16"
-                    android:paddingHorizontal="10dp"
-                    android:paddingVertical="4dp"
-                    android:text="Ninguna seleccionada"
-                    android:textColor="@color/huc_primary_container"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Trazabilidad y Seguridad"
+                        android:textAppearance="@style/TextAppearance.Huc.TitleSm" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="El brazalete codificará documento, nivel de triage y cama de ingreso encriptada."
+                        android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+                </LinearLayout>
             </LinearLayout>
-        </LinearLayout>
 
-        <!-- Bloque de Trazabilidad y Seguridad QR (Idéntico al Prototipo HTML) -->
+            <!-- Mensaje Informativo de Validación Inmediata -->
+            <TextView
+                android:id="@+id/tvFormValidacionFeedback"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:text="Complete los datos obligatorios para habilitar el ingreso."
+                android:textColor="@color/huc_on_surface_variant"
+                android:textSize="12sp" />
+
+            <!-- Botones de Acción -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnConfirmarIngreso"
+                style="@style/Widget.Huc.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="6dp"
+                android:enabled="false"
+                android:text="Confirmar Ingreso y Asignar Cama"
+                app:icon="@drawable/ic_check_circle"
+                app:iconGravity="textStart" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGenerarBrazaleteQr"
+                style="@style/Widget.Huc.Button.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="8dp"
+                android:text="Generar Brazalete QR"
+                app:icon="@drawable/ic_qr_code"
+                app:iconGravity="textStart"
+                app:iconTint="@color/huc_on_secondary_fixed" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- ─────────────────────────────────────────────────────────────────────────
+         TAB 2: Vista de Habitaciones (Panel Detallado con Pacientes Internados)
+         ───────────────────────────────────────────────────────────────────────── -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/layoutTabHabitaciones"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="88dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_card_rounded_16"
-            android:elevation="1dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="16dp">
+            android:orientation="vertical">
 
-            <FrameLayout
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:background="@drawable/bg_surface_container_16">
-
-                <ImageView
-                    android:layout_width="30dp"
-                    android:layout_height="30dp"
-                    android:layout_gravity="center"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_qr_code"
-                    app:tint="@color/huc_primary" />
-            </FrameLayout>
-
+            <!-- Banner Institucional de Habitaciones -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:background="@drawable/bg_card_rounded_16"
+                android:elevation="1dp"
+                android:orientation="vertical"
+                android:padding="16dp">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Trazabilidad y Seguridad"
-                    android:textAppearance="@style/TextAppearance.Huc.TitleSm" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_domain"
+                        app:tint="@color/huc_primary_container" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:letterSpacing="0.06"
+                        android:text="HOSPITALIZACIÓN CMO"
+                        android:textColor="@color/huc_primary_container"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Vista de Habitaciones &amp; Pacientes"
+                    android:textAppearance="@style/TextAppearance.Huc.HeadlineSm" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="El brazalete codificará DNI, nivel de triage, alergias y cama de ingreso encriptada."
+                    android:text="Consulte la ocupación por habitación y el detalle clínico de pacientes internados."
                     android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+
+                <!-- Métricas Rápidas -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_surface_container_16"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="11 Habitaciones (17 Camas)"
+                            android:textAppearance="@style/TextAppearance.Huc.TitleSm" />
+
+                        <TextView
+                            android:id="@+id/tvHabCapacidadOcupadasPill"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_pill_primary_container"
+                            android:paddingHorizontal="9dp"
+                            android:paddingVertical="3dp"
+                            android:text="14 Ocupadas"
+                            android:textColor="@color/huc_primary_fixed"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <ProgressBar
+                        android:id="@+id/progressHospitalCapacityTab2"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="6dp"
+                        android:max="100"
+                        android:progress="82"
+                        android:progressDrawable="@drawable/bg_progress_hospital_capacity" />
+
+                    <TextView
+                        android:id="@+id/tvHabCapacidadDisponibles"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="3 Camas Disponibles para Asignación Inmediata"
+                        android:textColor="@color/huc_primary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
             </LinearLayout>
+
+            <!-- Filtros de Habitaciones: Tipo y Disponibilidad -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card_rounded_16"
+                android:elevation="1dp"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_search"
+                        app:tint="@color/huc_primary" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:letterSpacing="0.06"
+                        android:text="FILTRAR HABITACIONES"
+                        android:textColor="@color/huc_primary"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvFiltrosActivosBadge"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_pill_secondary_fixed"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="2dp"
+                        android:text="11 Habitaciones"
+                        android:textColor="@color/huc_on_secondary_fixed"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/btnResetFiltrosHabitaciones"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:padding="4dp"
+                        android:text="Restablecer"
+                        android:textColor="@color/huc_error"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+                </LinearLayout>
+
+                <!-- Campo de Búsqueda Rápida -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilBuscarHabitacion"
+                    style="@style/Widget.Huc.TextInputLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="Buscar por código, paciente o motivo..."
+                    app:endIconMode="clear_text"
+                    app:startIconDrawable="@drawable/ic_search">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etBuscarHabitacion"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- 1. Filtro por Tipo de Habitación -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="1. Tipo de Habitación"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelMd"
+                    android:textColor="@color/huc_on_surface_variant" />
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:scrollbars="none">
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipGroupFiltroHabTipo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:selectionRequired="true"
+                        app:singleLine="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipFiltroHabTodas"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true"
+                            android:text="Todas (11)"
+                            android:textSize="12sp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipFiltroHabVip"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="VIP Individual (5)"
+                            android:textSize="12sp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipFiltroHabSemi"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Semiprivadas (6)"
+                            android:textSize="12sp" />
+                    </com.google.android.material.chip.ChipGroup>
+                </HorizontalScrollView>
+
+                <!-- Separador -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="6dp"
+                    android:background="@color/huc_outline_variant" />
+
+                <!-- 2. Filtro por Disponibilidad de Camas -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2. Disponibilidad de Camas"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelMd"
+                    android:textColor="@color/huc_on_surface_variant" />
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="3dp"
+                    android:scrollbars="none">
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipGroupFiltroHabOcup"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:selectionRequired="true"
+                        app:singleLine="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipFiltroOcupTodas"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true"
+                            android:text="Cualquier Estado"
+                            android:textSize="12sp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipFiltroOcupDisp"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Con Disponibilidad"
+                            android:textSize="12sp" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipFiltroOcupLlenas"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="100% Ocupadas"
+                            android:textSize="12sp" />
+                    </com.google.android.material.chip.ChipGroup>
+                </HorizontalScrollView>
+            </LinearLayout>
+
+            <!-- Lista de Habitaciones Detalladas -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvHabitacionesDetalle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:nestedScrollingEnabled="false"
+                tools:listitem="@layout/item_habitacion_detalle" />
+
+            <TextView
+                android:id="@+id/tvHabitacionesEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_surface_low_16"
+                android:gravity="center"
+                android:padding="24dp"
+                android:text="No se encontraron habitaciones con los filtros seleccionados."
+                android:textColor="@color/huc_on_surface_variant"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
         </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
-        <!-- Botones de Acción Obligatorios (#004D40 y #CFE5FF) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnConfirmarIngreso"
-            style="@style/Widget.Huc.Button.Primary"
-            android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="18dp"
-            android:text="Confirmar Ingreso y Asignar Cama"
-            app:icon="@drawable/ic_check_circle"
-            app:iconGravity="textStart" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnGenerarBrazaleteQr"
-            style="@style/Widget.Huc.Button.Secondary"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:layout_marginTop="8dp"
-            android:text="Generar Brazalete QR"
-            app:icon="@drawable/ic_qr_code"
-            app:iconGravity="textStart"
-            app:iconTint="@color/huc_on_secondary_fixed" />
-
-    </LinearLayout>
-</androidx.core.widget.NestedScrollView>
+</LinearLayout>

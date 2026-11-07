@@ -146,6 +146,7 @@ class AppContainer(context: Context) {
     fun createAdmisionViewModel(): AdmisionViewModel =
         AdmisionViewModel(
             observeCapacidadCamasUseCase = ObserveCapacidadCamasUseCase(admisionRepository),
+            observeHabitacionesDetalladasUseCase = com.cmo.hospital.features.recepcionista.admision.domain.usecase.ObserveHabitacionesDetalladasUseCase(admisionRepository),
             simularEscanerDocumentoUseCase = SimularEscanerDocumentoUseCase(),
             registrarIngresoPacienteUseCase = RegistrarIngresoPacienteUseCase(admisionRepository),
             generarBrazaleteQrUseCase = GenerarBrazaleteQrUseCase()

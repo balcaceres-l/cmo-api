@@ -1,0 +1,460 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    android:background="@drawable/bg_card_rounded_16"
+    android:elevation="1dp"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <!-- Encabezado de la Habitación -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <FrameLayout
+            android:id="@+id/iconHabitacionBox"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_circle_surface_highest">
+
+            <ImageView
+                android:id="@+id/ivHabitacionIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_meeting_room"
+                app:tint="@color/huc_primary_container" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvHabitacionCodigo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="@style/TextAppearance.Huc.TitleSm"
+                android:textColor="@color/huc_on_surface"
+                tools:text="HAB-201" />
+
+            <TextView
+                android:id="@+id/tvHabitacionTipoYPlanta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:textAppearance="@style/TextAppearance.Huc.BodySm"
+                android:textColor="@color/huc_on_surface_variant"
+                tools:text="Semiprivada (2 Camas) • 2ª Planta" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvHabitacionEstadoBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_pill_primary_fixed"
+            android:paddingHorizontal="9dp"
+            android:paddingVertical="3dp"
+            android:textColor="@color/huc_on_primary_fixed"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            tools:text="Disponible" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginVertical="10dp"
+        android:background="@color/huc_outline_variant" />
+
+    <!-- ─────────────────────────────────────────────────────────────────────────
+         Cama A (o Única Cama si es VIP)
+         ───────────────────────────────────────────────────────────────────────── -->
+    <LinearLayout
+        android:id="@+id/cardCamaA"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_surface_low_16"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvCamaACodigoBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_surface_container_16"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:textColor="@color/huc_on_surface"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                tools:text="Cama HAB-201-A" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/tvCamaAEstadoBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_pill_primary_fixed"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:textColor="@color/huc_on_primary_fixed"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                tools:text="DISPONIBLE" />
+        </LinearLayout>
+
+        <!-- Detalle Cama A Disponible -->
+        <LinearLayout
+            android:id="@+id/containerCamaADisponible"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_check_circle"
+                app:tint="@color/huc_primary" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:text="Cama libre y preparada para asignación"
+                android:textAppearance="@style/TextAppearance.Huc.BodySm"
+                android:textColor="@color/huc_on_surface_variant" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAsignarCamaA"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:paddingHorizontal="10dp"
+                android:text="Asignar"
+                android:textSize="11sp"
+                app:icon="@drawable/ic_how_to_reg"
+                app:iconSize="14dp" />
+        </LinearLayout>
+
+        <!-- Detalle Cama A Ocupada (Datos Detallados del Paciente) -->
+        <LinearLayout
+            android:id="@+id/containerCamaAOcupada"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="vertical"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_person"
+                    app:tint="@color/huc_secondary" />
+
+                <TextView
+                    android:id="@+id/tvPacienteANombre"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textAppearance="@style/TextAppearance.Huc.TitleSm"
+                    android:textColor="@color/huc_on_surface"
+                    tools:text="Francisca Elena Navarro Silva" />
+
+                <TextView
+                    android:id="@+id/tvPacienteAExpediente"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/huc_on_surface_variant"
+                    android:textSize="11sp"
+                    tools:text="Exp: PV-2026-0301" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvPacienteADocumento"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/huc_on_surface_variant"
+                    android:textSize="11sp"
+                    tools:text="DUI: 04829101-1" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="6dp"
+                    android:text="•"
+                    android:textColor="@color/huc_outline" />
+
+                <TextView
+                    android:id="@+id/tvPacienteASexoEdad"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/huc_on_surface_variant"
+                    android:textSize="11sp"
+                    tools:text="F • 34 años" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/tvPacienteATriage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_tertiary_fixed_16"
+                    android:paddingHorizontal="7dp"
+                    android:paddingVertical="1dp"
+                    android:textColor="@color/huc_on_tertiary_fixed"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    tools:text="Nivel II Naranja" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvPacienteADiagnostico"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="@color/huc_on_surface_variant"
+                android:textSize="11sp"
+                tools:text="Motivo: Síndrome coronario agudo en observación." />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ─────────────────────────────────────────────────────────────────────────
+         Cama B (Solo en Habitaciones Semiprivadas)
+         ───────────────────────────────────────────────────────────────────────── -->
+    <LinearLayout
+        android:id="@+id/cardCamaB"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_surface_low_16"
+        android:orientation="vertical"
+        android:padding="10dp"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tvCamaBCodigoBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_surface_container_16"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:textColor="@color/huc_on_surface"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                tools:text="Cama HAB-201-B" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/tvCamaBEstadoBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_pill_error_container"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:textColor="@color/huc_on_error_container"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                tools:text="OCUPADA" />
+        </LinearLayout>
+
+        <!-- Detalle Cama B Disponible -->
+        <LinearLayout
+            android:id="@+id/containerCamaBDisponible"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_check_circle"
+                app:tint="@color/huc_primary" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:text="Cama libre y preparada para asignación"
+                android:textAppearance="@style/TextAppearance.Huc.BodySm"
+                android:textColor="@color/huc_on_surface_variant" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAsignarCamaB"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:paddingHorizontal="10dp"
+                android:text="Asignar"
+                android:textSize="11sp"
+                app:icon="@drawable/ic_how_to_reg"
+                app:iconSize="14dp" />
+        </LinearLayout>
+
+        <!-- Detalle Cama B Ocupada (Datos Detallados del Paciente) -->
+        <LinearLayout
+            android:id="@+id/containerCamaBOcupada"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="vertical"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_person"
+                    app:tint="@color/huc_secondary" />
+
+                <TextView
+                    android:id="@+id/tvPacienteBNombre"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textAppearance="@style/TextAppearance.Huc.TitleSm"
+                    android:textColor="@color/huc_on_surface"
+                    tools:text="Paciente HAB-201-B" />
+
+                <TextView
+                    android:id="@+id/tvPacienteBExpediente"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/huc_on_surface_variant"
+                    android:textSize="11sp"
+                    tools:text="Exp: PH-2026-201" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvPacienteBDocumento"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/huc_on_surface_variant"
+                    android:textSize="11sp"
+                    tools:text="DUI: 023910201-4" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="6dp"
+                    android:text="•"
+                    android:textColor="@color/huc_outline" />
+
+                <TextView
+                    android:id="@+id/tvPacienteBSexoEdad"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/huc_on_surface_variant"
+                    android:textSize="11sp"
+                    tools:text="F • 29 años" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/tvPacienteBTriage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_primary_fixed_16"
+                    android:paddingHorizontal="7dp"
+                    android:paddingVertical="1dp"
+                    android:textColor="@color/huc_on_primary_fixed"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    tools:text="Nivel IV Verde" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvPacienteBDiagnostico"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="@color/huc_on_surface_variant"
+                android:textSize="11sp"
+                tools:text="Motivo: Post-operatorio de apendicectomía, evolución favorable." />
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>
