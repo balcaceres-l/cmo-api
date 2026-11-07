@@ -49,13 +49,55 @@
   --shadow-xl: 0 20px 35px -8px rgba(11, 44, 35, 0.12), 0 6px 12px -3px rgba(11, 44, 35, 0.05);
 
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 20px;
   font-weight: 400;
   color: var(--cmo-text);
   background-color: var(--cmo-bg);
   box-sizing: border-box;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Escala Tipográfica Oficial Sistema de Diseño CMO ─── */
+/* 1. Título: ExtraBold 24/32 (Títulos de pantalla, panel, cifras grandes KPI) */
+h1, .typo-titulo {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 800;
+}
+
+/* 2. Subtítulo: Bold 16/24 (Títulos de sección, tarjeta, nombre de paciente) */
+h2, h3, .typo-subtitulo {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 700;
+}
+
+/* 3. Cuerpo: Regular 14/20 (Texto general, celdas, campos, mensaje de alerta) */
+p, td, input, select, textarea, .typo-cuerpo {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+/* 4. Cuerpo/Negrita: Bold 14/20 (Botones, enlaces de acción, título de alerta, énfasis) */
+button, strong, b, .typo-cuerpo-negrita {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 700;
+}
+
+/* 5. Etiqueta: SemiBold 12/16 (Chips de estado, etiquetas de campo, encabezados tabla, metadatos) */
+th, label, .typo-etiqueta, .cmo-chip {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
 }
 
 *, *::before, *::after {

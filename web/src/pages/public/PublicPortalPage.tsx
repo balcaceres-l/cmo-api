@@ -50,30 +50,100 @@ export const PublicPortalPage: React.FC = () => {
 
   const [lastCheck, setLastCheck] = useState<Date>(new Date());
 
-  // Consulta pública a la API (si está disponible)
+  // Consulta pública a la API en tiempo real
   useEffect(() => {
     const fetchPublicInfo = async () => {
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
-        const res = await fetch(`${baseUrl}/publico/ocupacion`);
-        if (res.ok) {
-          const json = await res.json();
-          if (json.success && json.data) {
-            const ocupacion: OcupacionItem[] = json.data.ocupacion || [];
-            const vipLibres = ocupacion.find((o) => o.planta === 3 && o.estado === 'DISPONIBLE')?.total ?? 3;
-            const semiLibres = ocupacion.find((o) => o.planta === 2 && o.estado === 'DISPONIBLE')?.total ?? 9;
-            const vipOcup = ocupacion.find((o) => o.planta === 3 && o.estado === 'OCUPADA')?.total ?? 2;
-            const semiOcup = ocupacion.find((o) => o.planta === 2 && o.estado === 'OCUPADA')?.total ?? 3;
+        const baseUrl =
+          window.__ENV__?.VITE_API_URL ||
+          import.meta.env.VITE_API_URL ||
+          'http://localhost:8000/api/v1';
 
-            setData((prev) => ({
-              ...prev,
+        const [ocupacionRes, ambulanciaRes, medicosRes, avisosRes] = await Promise.allSettled([
+          fetch(`${baseUrl.replace(/\/$/, '')}/publico/ocupacion`).then((r) => r.json()),
+          fetch(`${baseUrl.replace(/\/$/, '')}/publico/ambulancia`).then((r) => r.json()),
+          fetch(`${baseUrl.replace(/\/$/, '')}/publico/medicos-de-turno`).then((r) => r.json()),
+          fetch(`${baseUrl.replace(/\/$/, '')}/publico/avisos`).then((r) => r.json()),
+        ]);
+
+        setData((prev) => {
+          let updated = { ...prev };
+
+          // 1. Ocupación
+          if (ocupacionRes.status === 'fulfilled' && ocupacionRes.value?.success) {
+            const list: OcupacionItem[] = Array.isArray(ocupacionRes.value.data)
+              ? ocupacionRes.value.data
+              : ocupacionRes.value.data?.ocupacion || [];
+
+            const vipLibres =
+              list.find((o) => o.planta === 3 && o.estado === 'DISPONIBLE')?.total ?? 0;
+            const vipOcup =
+              list.find((o) => o.planta === 3 && o.estado === 'OCUPADA')?.total ?? 0;
+            const semiLibres =
+              list.find((o) => o.planta === 2 && o.estado === 'DISPONIBLE')?.total ?? 0;
+            const semiOcup =
+              list.find((o) => o.planta === 2 && o.estado === 'OCUPADA')?.total ?? 0;
+
+            updated = {
+              ...updated,
               camasVipLibres: vipLibres,
               camasSemiprivadasLibres: semiLibres,
               camasDisponibles: vipLibres + semiLibres,
               camasOcupadas: vipOcup + semiOcup,
-            }));
+            };
           }
-        }
+
+          // 2. Ambulancia
+          if (ambulanciaRes.status === 'fulfilled' && ambulanciaRes.value?.success) {
+            const ambData = ambulanciaRes.value.data;
+            if (ambData?.estado) {
+              updated = {
+                ...updated,
+                ambulanciaEstado: ambData.estado,
+              };
+            }
+          }
+
+          // 3. Médicos de Turno
+          if (medicosRes.status === 'fulfilled' && medicosRes.value?.success) {
+            const meds = medicosRes.value.data;
+            if (Array.isArray(meds) && meds.length > 0) {
+              updated = {
+                ...updated,
+                medicosTurno: meds.map((m: any) => ({
+                  nombre: m.nombre || m.nombre_completo || 'Médico de Turno',
+                  especialidad: m.cargo || m.especialidad || 'Medicina General',
+                  consultorio: m.area || 'Consulta Externa',
+                })),
+              };
+            }
+          }
+
+          // 4. Avisos Públicos
+          if (avisosRes.status === 'fulfilled' && avisosRes.value?.success) {
+            const avs = avisosRes.value.data;
+            if (Array.isArray(avs) && avs.length > 0) {
+              updated = {
+                ...updated,
+                avisos: avs.map((a: any, idx: number) => ({
+                  id: a.id || a.id_aviso || idx + 1,
+                  titulo: a.titulo,
+                  contenido: a.contenido,
+                  fecha: a.vigente_desde
+                    ? new Date(a.vigente_desde).toLocaleDateString('es-SV', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                    : 'Vigente hoy',
+                  tipo: 'general' as const,
+                })),
+              };
+            }
+          }
+
+          return updated;
+        });
       } catch {
         // Fallback robusto con valores de referencia
       } finally {
