@@ -1,6 +1,7 @@
 package com.cmo.hospital.features.recepcionista.admision.domain.usecase
 
 import com.cmo.hospital.core.domain.model.*
+import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.features.recepcionista.admision.domain.repository.AdmisionRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -14,17 +15,24 @@ class ObserveCapacidadCamasUseCase(
         repository.camasFlow.map { repository.obtenerCapacidadActual() }
 }
 
+class ObserveHabitacionesDetalladasUseCase(
+    private val repository: AdmisionRepository
+) {
+    operator fun invoke(): Flow<List<HabitacionDetalleUi>> =
+        repository.camasFlow.map { repository.obtenerHabitacionesDetalladas() }
+}
+
 class SimularEscanerDocumentoUseCase {
     suspend operator fun invoke(delayMs: Long = 650L): DatosDocumentoEscaneado {
         if (delayMs > 0) delay(delayMs)
         val edad = 34
         return DatosDocumentoEscaneado(
-            dni = "17.489.201-3",
+            dni = "04829102-1",
             nombres = "Francisca Elena",
             apellidos = "Navarro Silva",
             edad = edad,
-            fechaNacimiento = Paciente.calcularFechaNacimientoDesdeEdad(edad),
-            contactoEmergencia = "Carlos Navarro (Hermano) +56 9 7654 3210"
+            fechaNacimiento = DateUtils.toUiDate(Paciente.calcularFechaNacimientoDesdeEdad(edad)),
+            contactoEmergencia = "Carlos Navarro (Hermano) +503 7654-3210"
         )
     }
 }
@@ -36,10 +44,13 @@ class RegistrarIngresoPacienteUseCase(
         dni: String,
         nombres: String,
         apellidos: String,
-        edadTexto: String,
-        prevision: String,
-        contactoEmergencia: String,
-        protegidoLey19628: Boolean,
+        edadTexto: String = "",
+        fechaNacimiento: String? = null,
+        tipoDocumento: String = "DUI",
+        prevision: String = "Particular",
+        contactoEmergencia: String = "",
+        responsableMenor: ResponsableMenor? = null,
+        protegidoLey19628: Boolean = false,
         motivoIngreso: String,
         nivelTriage: NivelTriageManchester,
         esEmergenciaDirecta: Boolean,
@@ -65,18 +76,23 @@ class RegistrarIngresoPacienteUseCase(
             )
         }
 
-        val edadInt = edadTexto.trim().toIntOrNull()
-        val fechaNac = edadInt?.let { Paciente.calcularFechaNacimientoDesdeEdad(it) } ?: "1990-01-01"
+        val fechaNacFinal = when {
+            !fechaNacimiento.isNullOrBlank() -> DateUtils.toIsoDate(fechaNacimiento)
+            edadTexto.isNotBlank() -> edadTexto.trim().toIntOrNull()?.let { Paciente.calcularFechaNacimientoDesdeEdad(it) } ?: "1990-01-01"
+            else -> "1990-01-01"
+        }
         val motivoFinal = motivoIngreso.trim().ifBlank {
             "Ingreso clínico (${nivelTriage.titulo})"
         }
 
         val paciente = Paciente(
             nombreCompleto = nombreCompleto,
-            fechaNacimiento = fechaNac,
+            fechaNacimiento = fechaNacFinal,
             dui = dni.trim().ifBlank { "S/D" },
+            tipoDocumento = tipoDocumento,
             protegido = protegidoLey19628,
             contactoEmergencia = contactoEmergencia.trim().ifBlank { null },
+            responsableMenor = responsableMenor,
             prevision = prevision,
             nivelTriage = nivelTriage
         )

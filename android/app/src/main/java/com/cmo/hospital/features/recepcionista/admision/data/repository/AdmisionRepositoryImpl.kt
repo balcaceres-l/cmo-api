@@ -17,6 +17,9 @@ class AdmisionRepositoryImpl(
     override fun obtenerCapacidadActual(): CapacidadHospitalaria =
         dataSource.construirCapacidadHospitalaria()
 
+    override fun obtenerHabitacionesDetalladas(): List<com.cmo.hospital.core.domain.model.HabitacionDetalleUi> =
+        dataSource.construirHabitacionesDetalladas()
+
     override suspend fun registrarEIngresarPaciente(
         paciente: Paciente,
         signosVitales: SignosVitales?,

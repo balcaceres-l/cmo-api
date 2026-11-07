@@ -356,6 +356,42 @@ class HospitalClinicalDataSource(
         )
     }
 
+    fun construirHabitacionesDetalladas(): List<HabitacionDetalleUi> {
+        val todas = _camasState.value
+        val vips = todas.filter { it.esVip }.sortedBy { it.codigo }.map { cama ->
+            HabitacionDetalleUi(
+                codigo = cama.codigo,
+                tipo = "VIP Individual",
+                planta = "3ª Planta",
+                camas = listOf(cama),
+                totalCamas = 1,
+                camasOcupadas = if (cama.estaDisponible) 0 else 1,
+                camasDisponibles = if (cama.estaDisponible) 1 else 0
+            )
+        }
+
+        val semis = todas.filter { !it.esVip }
+        val salasMap = semis.groupBy { cama ->
+            cama.codigo.substringBeforeLast("-")
+        }
+        val semiHabitaciones = salasMap.entries.sortedBy { it.key }.map { (codigoSala, camasSala) ->
+            val camasOrdenadas = camasSala.sortedBy { it.codigo }
+            val ocupadas = camasOrdenadas.count { !it.estaDisponible }
+            val disponibles = camasOrdenadas.count { it.estaDisponible }
+            HabitacionDetalleUi(
+                codigo = codigoSala,
+                tipo = "Semiprivada",
+                planta = "2ª Planta",
+                camas = camasOrdenadas,
+                totalCamas = camasOrdenadas.size,
+                camasOcupadas = ocupadas,
+                camasDisponibles = disponibles
+            )
+        }
+
+        return vips + semiHabitaciones
+    }
+
     suspend fun registrarEIngresarPaciente(
         paciente: Paciente,
         signosVitales: SignosVitales?,

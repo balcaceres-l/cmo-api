@@ -11,6 +11,8 @@ interface AdmisionRepository {
 
     fun obtenerCapacidadActual(): CapacidadHospitalaria
 
+    fun obtenerHabitacionesDetalladas(): List<com.cmo.hospital.core.domain.model.HabitacionDetalleUi>
+
     suspend fun registrarEIngresarPaciente(
         paciente: Paciente,
         signosVitales: SignosVitales?,
