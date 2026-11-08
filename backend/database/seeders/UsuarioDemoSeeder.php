@@ -12,7 +12,15 @@ class UsuarioDemoSeeder extends Seeder
 {
     public function run(): void
     {
-        $personal = [['admin', 'Administrador General', 'ADMINISTRADOR', 'Administración'], ['medico.general', 'Dra. Ana Martínez', 'MEDICO', 'Medicina general'], ['medico.emergencia', 'Dr. Carlos López', 'MEDICO', 'Emergencia'], ['medico.alergista', 'Dra. Sofía Rivera', 'MEDICO', 'Alergista'], ['recepcion', 'María Hernández', 'RECEPCIONISTA', 'Recepcionista'], ['enfermeria', 'José Ramírez', 'RECEPCIONISTA', 'Enfermera']];
+        $personal = [
+            ['admin', 'Administrador General', 'ADMINISTRADOR', 'Administración'],
+            ['operaciones', 'Lic. Carolina Valenzuela', 'ADMINISTRADOR', 'Jefe de Operaciones'],
+            ['medico.general', 'Dra. Ana Martínez', 'MEDICO', 'Medicina general'],
+            ['medico.emergencia', 'Dr. Carlos López', 'MEDICO', 'Emergencia'],
+            ['medico.alergista', 'Dra. Sofía Rivera', 'MEDICO', 'Alergista'],
+            ['recepcion', 'María Hernández', 'RECEPCIONISTA', 'Recepcionista'],
+            ['enfermeria', 'José Ramírez', 'RECEPCIONISTA', 'Enfermera']
+        ];
         foreach ($personal as [$usuario,$nombre,$rol,$cargo]) {
             User::updateOrCreate(['usuario' => $usuario], ['nombre_completo' => $nombre, 'email' => "$usuario@hospital.edu.sv", 'password' => Hash::make('Hospital2026!'), 'rol' => $rol, 'cargo' => $cargo, 'estado' => 'ACTIVO']);
         }foreach ([['paciente.uno', 'Paciente Uno', '01234567-8', 'F'], ['paciente.dos', 'Paciente Dos', '87654321-0', 'M']] as $i => [$usuario,$nombre,$dui,$sexo]) {

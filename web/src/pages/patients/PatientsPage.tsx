@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { apiClient, ApiError } from '../../api/client';
+import { apiClient } from '../../api/client';
 
 interface PacienteItem {
-  id: number;
+  id: number | string;
   nombre_completo: string;
   dui: string;
   numero_expediente: string;
@@ -16,19 +16,7 @@ interface PacienteItem {
 export const PatientsPage: React.FC = () => {
   const [pacientes, setPacientes] = useState<PacienteItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Modal de Registro de Paciente
-  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
-  const [registerForm, setRegisterForm] = useState({
-    nombre_completo: '',
-    dui: '',
-    fecha_nacimiento: '',
-    sexo: 'M' as 'M' | 'F' | 'OTRO',
-    telefono: '',
-    direccion: '',
-  });
-  const [registerError, setRegisterError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // Modal de Código de Activación (6 dígitos)
   const [activationModal, setActivationModal] = useState<{
@@ -41,9 +29,26 @@ export const PatientsPage: React.FC = () => {
   const [viewingPaciente, setViewingPaciente] = useState<PacienteItem | null>(null);
 
   const fetchPacientes = async () => {
+    setLoading(true);
     try {
-      const res = await apiClient.get<PacienteItem[]>('/pacientes');
-      setPacientes(Array.isArray(res) ? res : []);
+      const res: any = await apiClient.get('/pacientes');
+      const list = Array.isArray(res) ? res : res?.data || [];
+      if (list.length > 0) {
+        const mapped: PacienteItem[] = list.map((p: any) => ({
+          id: p.id_paciente,
+          nombre_completo: p.nombre_completo,
+          dui: p.dui,
+          numero_expediente: p.numero_expediente,
+          fecha_nacimiento: p.fecha_nacimiento,
+          sexo: p.sexo,
+          telefono: p.telefono,
+          direccion: p.direccion,
+          tiene_cuenta_usuario: !!p.id_usuario,
+        }));
+        setPacientes(mapped);
+        return;
+      }
+      setPacientes([]);
     } catch {
       // Datos de muestra para visualización
       setPacientes([
@@ -81,6 +86,8 @@ export const PatientsPage: React.FC = () => {
           tiene_cuenta_usuario: false,
         },
       ]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -88,53 +95,17 @@ export const PatientsPage: React.FC = () => {
     fetchPacientes();
   }, []);
 
-  const handleOpenRegister = () => {
-    setRegisterForm({
-      nombre_completo: '',
-      dui: '',
-      fecha_nacimiento: '',
-      sexo: 'M',
-      telefono: '',
-      direccion: '',
-    });
-    setRegisterError(null);
-    setIsRegisterOpen(true);
-  };
-
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!registerForm.nombre_completo || !registerForm.dui) {
-      setRegisterError('Por favor completa el nombre completo y DUI.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setRegisterError(null);
-
-    try {
-      await apiClient.post('/pacientes', registerForm);
-      setIsRegisterOpen(false);
-      fetchPacientes();
-    } catch (err: unknown) {
-      const e = err as ApiError;
-      setRegisterError(e.message || 'Error al registrar paciente. Verifica que el DUI no esté repetido.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleGenerateActivationCode = async (paciente: PacienteItem) => {
     try {
-      const res = await apiClient.post<{ codigo: string; expira_en: string }>(
+      const res: any = await apiClient.post(
         `/pacientes/${paciente.id}/codigo-activacion`
       );
       setActivationModal({
         paciente,
         codigo: res.codigo || Math.floor(100000 + Math.random() * 900000).toString(),
-        expira: '24 horas',
+        expira: res.vence_en ? new Date(res.vence_en).toLocaleString() : '24 horas',
       });
     } catch {
-      // Fallback de demostración
       setActivationModal({
         paciente,
         codigo: Math.floor(100000 + Math.random() * 900000).toString(),
@@ -157,32 +128,45 @@ export const PatientsPage: React.FC = () => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <span
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                background: '#0b5d4b',
+                color: '#ffffff',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+              }}
+            >
+              Auditoría Clínica
+            </span>
+          </div>
           <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#073f33', margin: '0 0 4px' }}>
-            Pacientes y Expedientes
+            Censo de Pacientes y Expedientes
           </h1>
           <p style={{ margin: 0, color: '#526b60', fontSize: '0.88rem' }}>
-            Búsqueda, registro clínico administrativo y generación de códigos de activación para la app móvil (HU-31 / HU-44).
+            Búsqueda, auditoría de expedientes y soporte de vinculación. El alta inicial de pacientes es operado en ventanilla por Recepción desde la App Móvil.
           </p>
         </div>
 
         <button
-          onClick={handleOpenRegister}
+          onClick={fetchPacientes}
+          disabled={loading}
           style={{
-            background: 'linear-gradient(135deg, #0b5d4b 0%, #158066 100%)',
-            color: '#ffffff',
-            border: 'none',
+            padding: '9px 16px',
             borderRadius: '8px',
-            padding: '10px 20px',
-            fontWeight: 700,
-            fontSize: '0.9rem',
+            border: '1px solid #cad8d1',
+            background: '#ffffff',
+            fontSize: '0.84rem',
+            fontWeight: 600,
             cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(11, 93, 75, 0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
           }}
         >
-          <span>+ Registrar Paciente</span>
+          {loading ? 'Actualizando...' : 'Actualizar Censo'}
         </button>
       </div>
 
@@ -213,7 +197,7 @@ export const PatientsPage: React.FC = () => {
               <th style={{ padding: '12px 18px', fontWeight: 700 }}>DUI</th>
               <th style={{ padding: '12px 18px', fontWeight: 700 }}>Teléfono / Contacto</th>
               <th style={{ padding: '12px 18px', fontWeight: 700 }}>Cuenta App Móvil</th>
-              <th style={{ padding: '12px 18px', fontWeight: 700, textAlign: 'right' }}>Acciones</th>
+              <th style={{ padding: '12px 18px', fontWeight: 700, textAlign: 'right' }}>Auditoría</th>
             </tr>
           </thead>
           <tbody>
@@ -242,44 +226,26 @@ export const PatientsPage: React.FC = () => {
                     </span>
                   ) : (
                     <span style={{ background: '#fae9c8', color: '#85560a', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700 }}>
-                      Pendiente Registro
+                      Pendiente App
                     </span>
                   )}
                 </td>
                 <td style={{ padding: '14px 18px', textAlign: 'right' }}>
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button
-                      onClick={() => handleGenerateActivationCode(p)}
-                      title="Generar código para vincular la app móvil de paciente"
-                      style={{
-                        background: '#eaf5f1',
-                        color: '#0b5d4b',
-                        border: '1px solid #d1dcd6',
-                        borderRadius: '6px',
-                        padding: '6px 10px',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      🔑 Código
-                    </button>
-                    <button
-                      onClick={() => setViewingPaciente(p)}
-                      style={{
-                        background: '#f8faf9',
-                        color: '#13221c',
-                        border: '1px solid #d1dcd6',
-                        borderRadius: '6px',
-                        padding: '6px 12px',
-                        fontSize: '0.78rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Ver Expediente
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setViewingPaciente(p)}
+                    style={{
+                      background: '#f8faf9',
+                      color: '#073f33',
+                      border: '1px solid #d1dcd6',
+                      borderRadius: '6px',
+                      padding: '6px 14px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Ver Expediente →
+                  </button>
                 </td>
               </tr>
             ))}
@@ -294,166 +260,23 @@ export const PatientsPage: React.FC = () => {
         </table>
       </div>
 
-      {/* Modal Registrar Paciente */}
-      {isRegisterOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '540px', padding: '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#073f33' }}>
-                Registrar Ficha de Paciente
-              </h2>
-              <button onClick={() => setIsRegisterOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#849a90' }}>✕</button>
-            </div>
-
-            {registerError && (
-              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', padding: '10px 14px', borderRadius: '8px', fontSize: '0.84rem', marginBottom: '14px' }}>
-                {registerError}
-              </div>
-            )}
-
-            <form onSubmit={handleRegisterSubmit} style={{ display: 'grid', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#13221c', marginBottom: '4px' }}>Nombre Completo *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej. Juan Antonio Pérez"
-                  value={registerForm.nombre_completo}
-                  onChange={(e) => setRegisterForm({ ...registerForm, nombre_completo: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #d1dcd6', fontSize: '0.9rem' }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#13221c', marginBottom: '4px' }}>DUI (con guión) *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="00000000-0"
-                    value={registerForm.dui}
-                    onChange={(e) => setRegisterForm({ ...registerForm, dui: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #d1dcd6', fontSize: '0.9rem' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#13221c', marginBottom: '4px' }}>Fecha de Nacimiento *</label>
-                  <input
-                    type="date"
-                    required
-                    value={registerForm.fecha_nacimiento}
-                    onChange={(e) => setRegisterForm({ ...registerForm, fecha_nacimiento: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #d1dcd6', fontSize: '0.9rem' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#13221c', marginBottom: '4px' }}>Sexo *</label>
-                  <select
-                    value={registerForm.sexo}
-                    onChange={(e) => setRegisterForm({ ...registerForm, sexo: e.target.value as 'M' | 'F' | 'OTRO' })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #d1dcd6', fontSize: '0.9rem', background: '#ffffff' }}
-                  >
-                    <option value="M">Masculino</option>
-                    <option value="F">Femenino</option>
-                    <option value="OTRO">Otro</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#13221c', marginBottom: '4px' }}>Teléfono de Contacto</label>
-                  <input
-                    type="text"
-                    placeholder="+503 7000-0000"
-                    value={registerForm.telefono}
-                    onChange={(e) => setRegisterForm({ ...registerForm, telefono: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #d1dcd6', fontSize: '0.9rem' }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#13221c', marginBottom: '4px' }}>Dirección de Residencia</label>
-                <input
-                  type="text"
-                  placeholder="Municipio, Departamento"
-                  value={registerForm.direccion}
-                  onChange={(e) => setRegisterForm({ ...registerForm, direccion: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #d1dcd6', fontSize: '0.9rem' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px' }}>
-                <button type="button" onClick={() => setIsRegisterOpen(false)} style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid #d1dcd6', background: '#f8faf9', color: '#13221c', fontWeight: 600, cursor: 'pointer' }}>
-                  Cancelar
-                </button>
-                <button type="submit" disabled={isSubmitting} style={{ padding: '10px 22px', borderRadius: '8px', border: 'none', background: '#0b5d4b', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}>
-                  {isSubmitting ? 'Registrando...' : 'Registrar y Generar Expediente'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Código de Activación */}
-      {activationModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '440px', padding: '28px', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🔑</div>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#073f33', margin: '0 0 6px' }}>
-              Código de Activación
-            </h2>
-            <p style={{ margin: '0 0 20px', color: '#526b60', fontSize: '0.85rem' }}>
-              Proporciona este código a <b>{activationModal.paciente.nombre_completo}</b> para que vincule su cuenta en la app de iOS.
-            </p>
-
-            <div style={{ background: '#eaf5f1', border: '2px dashed #0b5d4b', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
-              <div style={{ fontSize: '2.4rem', fontWeight: 800, letterSpacing: '0.25em', color: '#0b5d4b', fontFamily: 'monospace' }}>
-                {activationModal.codigo}
-              </div>
-              <div style={{ fontSize: '0.78rem', color: '#526b60', marginTop: '6px' }}>
-                ⏱️ Válido durante las próximas 24 horas
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(activationModal.codigo);
-                alert('Código copiado al portapapeles.');
-              }}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: 'none', background: '#0b5d4b', color: '#ffffff', fontWeight: 700, cursor: 'pointer', marginBottom: '10px' }}
-            >
-              Copiar Código
-            </button>
-            <button
-              onClick={() => setActivationModal(null)}
-              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1dcd6', background: '#f8faf9', color: '#13221c', fontWeight: 600, cursor: 'pointer' }}
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Modal Consulta Expediente (HU-44) */}
       {viewingPaciente && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '640px', padding: '28px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '640px', padding: '28px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0b5d4b', textTransform: 'uppercase' }}>
-                  Expediente Clínico · Modo Solo Lectura (Admin)
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0b5d4b', textTransform: 'uppercase' }}>
+                  Expediente Clínico Digital · Modo Supervisión
                 </span>
-                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: '#073f33' }}>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '2px 0 0', color: '#073f33' }}>
                   {viewingPaciente.nombre_completo}
                 </h2>
               </div>
               <button onClick={() => setViewingPaciente(null)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#849a90' }}>✕</button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', background: '#f8faf9', padding: '16px', borderRadius: '8px', border: '1px solid #e8efeb', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', background: '#f8faf9', padding: '16px', borderRadius: '12px', border: '1px solid #e8efeb', marginBottom: '20px' }}>
               <div><b>DUI:</b> {viewingPaciente.dui}</div>
               <div><b>N° Expediente:</b> {viewingPaciente.numero_expediente}</div>
               <div><b>Fecha Nacimiento:</b> {viewingPaciente.fecha_nacimiento}</div>
@@ -462,7 +285,7 @@ export const PatientsPage: React.FC = () => {
               <div><b>Dirección:</b> {viewingPaciente.direccion || 'No registrada'}</div>
             </div>
 
-            <div style={{ display: 'grid', gap: '12px' }}>
+            <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#073f33' }}>
                 Historial de Consultas & Recetas
               </h3>
@@ -485,11 +308,94 @@ export const PatientsPage: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+            {/* Sección Discreta de Soporte para Vinculación Móvil */}
+            <div
+              style={{
+                background: '#f0fdf4',
+                border: '1px solid #bbf7d0',
+                borderRadius: '12px',
+                padding: '14px 18px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '20px',
+              }}
+            >
+              <div>
+                <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#166534', textTransform: 'uppercase' }}>
+                  Soporte de Vinculación App Móvil
+                </span>
+                <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#15803d' }}>
+                  {viewingPaciente.tiene_cuenta_usuario
+                    ? '✓ El paciente ya vinculó su dispositivo móvil a este expediente.'
+                    : 'Dispositivo aún no vinculado. Genera un PIN temporal de 6 dígitos si el paciente solicita soporte en ventanilla.'}
+                </p>
+              </div>
+
+              <button
+                onClick={() => handleGenerateActivationCode(viewingPaciente)}
+                style={{
+                  background: '#0b5d4b',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '8px 14px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                🔑 Generar PIN
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button onClick={() => setViewingPaciente(null)} style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #d1dcd6', background: '#f8faf9', color: '#13221c', fontWeight: 600, cursor: 'pointer' }}>
                 Cerrar Expediente
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Código de Activación (6 dígitos) */}
+      {activationModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 110, padding: '16px' }}>
+          <div style={{ background: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '440px', padding: '28px', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🔑</div>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#073f33', margin: '0 0 6px' }}>
+              Código de Activación Móvil
+            </h2>
+            <p style={{ margin: '0 0 20px', color: '#526b60', fontSize: '0.85rem' }}>
+              Proporciona este código a <b>{activationModal.paciente.nombre_completo}</b> para vincular su cuenta en la App CMO (iOS/Android) sin exponer registros por DUI.
+            </p>
+
+            <div style={{ background: '#eaf5f1', border: '2px dashed #0b5d4b', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '2.4rem', fontWeight: 800, letterSpacing: '0.25em', color: '#0b5d4b', fontFamily: 'monospace' }}>
+                {activationModal.codigo}
+              </div>
+              <div style={{ fontSize: '0.78rem', color: '#526b60', marginTop: '6px' }}>
+                ⏱️ Válido durante las próximas 24 horas
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(activationModal.codigo);
+                alert('Código de 6 dígitos copiado al portapapeles.');
+              }}
+              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: 'none', background: '#0b5d4b', color: '#ffffff', fontWeight: 700, cursor: 'pointer', marginBottom: '10px' }}
+            >
+              Copiar Código
+            </button>
+            <button
+              onClick={() => setActivationModal(null)}
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #d1dcd6', background: '#f8faf9', color: '#13221c', fontWeight: 600, cursor: 'pointer' }}
+            >
+              Cerrar
+            </button>
           </div>
         </div>
       )}

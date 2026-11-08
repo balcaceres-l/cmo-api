@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { isJefeOperaciones } from '../../utils/roles';
 
 interface HeaderProps {
   title?: string;
@@ -7,10 +8,19 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  title = 'Panel de Control y Operaciones',
-  subtitle = 'Centro Médico de Occidente — Hospital Universitario',
+  title,
+  subtitle,
 }) => {
   const { user } = useAuth();
+  const esOperaciones = isJefeOperaciones(user);
+
+  const defaultTitle = esOperaciones
+    ? 'Centro de Control y Logística Hospitalaria'
+    : 'Panel de Control y Gobernanza';
+
+  const defaultSubtitle = esOperaciones
+    ? 'Centro Médico de Occidente — Monitoreo Operativo y Recursos en Tiempo Real'
+    : 'Centro Médico de Occidente — Dirección General y Administración Hospitalaria';
 
   return (
     <header
@@ -37,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
             letterSpacing: '-0.01em',
           }}
         >
-          {title}
+          {title || defaultTitle}
         </h2>
         <p
           style={{
@@ -46,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
             color: '#526b60',
           }}
         >
-          {subtitle}
+          {subtitle || defaultSubtitle}
         </p>
       </div>
 
@@ -83,35 +93,53 @@ export const Header: React.FC<HeaderProps> = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
+            gap: '12px',
             paddingLeft: '16px',
             borderLeft: '1px solid #e2ece7',
           }}
         >
           <div style={{ textAlign: 'right' }}>
             <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: '#13221c' }}>
-              {user?.nombre_completo || 'Administrador General'}
+              {user?.nombre_completo || (esOperaciones ? 'Lic. Carolina Valenzuela' : 'Administrador General')}
             </p>
-            <p style={{ margin: 0, fontSize: '0.72rem', color: '#849a90' }}>
-              {user?.cargo || 'Jefe de Operaciones'}
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
+              <span
+                style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  padding: '2px 8px',
+                  borderRadius: '999px',
+                  letterSpacing: '0.04em',
+                  background: esOperaciones ? '#eff6ff' : '#fef3c7',
+                  color: esOperaciones ? '#1d4ed8' : '#92400e',
+                  border: `1px solid ${esOperaciones ? '#bfdbfe' : '#fde68a'}`,
+                }}
+              >
+                {esOperaciones ? '⚙️ Jefe de Operaciones' : '👑 Administrador General'}
+              </span>
+            </div>
           </div>
           <div
             style={{
-              width: '36px',
-              height: '36px',
+              width: '38px',
+              height: '38px',
               borderRadius: '10px',
-              background: '#0b5d4b',
+              background: esOperaciones
+                ? 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)'
+                : 'linear-gradient(135deg, #0b5d4b 0%, #158066 100%)',
               color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 800,
-              fontSize: '0.9rem',
-              boxShadow: '0 2px 6px rgba(11, 93, 75, 0.25)',
+              fontSize: '0.92rem',
+              boxShadow: esOperaciones
+                ? '0 2px 6px rgba(29, 78, 216, 0.3)'
+                : '0 2px 6px rgba(11, 93, 75, 0.25)',
             }}
           >
-            {user?.nombre_completo ? user.nombre_completo.charAt(0).toUpperCase() : 'A'}
+            {user?.nombre_completo ? user.nombre_completo.charAt(0).toUpperCase() : esOperaciones ? 'O' : 'A'}
           </div>
         </div>
       </div>

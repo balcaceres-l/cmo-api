@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { isJefeOperaciones } from '../../utils/roles';
 import {
   ActivityIcon,
   BedIcon,
@@ -17,6 +18,7 @@ import {
 export const Sidebar: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const isOps = isJefeOperaciones(user);
 
   const handleLogout = async () => {
     await logout();
@@ -108,7 +110,9 @@ export const Sidebar: React.FC = () => {
           gap: '18px',
         }}
       >
-        {/* OPERACIONES */}
+        {/* ====================================================
+            CATEGORÍA 1: GESTIÓN INSTITUCIONAL
+            ==================================================== */}
         <div>
           <span
             style={{
@@ -121,13 +125,42 @@ export const Sidebar: React.FC = () => {
               letterSpacing: '0.07em',
             }}
           >
-            Operaciones
+            Gestión Institucional
           </span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
             <NavLink to="/dashboard" className={navItemClass}>
               <ActivityIcon size={18} />
-              <span>Dashboard</span>
+              <span>{isOps ? 'Dashboard Operativo' : 'Dashboard General'}</span>
             </NavLink>
+            <NavLink to="/usuarios" className={navItemClass}>
+              <UsersIcon size={18} />
+              <span>{isOps ? 'Directorio de Personal' : 'Personal y Cuentas'}</span>
+            </NavLink>
+            <NavLink to="/avisos" className={navItemClass}>
+              <BellIcon size={18} />
+              <span>Avisos Institucionales</span>
+            </NavLink>
+          </div>
+        </div>
+
+        {/* ====================================================
+            CATEGORÍA 2: OPERACIONES HOSPITALARIAS
+            ==================================================== */}
+        <div>
+          <span
+            style={{
+              display: 'block',
+              padding: '0 10px 6px',
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              color: '#4fc4a2',
+              textTransform: 'uppercase',
+              letterSpacing: '0.07em',
+            }}
+          >
+            Operaciones Hospitalarias
+          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
             <NavLink to="/camas" className={navItemClass}>
               <BedIcon size={18} />
               <span>Camas y Habitaciones</span>
@@ -136,86 +169,46 @@ export const Sidebar: React.FC = () => {
               <AmbulanceIcon size={18} />
               <span>Ambulancia en Vivo</span>
             </NavLink>
-          </div>
-        </div>
-
-        {/* PERSONAL */}
-        <div>
-          <span
-            style={{
-              display: 'block',
-              padding: '0 10px 6px',
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              color: '#4fc4a2',
-              textTransform: 'uppercase',
-              letterSpacing: '0.07em',
-            }}
-          >
-            Personal
-          </span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            <NavLink to="/usuarios" className={navItemClass}>
-              <UsersIcon size={18} />
-              <span>Usuarios y Personal</span>
-            </NavLink>
-            <NavLink to="/turnos" className={navItemClass}>
-              <CalendarIcon size={18} />
-              <span>Control de Turnos</span>
-            </NavLink>
-          </div>
-        </div>
-
-        {/* CLÍNICO */}
-        <div>
-          <span
-            style={{
-              display: 'block',
-              padding: '0 10px 6px',
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              color: '#4fc4a2',
-              textTransform: 'uppercase',
-              letterSpacing: '0.07em',
-            }}
-          >
-            Clínico
-          </span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-            <NavLink to="/pacientes" className={navItemClass}>
-              <FileTextIcon size={18} />
-              <span>Pacientes & Expedientes</span>
-            </NavLink>
-            <NavLink to="/laboratorio" className={navItemClass}>
-              <FlaskIcon size={18} />
-              <span>Laboratorio</span>
-            </NavLink>
-          </div>
-        </div>
-
-        {/* LOGÍSTICA & AVISOS */}
-        <div>
-          <span
-            style={{
-              display: 'block',
-              padding: '0 10px 6px',
-              fontSize: '0.7rem',
-              fontWeight: 700,
-              color: '#4fc4a2',
-              textTransform: 'uppercase',
-              letterSpacing: '0.07em',
-            }}
-          >
-            Logística & Avisos
-          </span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
             <NavLink to="/inventario" className={navItemClass}>
               <PackageIcon size={18} />
               <span>Recursos e Inventario</span>
             </NavLink>
-            <NavLink to="/avisos" className={navItemClass}>
-              <BellIcon size={18} />
-              <span>Avisos del Hospital</span>
+            <NavLink to="/turnos" className={navItemClass}>
+              <CalendarIcon size={18} />
+              <span>{isOps ? 'Turnos y Relevos' : 'Control de Turnos'}</span>
+            </NavLink>
+          </div>
+        </div>
+
+        {/* ====================================================
+            CATEGORÍA 3: SERVICIOS CLÍNICOS & PACIENTES
+            ==================================================== */}
+        <div>
+          <span
+            style={{
+              display: 'block',
+              padding: '0 10px 6px',
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              color: '#4fc4a2',
+              textTransform: 'uppercase',
+              letterSpacing: '0.07em',
+            }}
+          >
+            Servicios Clínicos & Pacientes
+          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <NavLink to="/pacientes" className={navItemClass}>
+              <FileTextIcon size={18} />
+              <span>{isOps ? 'Censo de Pacientes' : 'Pacientes & Expedientes'}</span>
+            </NavLink>
+            <NavLink to="/citas" className={navItemClass}>
+              <CalendarIcon size={18} />
+              <span>Supervisión de Citas</span>
+            </NavLink>
+            <NavLink to="/laboratorio" className={navItemClass}>
+              <FlaskIcon size={18} />
+              <span>{isOps ? 'Monitor de Laboratorio' : 'Laboratorio Clínico'}</span>
             </NavLink>
           </div>
         </div>
@@ -236,17 +229,20 @@ export const Sidebar: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
           <div
             style={{
-              width: '34px',
-              height: '34px',
+              width: '36px',
+              height: '36px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #0b5d4b, #158066)',
+              background: isOps
+                ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
+                : 'linear-gradient(135deg, #b45309 0%, #d97706 100%)',
               color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: '0.85rem',
+              fontWeight: 800,
+              fontSize: '0.82rem',
               flexShrink: 0,
+              boxShadow: isOps ? '0 2px 8px rgba(2, 132, 199, 0.35)' : '0 2px 8px rgba(180, 83, 9, 0.35)',
             }}
           >
             {user?.nombre_completo ? user.nombre_completo.charAt(0).toUpperCase() : 'A'}
@@ -256,7 +252,7 @@ export const Sidebar: React.FC = () => {
               style={{
                 margin: 0,
                 fontSize: '0.82rem',
-                fontWeight: 600,
+                fontWeight: 700,
                 color: '#ffffff',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -264,18 +260,19 @@ export const Sidebar: React.FC = () => {
               }}
               title={user?.nombre_completo}
             >
-              {user?.nombre_completo || 'Administrador'}
+              {user?.nombre_completo || 'Usuario'}
             </p>
             <span
               style={{
-                fontSize: '0.68rem',
-                color: '#5eead4',
-                fontWeight: 600,
+                fontSize: '0.66rem',
+                color: isOps ? '#38bdf8' : '#fbbf24',
+                fontWeight: 700,
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em',
+                display: 'block',
               }}
             >
-              {user?.rol || 'ADMIN'}
+              {isOps ? 'JEFE DE OPERACIONES' : 'ADMIN GENERAL'}
             </span>
           </div>
         </div>
