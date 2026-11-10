@@ -399,4 +399,99 @@ class HospitalBusinessLogicTest {
         // La búsqueda encuentra la habitación por el paciente internado.
         assertEquals(listOf("VIP-301", "HAB-201", "HAB-202"), filtrar(q = "Ana López").map { it.codigo })
     }
+
+    @Test
+    fun testCitasAgendadasPorDefectoYSinFiltroSolicitadas() {
+        val citaPorDefecto = Cita(
+            id = "c-def-1",
+            fecha = "2026-11-10",
+            horaInicio = "09:00",
+            horaFin = "09:30"
+        )
+        assertEquals(EstadoCita.AGENDADA, citaPorDefecto.estado)
+        assertFalse("No debe existir el filtro Solicitadas en recepción", CitasViewModel.FILTROS_ESTADO.contains("Solicitadas"))
+        assertTrue("Debe existir el filtro Agendadas", CitasViewModel.FILTROS_ESTADO.contains("Agendadas"))
+    }
+
+    @Test
+    fun testSignosVitalesSoloHabilitadosElDiaDeLaCita() = runTest {
+        val dataSource = HospitalClinicalDataSource(apiService = null)
+        val repo = com.cmo.hospital.features.recepcionista.citas.data.repository.CitaRepositoryImpl(dataSource)
+        val hoy = java.time.LocalDate.now()
+        val manana = hoy.plusDays(1)
+        val useCase = com.cmo.hospital.features.recepcionista.citas.domain.usecase.RegistrarTriajeYPasarConsultaUseCase(
+            repository = repo,
+            hoy = { hoy }
+        )
+
+        val citaHoy = Cita(
+            id = "c-hoy-test",
+            fecha = hoy.toString(),
+            horaInicio = "10:00",
+            horaFin = "10:30",
+            estado = EstadoCita.AGENDADA
+        )
+        val citaManana = Cita(
+            id = "c-manana-test",
+            fecha = manana.toString(),
+            horaInicio = "11:00",
+            horaFin = "11:30",
+            estado = EstadoCita.AGENDADA
+        )
+        dataSource.prependCita(citaHoy)
+        dataSource.prependCita(citaManana)
+
+        assertTrue(citaHoy.esDelDia(hoy.toString()))
+        assertFalse(citaManana.esDelDia(hoy.toString()))
+
+        val signos = SignosVitales(presionSistolica = 120, presionDiastolica = 80, temperaturaC = 36.7)
+        val resHoy = useCase("c-hoy-test", signos, pasarAConsulta = false)
+        assertTrue("El día de la cita debe permitir tomar signos vitales", resHoy.isSuccess)
+
+        val resManana = useCase("c-manana-test", signos, pasarAConsulta = false)
+        assertTrue("En una cita futura no se debe permitir tomar signos vitales", resManana.isFailure)
+    }
+
+    @Test
+    fun testFiltrosCitasPorFechaYCalendario() {
+        val lista = listOf(
+            Cita(
+                id = "c-10",
+                fecha = "2026-11-10",
+                horaInicio = "09:00",
+                horaFin = "09:30",
+                estado = EstadoCita.AGENDADA,
+                medicoNombre = "Dr. Alejandro Restrepo"
+            ),
+            Cita(
+                id = "c-11",
+                fecha = "2026-11-11",
+                horaInicio = "08:30",
+                horaFin = "09:00",
+                estado = EstadoCita.AGENDADA,
+                medicoNombre = "Dra. Sofía Valenzuela"
+            ),
+            Cita(
+                id = "c-12",
+                fecha = "2026-11-10",
+                horaInicio = "14:00",
+                horaFin = "14:30",
+                estado = EstadoCita.CANCELADA,
+                medicoNombre = "Dr. Alejandro Restrepo"
+            )
+        )
+
+        val porFechaUi = CitasViewModel.filtrarCitas(lista, fecha = "10/11/2026")
+        assertEquals(2, porFechaUi.size)
+
+        val agendadasFecha = CitasViewModel.filtrarCitas(lista, estado = "Agendadas", fecha = "2026-11-10")
+        assertEquals(listOf("c-10"), agendadasFecha.map { it.id })
+
+        // Calendario excluye citas canceladas y filtra por doctor y fecha
+        val calHoy = CitasViewModel.filtrarCitasCalendario(lista, fecha = "2026-11-10")
+        assertEquals(listOf("c-10"), calHoy.map { it.id })
+
+        val calSofia = CitasViewModel.filtrarCitasCalendario(lista, doctor = "Sofía", fecha = "")
+        assertEquals(listOf("c-11"), calSofia.map { it.id })
+    }
 }

@@ -349,8 +349,7 @@ class HospitalClinicalDataSource(
         }
         val cuerpo = programacion.aMapa() + mapOf(
             "id_paciente" to idPaciente,
-            "motivo" to motivo,
-            "estado" to EstadoCita.AGENDADA
+            "motivo" to motivo
         )
         return alCambiarCita(llamarApi { api.agendarCita(cuerpo) })
     }

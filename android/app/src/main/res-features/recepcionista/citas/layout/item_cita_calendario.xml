@@ -21,7 +21,7 @@
             android:layout_width="18dp"
             android:layout_height="18dp"
             android:contentDescription="@null"
-            android:src="@drawable/ic_calendar_today"
+            android:src="@drawable/ic_event"
             app:tint="@color/huc_primary_container" />
 
         <TextView

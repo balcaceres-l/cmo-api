@@ -35,7 +35,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:background="@drawable/bg_secondary_fixed_16"
+        android:background="@drawable/bg_pill_secondary_fixed"
         android:paddingHorizontal="12dp"
         android:paddingVertical="6dp"
         android:textColor="@color/huc_on_secondary_fixed"

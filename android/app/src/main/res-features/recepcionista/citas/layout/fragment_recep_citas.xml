@@ -34,7 +34,7 @@
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:icon="@drawable/ic_calendar_today"
+            android:icon="@drawable/ic_event"
             android:text="Calendario" />
     </com.google.android.material.tabs.TabLayout>
 
@@ -310,7 +310,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:hint="Filtrar por fecha (DD/MM/AAAA)"
-                    app:startIconDrawable="@drawable/ic_calendar_today">
+                    app:startIconDrawable="@drawable/ic_event">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etFiltroFechaCita"
@@ -466,7 +466,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:hint="Filtrar por fecha (DD/MM/AAAA)"
-                        app:startIconDrawable="@drawable/ic_calendar_today">
+                        app:startIconDrawable="@drawable/ic_event">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etCalendarioFecha"

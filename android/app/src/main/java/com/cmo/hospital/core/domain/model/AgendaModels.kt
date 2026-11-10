@@ -68,11 +68,12 @@ object EstadoCita {
      */
     fun ordenarParaMostrador(citas: List<Cita>): List<Cita> {
         fun grupo(c: Cita) = when (c.estado) {
-            EN_ESPERA, EN_ATENCION -> 0
-            AGENDADA, SOLICITADA -> 1
-            else -> 2
+            SOLICITADA -> 0
+            EN_ESPERA, EN_ATENCION -> 1
+            AGENDADA -> 2
+            else -> 3
         }
-        val (abiertas, cerradas) = citas.partition { grupo(it) < 2 }
+        val (abiertas, cerradas) = citas.partition { grupo(it) < 3 }
         return abiertas.sortedWith(compareBy<Cita>({ grupo(it) }, { it.fecha }, { it.horaInicio })) +
             cerradas.sortedWith(compareByDescending<Cita> { it.fecha }.thenBy { it.horaInicio })
     }
