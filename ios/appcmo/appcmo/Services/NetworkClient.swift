@@ -25,7 +25,10 @@ nonisolated struct NetworkClient: Sendable {
     private let session: URLSession
     private let keychain: KeychainManager
 
-    init(baseURL: URL = AppConfig.apiBaseURL, session: URLSession = .shared, keychain: KeychainManager = .shared) {
+    /// Sin caché en disco: las respuestas traen datos clínicos y no deben quedar guardadas en el iPhone.
+    static let sesionSinCache = URLSession(configuration: .ephemeral)
+
+    init(baseURL: URL = AppConfig.apiBaseURL, session: URLSession = NetworkClient.sesionSinCache, keychain: KeychainManager = .shared) {
         self.baseURL = baseURL
         self.session = session
         self.keychain = keychain

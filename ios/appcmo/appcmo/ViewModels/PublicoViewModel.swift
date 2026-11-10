@@ -46,7 +46,7 @@ final class PublicoViewModel {
         catch { if let mensaje = mensajeDeError(error) { avisos = .fallo(mensaje) } }
     }
 
-    /// El estado de la ambulancia se vuelve a pedir cada 10 segundos mientras la pantalla está abierta.
+    /// El estado de la ambulancia: en vivo por el canal público `ambulancia`; sin conexión, cada 10 segundos.
     func refrescarAmbulancia() async {
         do { ambulancia = .listo(try await repositorio.ambulancia()) }
         catch {
@@ -56,10 +56,6 @@ final class PublicoViewModel {
     }
 
     func vigilarAmbulancia() async {
-        while !Task.isCancelled {
-            try? await Task.sleep(for: .seconds(10))
-            if Task.isCancelled { return }
-            await refrescarAmbulancia()
-        }
+        await TiempoReal.vigilar(canales: ["ambulancia"], enVivo: { _ in }, refrescar: { [weak self] in await self?.refrescarAmbulancia() })
     }
 }

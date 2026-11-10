@@ -5,7 +5,7 @@
 
 import SwiftUI
 
-/// Estado de la ambulancia y del traslado en curso (pantalla 10). Se actualiza sola cada 10 segundos.
+/// Estado de la ambulancia y del traslado en curso (pantalla 10). Se actualiza en vivo (o cada 10 segundos sin conexión en vivo).
 /// El reporte clínico no incluye el nombre ni la dirección de la persona atendida.
 struct AmbulanciaView: View {
     @State private var viewModel = AmbulanciaViewModel()
@@ -19,7 +19,7 @@ struct AmbulanciaView: View {
                         traslado(servicio)
                     }
                     if let fecha = viewModel.ultimaActualizacion {
-                        Text("Actualizado a las \(horaDe(fecha))")
+                        Text(viewModel.enVivo ? "En vivo · actualizado a las \(horaDe(fecha))" : "Actualizado a las \(horaDe(fecha))")
                             .font(.caption)
                             .foregroundStyle(Color.cmoTintaSuave)
                             .frame(maxWidth: .infinity)

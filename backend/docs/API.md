@@ -259,7 +259,7 @@ Reglas:
 | --- | --- | --- | --- |
 | GET | `/citas` | ADMINISTRADOR, MEDICO, RECEPCIONISTA | Lista paginada con paciente, médico y consultorio. El MEDICO solo ve las suyas. |
 | POST | `/citas` | MEDICO, RECEPCIONISTA | Agenda una cita |
-| GET | `/agenda/disponibilidad?id_medico=&fecha=` | ADMINISTRADOR, MEDICO, RECEPCIONISTA | Bloques libres del médico ese día |
+| GET | `/agenda/disponibilidad?id_medico=&fecha=` | ADMINISTRADOR, MEDICO, RECEPCIONISTA | Bloques libres del médico ese día; si la fecha es hoy, solo los que aún no empiezan |
 | GET | `/consultorios` | ADMINISTRADOR, MEDICO, RECEPCIONISTA | Consultorios de consulta general de la planta 1 (`C-101` a `C-104`) |
 | PATCH | `/citas/{id}/llegada` | ADMINISTRADOR, RECEPCIONISTA | Registra la llegada del paciente (`AGENDADA` → `EN_ESPERA`). Solo el día de la cita: otro día responde 409 `La llegada solo se registra el día de la cita.` |
 | PATCH | `/citas/{id}/reprogramar` | ADMINISTRADOR, RECEPCIONISTA | Cambia médico, fecha u hora |
@@ -285,7 +285,7 @@ Reglas:
 | `motivo` | requerido |
 
 Errores:
-- 422 si la fecha ya pasó, si la cita cruzaría la medianoche o si la hora queda fuera de un turno del médico.
+- 422 si la fecha o la hora ya pasaron, si la cita cruzaría la medianoche o si la hora queda fuera de un turno del médico.
 - 409 `El horario solicitado ya está ocupado.` (el médico ya tiene cita a esa hora), `El consultorio ya está ocupado a esa hora.` o `El paciente ya tiene una cita a esa hora.` (un paciente no puede tener dos citas activas que se solapen, aunque sean con médicos distintos; agendar, confirmar y reprogramar aplican la misma regla; una cita cancelada, no asistida o solo solicitada no cuenta).
 - 403 si un MEDICO intenta agendar a un paciente del que no es tratante. El médico solo agenda seguimientos; la primera cita la agenda recepción.
 
@@ -312,7 +312,7 @@ Errores:
 **Receta:** `medicamento`, `dosis`, `frecuencia` y `duracion` (requeridos), más `indicaciones` (opcional).
 
 Reglas:
-- La consulta solo se abre sobre una cita `AGENDADA` o `EN_ESPERA` y solo el día de la cita (otro día responde 409 `La consulta solo se inicia el día de la cita.`). Una segunda apertura responde 409 `La cita ya tiene una consulta.`
+- La consulta solo se abre sobre una cita `AGENDADA` o `EN_ESPERA` y solo el día de la cita (otro día responde 409 `La consulta solo se inicia el día de la cita.`). Una segunda apertura responde 409 `La cita ya tiene una consulta.` Un médico solo tiene una consulta abierta a la vez: abrir otra sin finalizar o abandonar la primera responde 409 `Ya tienes una consulta en atención; finalízala o abandónala antes de iniciar otra.`
 - Una consulta cerrada es de solo lectura: editarla, agregar recetas u órdenes responde 409 `La consulta ya está cerrada.`
 - Un médico que no es el de la consulta recibe 403.
 - **Abandonar** borra la consulta con sus recetas y sus órdenes de laboratorio `PENDIENTE` o `CANCELADA`, y la cita vuelve a `AGENDADA` (o `EN_ESPERA` si tiene `hora_llegada`), por lo que se puede volver a iniciar. Solo vale para consultas abiertas; si el laboratorio ya trabaja una orden (`EN_PROCESO` o `COMPLETADO`) o la consulta está cerrada responde 409 (hay que finalizarla).

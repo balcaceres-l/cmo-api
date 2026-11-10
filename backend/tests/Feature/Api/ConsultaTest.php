@@ -75,7 +75,8 @@ class ConsultaTest extends TestCase
         $this->patchJson("/api/v1/consultas/{$id}/abandonar")->assertNotFound();
 
         // Se puede volver a iniciar la consulta de esa cita.
-        $this->postJson("/api/v1/citas/{$cita->id_cita}/consulta")->assertCreated();
+        $otra = $this->postJson("/api/v1/citas/{$cita->id_cita}/consulta")->assertCreated()->json('data.id_consulta');
+        $this->patchJson("/api/v1/consultas/{$otra}/abandonar")->assertOk();
 
         // El paciente ya había llegado (EN_ESPERA): vuelve a EN_ESPERA.
         $espera = $nueva('EN_ESPERA', now());
@@ -139,5 +140,23 @@ class ConsultaTest extends TestCase
 
         $this->postJson("/api/v1/citas/{$hoy->id_cita}/consulta")->assertCreated();
         $this->assertSame('EN_ATENCION', $hoy->refresh()->estado);
+    }
+
+    public function test_el_medico_no_abre_una_segunda_consulta_sin_cerrar_la_primera(): void
+    {
+        $medico = User::factory()->create(['rol' => 'MEDICO']);
+        $p = Paciente::create(['numero_expediente' => 'EXP-2026-001005', 'nombre_completo' => 'P', 'fecha_nacimiento' => '1990-01-01', 'sexo' => 'M', 'fecha_registro' => now()]);
+        HistorialClinico::create(['id_paciente' => $p->id_paciente]);
+        $cita = fn (string $hora) => Cita::create(['id_paciente' => $p->id_paciente, 'id_medico' => $medico->id, 'fecha' => today(), 'hora_inicio' => $hora, 'hora_fin' => '23:59', 'motivo' => 'Control', 'estado' => 'AGENDADA', 'id_creado_por' => $medico->id]);
+        $primera = $cita('08:00');
+        $segunda = $cita('09:00');
+
+        Sanctum::actingAs($medico);
+        $id = $this->postJson("/api/v1/citas/{$primera->id_cita}/consulta")->assertCreated()->json('data.id_consulta');
+        $this->postJson("/api/v1/citas/{$segunda->id_cita}/consulta")->assertStatus(409);
+        $this->assertSame('AGENDADA', $segunda->refresh()->estado);
+
+        $this->patchJson("/api/v1/consultas/{$id}/finalizar")->assertOk();
+        $this->postJson("/api/v1/citas/{$segunda->id_cita}/consulta")->assertCreated();
     }
 }

@@ -20,7 +20,12 @@ nonisolated struct KeychainError: LocalizedError {
 nonisolated struct KeychainManager: Sendable {
     static let shared = KeychainManager()
 
-    private let servicio = Bundle.main.bundleIdentifier ?? "com.catolica.edu.sv.appcmo"
+    private let servicio: String
+
+    /// `servicio` separa los datos guardados; las pruebas usan uno propio para no tocar la sesión de la app.
+    init(servicio: String = Bundle.main.bundleIdentifier ?? "com.catolica.edu.sv.appcmo") {
+        self.servicio = servicio
+    }
     private let cuentaToken = "auth_token"
     private let cuentaLlaveBorradores = "borradores_key"
 
