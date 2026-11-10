@@ -4,6 +4,14 @@
 <dict>
 	<key>API_BASE_URL</key>
 	<string>$(API_BASE_URL)</string>
+	<key>REVERB_APP_KEY</key>
+	<string>$(REVERB_APP_KEY)</string>
+	<key>REVERB_HOST</key>
+	<string>$(REVERB_HOST)</string>
+	<key>REVERB_PORT</key>
+	<string>$(REVERB_PORT)</string>
+	<key>REVERB_SCHEME</key>
+	<string>$(REVERB_SCHEME)</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
