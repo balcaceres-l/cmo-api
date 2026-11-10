@@ -22,7 +22,8 @@ class AgendaService
             while ($cursor->copy()->addMinutes($dur)->lte($fin)) {
                 $hasta = $cursor->copy()->addMinutes($dur);
                 $solapa = $ocupados->contains(fn ($c) => Carbon::parse("$fecha $c->hora_inicio")->lt($hasta) && Carbon::parse("$fecha $c->hora_fin")->gt($cursor));
-                if (! $solapa) {
+                // Hoy no se ofrecen bloques que ya empezaron.
+                if (! $solapa && $cursor->gt(now())) {
                     $bloques[] = ['hora_inicio' => $cursor->format('H:i'), 'hora_fin' => $hasta->format('H:i')];
                 }$cursor = $hasta;
             }
@@ -37,6 +38,10 @@ class AgendaService
      */
     public function validar(string $medico, string $fecha, string $inicio, string $fin, ?string $ignorar = null, ?string $consultorio = null, ?string $paciente = null): void
     {
+        if (Carbon::parse("$fecha $inicio")->lte(now())) {
+            throw ValidationException::withMessages(['hora_inicio' => 'La hora de la cita ya pasó; elige una hora posterior.']);
+        }
+
         $enTurno = TurnoPersonal::where('id_usuario', $medico)->whereDate('fecha', $fecha)->where('hora_inicio', '<=', $inicio)->where('hora_fin', '>=', $fin)->exists();
         if (! $enTurno) {
             throw ValidationException::withMessages(['hora_inicio' => 'La cita debe estar dentro de un turno del médico.']);

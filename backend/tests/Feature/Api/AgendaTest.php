@@ -49,6 +49,19 @@ class AgendaTest extends TestCase
         $this->assertSame(['08:30', '09:00', '09:30'], array_column($bloques, 'hora_inicio'));
     }
 
+    public function test_hoy_no_se_ofrecen_ni_aceptan_horas_pasadas(): void
+    {
+        $hoy = today()->toDateString();
+        TurnoPersonal::create(['id_usuario' => $this->medico->id, 'fecha' => $hoy, 'hora_inicio' => '08:00', 'hora_fin' => '12:00', 'area' => 'Consulta general']);
+        $this->travelTo(today()->setTime(9, 10));
+
+        $bloques = $this->getJson("/api/v1/agenda/disponibilidad?id_medico={$this->medico->id}&fecha={$hoy}")->assertOk()->json('data');
+        $this->assertSame(['09:30', '10:00', '10:30', '11:00', '11:30'], array_column($bloques, 'hora_inicio'));
+
+        $this->agendar(['fecha' => $hoy, 'hora_inicio' => '08:30'])->assertStatus(422)->assertJsonValidationErrors('hora_inicio');
+        $this->agendar(['fecha' => $hoy, 'hora_inicio' => '09:30'])->assertCreated();
+    }
+
     public function test_reglas_al_agendar(): void
     {
         $this->agendar(['hora_inicio' => '11:00'])->assertStatus(422);

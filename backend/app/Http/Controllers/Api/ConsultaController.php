@@ -22,6 +22,10 @@ class ConsultaController extends ApiController
             if (! $cita->fecha->isToday()) {
                 throw new ConflictoException('La consulta solo se inicia el día de la cita.');
             }
+            // Un médico atiende a un paciente a la vez.
+            if (Consulta::where('id_medico', $r->user()->id)->whereNull('fecha_hora_fin')->lockForUpdate()->exists()) {
+                throw new ConflictoException('Ya tienes una consulta en atención; finalízala o abandónala antes de iniciar otra.');
+            }
             try {
                 $c = Consulta::create(['id_cita' => $cita->getKey(), 'id_medico' => $r->user()->id, 'fecha_hora_inicio' => now(), 'motivo' => $cita->motivo]);
             } catch (UniqueConstraintViolationException) {

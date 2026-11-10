@@ -23,6 +23,8 @@ class TurnosTest extends TestCase
 
     public function test_turno_nocturno_se_guarda_en_dos_dias_y_cuenta_para_la_agenda(): void
     {
+        // Las fechas del turno son fijas: la agenda solo ofrece bloques futuros.
+        $this->travelTo('2026-10-19 12:00');
         Sanctum::actingAs(User::factory()->create(['rol' => 'ADMINISTRADOR']));
         $m = User::factory()->create(['rol' => 'MEDICO']);
         $noche = ['id_usuario' => $m->id, 'fecha' => '2026-10-20', 'hora_inicio' => '22:00', 'hora_fin' => '06:00', 'area' => 'Emergencia'];
