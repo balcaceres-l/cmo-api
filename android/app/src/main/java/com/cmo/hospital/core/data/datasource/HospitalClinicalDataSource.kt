@@ -169,16 +169,21 @@ class HospitalClinicalDataSource(
                 run {
                     val normalized = remoteList.mapIndexed { idx, raw ->
                         val safeId: String = (raw.id as String?) ?: "c-rem-$idx"
-                        // Una solicitud del paciente (SOLICITADA) llega sin fecha, hora ni médico:
-                        // Gson deja esos campos en null aunque el modelo no lo admita.
                         val hi = (raw.horaInicio as String?)?.take(5).orEmpty()
                         val hf = raw.horaFin?.take(5)
                             ?: hi.takeIf { it.isNotEmpty() }?.let { Cita.calcularFin30Minutos(it) }
+                        val estadoRaw = (raw.estado as String?)?.uppercase()?.trim().orEmpty()
+                        val estadoNorm = if (estadoRaw.isBlank() || estadoRaw == EstadoCita.SOLICITADA || estadoRaw == "PENDIENTE") {
+                            EstadoCita.AGENDADA
+                        } else {
+                            estadoRaw
+                        }
                         val citaNorm = raw.copy(
                             id = safeId,
                             fecha = (raw.fecha as String?)?.take(10).orEmpty(),
                             horaInicio = hi,
                             horaFin = hf,
+                            estado = estadoNorm,
                             idMedico = raw.idMedico ?: raw.medico?.id,
                             medicoNombre = raw.medico?.nombreCompleto ?: "Médico por asignar",
                             especialidad = raw.medico?.cargo ?: "Consulta externa",
@@ -240,23 +245,36 @@ class HospitalClinicalDataSource(
     }
 
     fun prependCita(cita: Cita) {
-        registrarPacienteDeCitaEnExpedientes(cita)
-        _citasState.value = listOf(cita) + _citasState.value
+        val citaAgendada = if (cita.estado.isBlank() || cita.estado == EstadoCita.SOLICITADA) {
+            cita.copy(estado = EstadoCita.AGENDADA)
+        } else {
+            cita
+        }
+        registrarPacienteDeCitaEnExpedientes(citaAgendada)
+        _citasState.value = listOf(citaAgendada) + _citasState.value
     }
 
     suspend fun agendarCitaRemotaOLocal(nuevaCita: Cita) {
+        val citaAgendada = nuevaCita.copy(
+            estado = if (nuevaCita.estado.isBlank() || nuevaCita.estado == EstadoCita.SOLICITADA) {
+                EstadoCita.AGENDADA
+            } else {
+                nuevaCita.estado
+            }
+        )
         try {
             apiService?.agendarCita(
                 mapOf(
-                    "fecha" to nuevaCita.fecha,
-                    "hora_inicio" to nuevaCita.horaInicio,
-                    "hora_fin" to nuevaCita.horaFin,
-                    "motivo" to nuevaCita.motivo
+                    "fecha" to citaAgendada.fecha,
+                    "hora_inicio" to citaAgendada.horaInicio,
+                    "hora_fin" to citaAgendada.horaFin,
+                    "motivo" to citaAgendada.motivo,
+                    "estado" to EstadoCita.AGENDADA
                 )
             )
         } catch (_: Exception) {
         }
-        prependCita(nuevaCita)
+        prependCita(citaAgendada)
     }
 
     // Agenda de recepción: todo pasa por la API. Si falla, la lista no cambia y
@@ -269,7 +287,13 @@ class HospitalClinicalDataSource(
     private suspend fun alCambiarCita(resultado: Result<Cita>): Result<Cita> {
         val cita = resultado.getOrElse { return Result.failure(it) }
         syncCitasFromRemote()
-        return Result.success(_citasState.value.firstOrNull { it.id == cita.id } ?: cita)
+        val actualizada = _citasState.value.firstOrNull { it.id == cita.id } ?: cita
+        val normalizada = if (actualizada.estado.isBlank() || actualizada.estado == EstadoCita.SOLICITADA) {
+            actualizada.copy(estado = EstadoCita.AGENDADA)
+        } else {
+            actualizada
+        }
+        return Result.success(normalizada)
     }
 
     suspend fun getMedicosAgenda(): Result<List<User>> {
@@ -297,8 +321,37 @@ class HospitalClinicalDataSource(
         programacion: ProgramacionCita,
         motivo: String
     ): Result<Cita> {
-        val api = apiService ?: return sinApi()
-        val cuerpo = programacion.aMapa() + mapOf("id_paciente" to idPaciente, "motivo" to motivo)
+        val api = apiService
+        if (api == null) {
+            val pacExp = _expedientes.value.firstOrNull { it.paciente.id == idPaciente }?.paciente
+            val nuevaLocal = Cita(
+                id = "c-loc-${System.currentTimeMillis()}",
+                fecha = programacion.fecha,
+                horaInicio = programacion.horaInicio,
+                horaFin = Cita.calcularFin30Minutos(programacion.horaInicio),
+                estado = EstadoCita.AGENDADA,
+                motivo = motivo,
+                idMedico = programacion.idMedico,
+                paciente = pacExp?.let {
+                    PacienteInfo(
+                        id = it.id,
+                        nombreCompleto = it.nombreCompleto,
+                        numeroExpediente = it.numeroExpediente,
+                        dui = it.dui,
+                        sexo = it.sexo,
+                        fechaNacimiento = it.fechaNacimiento,
+                        telefono = it.telefono
+                    )
+                }
+            )
+            prependCita(nuevaLocal)
+            return Result.success(nuevaLocal)
+        }
+        val cuerpo = programacion.aMapa() + mapOf(
+            "id_paciente" to idPaciente,
+            "motivo" to motivo,
+            "estado" to EstadoCita.AGENDADA
+        )
         return alCambiarCita(llamarApi { api.agendarCita(cuerpo) })
     }
 
@@ -327,15 +380,25 @@ class HospitalClinicalDataSource(
     fun actualizarTriajeOPasarAConsulta(
         citaId: String,
         signosVitales: SignosVitales?,
-        pasarAConsulta: Boolean
+        pasarAConsulta: Boolean,
+        hoyIso: String = LocalDate.now().toString()
     ): Cita? {
+        val objetivo = _citasState.value.firstOrNull { it.id == citaId } ?: return null
+        if (!objetivo.esDelDia(hoyIso)) {
+            return null
+        }
         var citaTransferida: Cita? = null
         _citasState.value = _citasState.value.map { cita ->
             if (cita.id == citaId) {
                 val nuevosSignos = if (signosVitales?.hasAnyData == true) signosVitales else cita.signosVitales
+                val nuevoEstado = when {
+                    pasarAConsulta -> EstadoCita.EN_ATENCION
+                    cita.estado == EstadoCita.AGENDADA && nuevosSignos?.hasAnyData == true -> EstadoCita.EN_ESPERA
+                    else -> cita.estado
+                }
                 val actualizada = cita.copy(
                     signosVitales = nuevosSignos,
-                    estado = if (pasarAConsulta) "EN_ATENCION" else cita.estado
+                    estado = nuevoEstado
                 )
                 if (pasarAConsulta) {
                     citaTransferida = actualizada
@@ -847,73 +910,89 @@ class HospitalClinicalDataSource(
     // Datos Semilla Clínicos (17 camas estrictas, citas, consulta y LIS)
     // ─────────────────────────────────────────────────────────────────────────
 
-    private fun seedInitialCitas(): List<Cita> = listOf(
-        Cita(
-            id = "c-101",
-            fecha = "2026-10-29",
-            horaInicio = "08:30",
-            horaFin = "09:00",
-            estado = "EN_ATENCION",
-            motivo = "Control de hipertensión y dolor torácico leve",
-            paciente = PacienteInfo("p-carlos", "Carlos Mendoza", "CM-2026-001", "14.891.203-K", "M", "1981-05-14", protegido = true),
-            consultorio = ConsultorioInfo("cs-1", "Medicina Interna", "Box 03"),
-            medicoNombre = "Dr. Alejandro Restrepo",
-            especialidad = "Medicina Interna",
-            signosVitales = SignosVitales(
-                presionSistolica = 120,
-                presionDiastolica = 80,
-                frecuenciaCardiaca = 78,
-                frecuenciaRespiratoria = 18,
-                temperaturaC = 36.6,
-                pesoKg = 74.0,
-                tallaCm = 172.0,
-                saturacionOxigeno = 98,
-                observaciones = "Normotenso en reposo, hemodinámicamente estable"
+    private fun seedInitialCitas(): List<Cita> {
+        val hoy = LocalDate.now().toString()
+        val manana = LocalDate.now().plusDays(1).toString()
+        return listOf(
+            Cita(
+                id = "c-101",
+                fecha = hoy,
+                horaInicio = "08:30",
+                horaFin = "09:00",
+                estado = "EN_ATENCION",
+                motivo = "Control de hipertensión y dolor torácico leve",
+                paciente = PacienteInfo("p-carlos", "Carlos Mendoza", "CM-2026-001", "14.891.203-K", "M", "1981-05-14", protegido = true),
+                consultorio = ConsultorioInfo("cs-1", "Medicina Interna", "Box 03"),
+                medicoNombre = "Dr. Alejandro Restrepo",
+                especialidad = "Medicina Interna",
+                signosVitales = SignosVitales(
+                    presionSistolica = 120,
+                    presionDiastolica = 80,
+                    frecuenciaCardiaca = 78,
+                    frecuenciaRespiratoria = 18,
+                    temperaturaC = 36.6,
+                    pesoKg = 74.0,
+                    tallaCm = 172.0,
+                    saturacionOxigeno = 98,
+                    observaciones = "Normotenso en reposo, hemodinámicamente estable"
+                )
+            ),
+            Cita(
+                id = "c-102",
+                fecha = hoy,
+                horaInicio = "09:00",
+                horaFin = "09:30",
+                estado = "EN_ESPERA",
+                motivo = "Cefalea persistente y mareos matutinos",
+                paciente = PacienteInfo("p-2", "Lucía Morales Castillo", "LM-2026-002", "16.782.341-8", "F", "1992-08-20"),
+                consultorio = ConsultorioInfo("cs-1", "Medicina General", "Box 03"),
+                medicoNombre = "Dr. Alejandro Restrepo",
+                especialidad = "Medicina General",
+                signosVitales = SignosVitales(
+                    presionSistolica = 110,
+                    presionDiastolica = 70,
+                    frecuenciaCardiaca = 82,
+                    saturacionOxigeno = 99
+                )
+            ),
+            Cita(
+                id = "c-103",
+                fecha = hoy,
+                horaInicio = "10:00",
+                horaFin = "10:30",
+                estado = "AGENDADA",
+                motivo = "Evaluación de dermatitis y rinitis alérgica",
+                paciente = PacienteInfo("p-3", "Rodrigo Valenzuela", "RV-2026-003", "05192834-9", "M", "2001-11-03"),
+                consultorio = ConsultorioInfo("cs-2", "Alergología", "Box 02"),
+                medicoNombre = "Dra. Sofía Valenzuela",
+                especialidad = "Medicina General"
+            ),
+            Cita(
+                id = "c-104",
+                fecha = hoy,
+                horaInicio = "08:00",
+                horaFin = "08:30",
+                estado = "ATENDIDA",
+                motivo = "Seguimiento post-alta bronquitis aguda",
+                paciente = PacienteInfo("p-4", "Elena Beatriz Campos", "EC-2026-004", "01928374-1", "F", "1975-02-17"),
+                consultorio = ConsultorioInfo("cs-1", "Medicina Interna", "Box 03"),
+                medicoNombre = "Dr. Alejandro Restrepo",
+                especialidad = "Medicina Interna"
+            ),
+            Cita(
+                id = "c-105",
+                fecha = manana,
+                horaInicio = "11:00",
+                horaFin = "11:30",
+                estado = "AGENDADA",
+                motivo = "Control preventivo y revisión de exámenes",
+                paciente = PacienteInfo("p-5", "Mariana Silva Rivas", "MS-2026-002", "04829102-1", "F", "1988-03-10"),
+                consultorio = ConsultorioInfo("cs-3", "Cardiología", "Box 01"),
+                medicoNombre = "Dr. Carlos Fuentes",
+                especialidad = "Cardiología"
             )
-        ),
-        Cita(
-            id = "c-102",
-            fecha = "2026-10-29",
-            horaInicio = "09:00",
-            horaFin = "09:30",
-            estado = "EN_ESPERA",
-            motivo = "Cefalea persistente y mareos matutinos",
-            paciente = PacienteInfo("p-2", "Lucía Morales Castillo", "LM-2026-002", "16.782.341-8", "F", "1992-08-20"),
-            consultorio = ConsultorioInfo("cs-1", "Medicina General", "Box 03"),
-            medicoNombre = "Dr. Alejandro Restrepo",
-            especialidad = "Medicina General",
-            signosVitales = SignosVitales(
-                presionSistolica = 110,
-                presionDiastolica = 70,
-                frecuenciaCardiaca = 82,
-                saturacionOxigeno = 99
-            )
-        ),
-        Cita(
-            id = "c-103",
-            fecha = "2026-10-29",
-            horaInicio = "10:00",
-            horaFin = "10:30",
-            estado = "AGENDADA",
-            motivo = "Evaluación de dermatitis y rinitis alérgica",
-            paciente = PacienteInfo("p-3", "Rodrigo Valenzuela", "RV-2026-003", "05192834-9", "M", "2001-11-03"),
-            consultorio = ConsultorioInfo("cs-2", "Alergología", "Box 02"),
-            medicoNombre = "Dra. Sofía Valenzuela",
-            especialidad = "Medicina General"
-        ),
-        Cita(
-            id = "c-104",
-            fecha = "2026-10-29",
-            horaInicio = "08:00",
-            horaFin = "08:30",
-            estado = "ATENDIDA",
-            motivo = "Seguimiento post-alta bronquitis aguda",
-            paciente = PacienteInfo("p-4", "Elena Beatriz Campos", "EC-2026-004", "01928374-1", "F", "1975-02-17"),
-            consultorio = ConsultorioInfo("cs-1", "Medicina Interna", "Box 03"),
-            medicoNombre = "Dr. Alejandro Restrepo",
-            especialidad = "Medicina Interna"
         )
-    )
+    }
 
     private fun seedInitialOrdenesLab(): List<OrdenLaboratorioItem> = listOf(
         OrdenLaboratorioItem(

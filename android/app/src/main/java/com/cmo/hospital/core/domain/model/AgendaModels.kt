@@ -53,8 +53,7 @@ object EstadoCita {
 
     fun etiqueta(estado: String): String = when (estado) {
         NO_ASISTIO -> "No asistió"
-        SOLICITADA -> "Solicitada"
-        AGENDADA -> "Agendada"
+        AGENDADA, SOLICITADA -> "Agendada"
         EN_ESPERA -> "En espera"
         EN_ATENCION -> "En atención"
         ATENDIDA -> "Atendida"
@@ -63,18 +62,17 @@ object EstadoCita {
     }
 
     /**
-     * Primero lo que pide acción en el mostrador (solicitudes, sala de espera,
+     * Primero lo que pide acción en el mostrador (sala de espera, en atención y
      * agendadas de la más próxima a la más lejana); al final el historial
      * cerrado, del más reciente al más antiguo.
      */
     fun ordenarParaMostrador(citas: List<Cita>): List<Cita> {
         fun grupo(c: Cita) = when (c.estado) {
-            SOLICITADA -> 0
-            EN_ESPERA, EN_ATENCION -> 1
-            AGENDADA -> 2
-            else -> 3
+            EN_ESPERA, EN_ATENCION -> 0
+            AGENDADA, SOLICITADA -> 1
+            else -> 2
         }
-        val (abiertas, cerradas) = citas.partition { grupo(it) < 3 }
+        val (abiertas, cerradas) = citas.partition { grupo(it) < 2 }
         return abiertas.sortedWith(compareBy<Cita>({ grupo(it) }, { it.fecha }, { it.horaInicio })) +
             cerradas.sortedWith(compareByDescending<Cita> { it.fecha }.thenBy { it.horaInicio })
     }

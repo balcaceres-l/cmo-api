@@ -112,8 +112,19 @@ class ReprogramarCitaUseCase(
     }
 }
 
-class MarcarLlegadaCitaUseCase(private val repository: CitaRepository) {
-    suspend operator fun invoke(citaId: String): Result<Cita> = repository.marcarLlegada(citaId)
+class MarcarLlegadaCitaUseCase(
+    private val repository: CitaRepository,
+    private val hoy: () -> LocalDate = { LocalDate.now() }
+) {
+    suspend operator fun invoke(citaId: String): Result<Cita> {
+        val cita = repository.citasFlow.value.firstOrNull { it.id == citaId }
+        if (cita != null && !cita.esDelDia(hoy().toString())) {
+            return Result.failure(
+                IllegalStateException("El registro de llegada solo está habilitado el día de la cita.")
+            )
+        }
+        return repository.marcarLlegada(citaId)
+    }
 }
 
 class CancelarCitaUseCase(private val repository: CitaRepository) {
@@ -125,12 +136,24 @@ class CancelarCitaUseCase(private val repository: CitaRepository) {
     }
 }
 
-class RegistrarTriajeYPasarConsultaUseCase(private val repository: CitaRepository) {
+class RegistrarTriajeYPasarConsultaUseCase(
+    private val repository: CitaRepository,
+    private val hoy: () -> LocalDate = { LocalDate.now() }
+) {
     suspend operator fun invoke(
         citaId: String,
         signosVitales: SignosVitales?,
         pasarAConsulta: Boolean
-    ): Result<String> = repository.registrarTriajeOPasarAConsulta(citaId, signosVitales, pasarAConsulta)
+    ): Result<String> {
+        val cita = repository.citasFlow.value.firstOrNull { it.id == citaId }
+            ?: return Result.failure(IllegalArgumentException("No se encontró la cita seleccionada."))
+        if (!cita.esDelDia(hoy().toString())) {
+            return Result.failure(
+                IllegalStateException("La toma de signos vitales solo está habilitada el día de la cita.")
+            )
+        }
+        return repository.registrarTriajeOPasarAConsulta(citaId, signosVitales, pasarAConsulta)
+    }
 }
 
 class ControlarLlamadorSalaUseCase(private val repository: CitaRepository) {

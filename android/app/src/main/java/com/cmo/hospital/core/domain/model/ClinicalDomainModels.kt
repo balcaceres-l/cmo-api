@@ -211,7 +211,7 @@ data class Cita(
     val fecha: String,
     @SerializedName("hora_inicio") val horaInicio: String,
     @SerializedName("hora_fin") val horaFin: String?,
-    val estado: String,
+    val estado: String = EstadoCita.AGENDADA,
     val motivo: String? = null,
     val paciente: PacienteInfo? = null,
     val consultorio: ConsultorioInfo? = null,
@@ -225,6 +225,19 @@ data class Cita(
 ) {
     /** Una cita creada solo en el teléfono no existe en la API y no admite consulta. */
     val esRemota: Boolean get() = !id.startsWith("c-")
+
+    /** Indica si la cita ya cuenta con signos vitales registrados en triaje. */
+    val tieneSignosVitales: Boolean
+        get() = signosVitales?.hasAnyData == true
+
+    /**
+     * Indica si la cita corresponde al día indicado (por defecto la fecha actual).
+     * La toma de signos vitales y el paso a sala de espera solo se habilitan el día de la cita.
+     */
+    fun esDelDia(hoyIso: String = LocalDate.now().toString()): Boolean {
+        val citaIso = com.cmo.hospital.core.ui.DateUtils.toIsoDate(fecha)
+        return citaIso.isNotBlank() && citaIso == hoyIso
+    }
 
     companion object {
         val BLOQUES_30_MINUTOS = listOf(

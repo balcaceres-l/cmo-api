@@ -46,6 +46,13 @@ class CitaRepositoryImpl(
         signosVitales: SignosVitales?,
         pasarAConsulta: Boolean
     ): Result<String> {
+        val citaPrevia = dataSource.citasState.value.firstOrNull { it.id == citaId }
+            ?: return Result.failure(IllegalArgumentException("No se encontró la cita seleccionada."))
+        if (!citaPrevia.esDelDia()) {
+            return Result.failure(
+                IllegalStateException("La toma de signos vitales solo está habilitada el día de la cita.")
+            )
+        }
         val transferida = dataSource.actualizarTriajeOPasarAConsulta(
             citaId = citaId,
             signosVitales = signosVitales,
