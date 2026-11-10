@@ -254,6 +254,48 @@
                 android:text="Todos los Médicos" />
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Filtro por Fecha de la Cita -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilFiltroFechaCita"
+                style="@style/Widget.Huc.TextInputLayout"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Filtrar por fecha (DD/MM/AAAA)"
+                app:startIconDrawable="@drawable/ic_calendar_today">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etFiltroFechaCita"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clickable="true"
+                    android:cursorVisible="false"
+                    android:focusable="false"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLimpiarFiltroFechaCita"
+                style="@style/Widget.Huc.Button.Outlined"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:layout_marginStart="8dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minHeight="44dp"
+                android:text="Todas"
+                android:textSize="11sp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+        </LinearLayout>
+
         <TextView
             android:id="@+id/tvCitasEmpty"
             android:layout_width="match_parent"

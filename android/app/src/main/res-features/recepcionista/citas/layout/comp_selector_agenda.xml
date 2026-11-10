@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Médico, fecha y bloque libre: lo comparten el formulario de
-     agendar y el diálogo de confirmar/reprogramar. Los bloques vienen de
+     agendar y el diálogo de reprogramar. Los bloques vienen de
      GET /agenda/disponibilidad, así que respetan el turno del médico. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -9,27 +9,41 @@
     android:layout_height="wrap_content"
     android:orientation="vertical">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:text="Médico *"
-        android:textAppearance="@style/TextAppearance.Huc.LabelMd"
-        android:textColor="@color/huc_on_surface_variant" />
-
-    <HorizontalScrollView
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilAgendaMedico"
+        style="@style/Widget.Huc.TextInputLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:scrollbars="none">
+        android:layout_marginTop="10dp"
+        android:hint="Médico y especialidad *"
+        app:endIconMode="dropdown_menu">
 
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupMedicos"
-            android:layout_width="wrap_content"
+        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            android:id="@+id/actvAgendaMedico"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:singleLine="true"
-            app:singleSelection="true" />
-    </HorizontalScrollView>
+            android:completionThreshold="1"
+            android:imeOptions="actionDone"
+            android:inputType="textNoSuggestions"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="14dp"
+            android:textAppearance="@style/TextAppearance.Huc.BodyMd" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <TextView
+        android:id="@+id/tvMedicoSeleccionadoInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/bg_secondary_fixed_16"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="6dp"
+        android:textColor="@color/huc_on_secondary_fixed"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        tools:text="✓ Médico asignado: Dr. Alejandro Restrepo • Medicina Interna"
+        tools:visibility="visible" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilAgendaFecha"

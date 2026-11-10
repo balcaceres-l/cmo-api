@@ -15,17 +15,20 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cmo.hospital.CmoApplication
 import com.cmo.hospital.core.domain.model.Cita
-import com.cmo.hospital.core.domain.model.EstadoCita
 import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.core.domain.model.User
+import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.core.ui.simpleViewModelFactory
 import com.cmo.hospital.databinding.FragmentRecepCitasBinding
 import com.cmo.hospital.features.recepcionista.shell.presentation.RecepcionistaToastHost
 import com.google.android.material.chip.Chip
+import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneOffset
 
 class CitasFragment : Fragment() {
 
@@ -80,14 +83,13 @@ class CitasFragment : Fragment() {
                 viewModel.guardarTriajeOPasarConsulta(cita.id, cita.signosVitales, pasarAConsulta = true)
             },
             onCancelarCita = { cita -> pedirMotivoCancelacion(cita) },
-            onConfirmarSolicitud = { cita -> abrirProgramacion(cita, ProgramarCitaDialogFragment.MODO_CONFIRMAR) },
             onReprogramar = { cita -> abrirProgramacion(cita, ProgramarCitaDialogFragment.MODO_REPROGRAMAR) }
         )
         binding.rvCitasRecepcion.layoutManager = LinearLayoutManager(requireContext())
         binding.rvCitasRecepcion.adapter = citasAdapter
     }
 
-    /** Filtros de la agenda por estado y por médico. */
+    /** Filtros de la agenda por estado, por médico y por fecha. */
     private fun setupFiltros() {
         val grupo = binding.chipGroupFiltroEstadoCitas
         grupo.isSingleSelection = true
@@ -107,6 +109,24 @@ class CitasFragment : Fragment() {
             viewModel.setFiltroDoctor(binding.actvFiltroDoctor.adapter?.getItem(position)?.toString().orEmpty())
         }
         binding.actvFiltroDoctor.doAfterTextChanged { viewModel.setFiltroDoctor(it?.toString().orEmpty().trim()) }
+
+        binding.etFiltroFechaCita.setOnClickListener { abrirSelectorFiltroFecha() }
+        binding.tilFiltroFechaCita.setOnClickListener { abrirSelectorFiltroFecha() }
+        binding.btnLimpiarFiltroFechaCita.setOnClickListener {
+            viewModel.limpiarFiltroFecha()
+        }
+    }
+
+    private fun abrirSelectorFiltroFecha() {
+        if (childFragmentManager.findFragmentByTag("picker_filtro_fecha_cita") != null) return
+        val picker = MaterialDatePicker.Builder.datePicker()
+            .setTitleText("Filtrar citas por fecha")
+            .build()
+        picker.addOnPositiveButtonClickListener { millis ->
+            val iso = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString()
+            viewModel.setFiltroFecha(iso)
+        }
+        picker.show(childFragmentManager, "picker_filtro_fecha_cita")
     }
 
     private fun actualizarDropdownFiltroDoctores(citas: List<Cita>) {
@@ -253,6 +273,7 @@ class CitasFragment : Fragment() {
     private fun mostrarErrorFormulario(error: ErrorProgramacion) {
         when (error.campo) {
             "id_paciente" -> binding.tilCitaPacienteBuscar.error = error.mensaje
+            "id_medico" -> selector.marcarErrorMedico(error.mensaje)
             "motivo" -> binding.tilCitaMotivo.error = error.mensaje
             "fecha" -> selector.marcarErrorFecha(error.mensaje)
         }
@@ -264,6 +285,7 @@ class CitasFragment : Fragment() {
         binding.tvCitaFormError.visibility = View.GONE
         binding.tilCitaPacienteBuscar.error = null
         binding.tilCitaMotivo.error = null
+        selector.marcarErrorMedico(null)
         selector.marcarErrorFecha(null)
         viewModel.limpiarError(OrigenProgramacion.FORMULARIO)
     }
@@ -288,12 +310,20 @@ class CitasFragment : Fragment() {
                 }
 
                 launch {
-                    viewModel.citas.collect { lista ->
-                        val solicitudes = lista.count { it.estado == EstadoCita.SOLICITADA }
-                        binding.tvCitasTotalBadge.text = buildString {
-                            append("${lista.size} citas")
-                            if (solicitudes > 0) append(" • $solicitudes por confirmar")
+                    viewModel.filtroFecha.collect { fechaFiltro ->
+                        if (fechaFiltro.isBlank()) {
+                            binding.etFiltroFechaCita.setText("")
+                            binding.btnLimpiarFiltroFechaCita.visibility = View.GONE
+                        } else {
+                            binding.etFiltroFechaCita.setText(DateUtils.toUiDate(fechaFiltro))
+                            binding.btnLimpiarFiltroFechaCita.visibility = View.VISIBLE
                         }
+                    }
+                }
+
+                launch {
+                    viewModel.citas.collect { lista ->
+                        binding.tvCitasTotalBadge.text = "${lista.size} citas"
                         actualizarDropdownFiltroDoctores(lista)
                     }
                 }

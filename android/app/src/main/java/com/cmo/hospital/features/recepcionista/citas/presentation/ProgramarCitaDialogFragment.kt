@@ -89,6 +89,7 @@ class ProgramarCitaDialogFragment : DialogFragment() {
                     viewModel.errorProgramacion.collect { error ->
                         val b = _binding ?: return@collect
                         if (error?.origen == OrigenProgramacion.DIALOGO) {
+                            if (error.campo == "id_medico") selector.marcarErrorMedico(error.mensaje)
                             if (error.campo == "fecha") selector.marcarErrorFecha(error.mensaje)
                             b.tvProgramarError.text = error.mensaje
                             b.tvProgramarError.visibility = View.VISIBLE

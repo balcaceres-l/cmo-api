@@ -2,12 +2,16 @@ package com.cmo.hospital.features.recepcionista.citas.presentation
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.view.View
+import android.widget.ArrayAdapter
+import android.widget.Filter
 import androidx.core.content.ContextCompat
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.FragmentManager
 import com.cmo.hospital.R
-import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.core.domain.model.ProgramacionCita
 import com.cmo.hospital.core.domain.model.User
+import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.databinding.CompSelectorAgendaBinding
 import com.google.android.material.chip.Chip
 import com.google.android.material.datepicker.CalendarConstraints
@@ -18,9 +22,9 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 
 /**
- * Maneja el bloque médico → fecha → horario libre. Cada vez que
- * cambian médico o fecha pide la disponibilidad a la API mediante
- * [onPedirDisponibilidad]; los bloques que muestra son solo los que devolvió.
+ * Maneja el bloque médico → fecha → horario libre.
+ * El selector de médico utiliza un menú desplegable con búsqueda integrada por nombre
+ * o especialidad para escalar cuando existen múltiples médicos en el sistema.
  */
 class SelectorAgendaController(
     private val binding: CompSelectorAgendaBinding,
@@ -35,8 +39,10 @@ class SelectorAgendaController(
         private set
 
     private var medicos: List<User> = emptyList()
+    private var medicosFiltrados: List<User> = emptyList()
     private var ultimaDisponibilidad: DisponibilidadUi? = null
     private var ultimaPedida: Pair<String?, String>? = null
+    private var actualizandoTextoInterno = false
 
     private val ctx: Context get() = binding.root.context
 
@@ -45,6 +51,23 @@ class SelectorAgendaController(
         binding.etAgendaFecha.setOnClickListener { abrirCalendario() }
         binding.tilAgendaFecha.setOnClickListener { abrirCalendario() }
         binding.tvAgendaAviso.text = "Seleccione médico y fecha para ver los horarios."
+
+        binding.actvAgendaMedico.setOnClickListener {
+            binding.actvAgendaMedico.showDropDown()
+        }
+        binding.actvAgendaMedico.setOnItemClickListener { _, _, position, _ ->
+            val elegido = medicosFiltrados.getOrNull(position) ?: return@setOnItemClickListener
+            seleccionarMedico(elegido)
+        }
+        binding.actvAgendaMedico.doAfterTextChanged { editable ->
+            if (actualizandoTextoInterno) return@doAfterTextChanged
+            val texto = editable?.toString()?.trim().orEmpty()
+            val actual = medicos.firstOrNull { it.id == idMedico }
+            if (actual != null && texto != etiquetaMedico(actual)) {
+                // El usuario está escribiendo para buscar otro médico
+                binding.tilAgendaMedico.error = null
+            }
+        }
     }
 
     /**
@@ -64,8 +87,9 @@ class SelectorAgendaController(
             idMedico = lista.firstOrNull()?.id
             horaInicio = null
         }
+        configurarAdaptadorMedicos()
+        sincronizarMedicoSeleccionadoUi()
         if (idMedico to fecha != ultimaPedida) pedirDisponibilidad()
-        pintarMedicos()
     }
 
     fun mostrarDisponibilidad(d: DisponibilidadUi?) {
@@ -75,7 +99,7 @@ class SelectorAgendaController(
         val grupo = binding.chipGroupBloques
         grupo.removeAllViews()
         val aviso = when {
-            idMedico == null -> "No hay médicos activos para esta especialidad."
+            idMedico == null -> "No hay médicos activos disponibles."
             d == null -> "Seleccione médico y fecha para ver los horarios."
             d.cargando -> "Consultando horarios libres…"
             d.error != null -> d.error
@@ -102,30 +126,93 @@ class SelectorAgendaController(
         horaInicio = horaInicio.orEmpty()
     )
 
+    fun marcarErrorMedico(mensaje: String?) {
+        binding.tilAgendaMedico.error = mensaje
+    }
+
     /** Marca el campo de fecha cuando la API o la validación local lo rechazan. */
     fun marcarErrorFecha(mensaje: String?) {
         binding.tilAgendaFecha.error = mensaje
+    }
+
+    private fun seleccionarMedico(medico: User) {
+        val cambio = idMedico != medico.id
+        idMedico = medico.id
+        binding.tilAgendaMedico.error = null
+        sincronizarMedicoSeleccionadoUi()
+        if (cambio) {
+            horaInicio = null
+            pedirDisponibilidad()
+        }
+    }
+
+    private fun sincronizarMedicoSeleccionadoUi() {
+        val actual = medicos.firstOrNull { it.id == idMedico }
+        actualizandoTextoInterno = true
+        if (actual != null) {
+            val etiqueta = etiquetaMedico(actual)
+            if (binding.actvAgendaMedico.text?.toString() != etiqueta) {
+                binding.actvAgendaMedico.setText(etiqueta, false)
+            }
+            val esp = actual.cargo?.takeIf { it.isNotBlank() } ?: "Consulta Externa"
+            binding.tvMedicoSeleccionadoInfo.text = "✓ Médico seleccionado: ${actual.nombreCompleto} • $esp"
+            binding.tvMedicoSeleccionadoInfo.visibility = View.VISIBLE
+        } else {
+            binding.actvAgendaMedico.setText("", false)
+            binding.tvMedicoSeleccionadoInfo.visibility = View.GONE
+        }
+        actualizandoTextoInterno = false
+    }
+
+    private fun configurarAdaptadorMedicos() {
+        medicosFiltrados = medicos
+        val adapter = object : ArrayAdapter<String>(
+            ctx,
+            android.R.layout.simple_dropdown_item_1line,
+            medicos.map { etiquetaMedico(it) }.toMutableList()
+        ) {
+            private val customFilter = object : Filter() {
+                override fun performFiltering(constraint: CharSequence?): FilterResults {
+                    val query = constraint?.toString()?.trim().orEmpty()
+                    val actual = medicos.firstOrNull { it.id == idMedico }
+                    // Si el texto coincide con el médico ya elegido o está vacío, mostrar todos los médicos
+                    val coincidencias = if (query.isEmpty() || (actual != null && query.equals(etiquetaMedico(actual), ignoreCase = true))) {
+                        medicos
+                    } else {
+                        medicos.filter { m ->
+                            m.nombreCompleto.contains(query, ignoreCase = true) ||
+                                (m.cargo?.contains(query, ignoreCase = true) == true)
+                        }
+                    }
+                    return FilterResults().apply {
+                        values = coincidencias
+                        count = coincidencias.size
+                    }
+                }
+
+                @Suppress("UNCHECKED_CAST")
+                override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
+                    medicosFiltrados = (results?.values as? List<User>) ?: medicos
+                    clear()
+                    addAll(medicosFiltrados.map { etiquetaMedico(it) })
+                    notifyDataSetChanged()
+                }
+            }
+
+            override fun getFilter(): Filter = customFilter
+        }
+        binding.actvAgendaMedico.setAdapter(adapter)
+    }
+
+    private fun etiquetaMedico(medico: User): String {
+        val especialidad = medico.cargo?.takeIf { it.isNotBlank() } ?: "Medicina General"
+        return "${medico.nombreCompleto} — $especialidad"
     }
 
     private fun pedirDisponibilidad() {
         ultimaPedida = idMedico to fecha
         binding.tilAgendaFecha.error = null
         onPedirDisponibilidad(idMedico, fecha)
-    }
-
-    private fun pintarMedicos() {
-        val grupo = binding.chipGroupMedicos
-        grupo.removeAllViews()
-        medicos.forEach { m ->
-            grupo.addView(chip(m.nombreCompleto, m.id == idMedico) {
-                if (idMedico != m.id) {
-                    idMedico = m.id
-                    horaInicio = null
-                    pintarMedicos()
-                    pedirDisponibilidad()
-                }
-            })
-        }
     }
 
     private fun abrirCalendario() {

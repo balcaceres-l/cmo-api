@@ -18,7 +18,6 @@ class CitasRecepcionAdapter(
     private val onAbrirTriaje: (Cita) -> Unit,
     private val onPasarDirectoAConsulta: (Cita) -> Unit,
     private val onCancelarCita: (Cita) -> Unit,
-    private val onConfirmarSolicitud: (Cita) -> Unit,
     private val onReprogramar: (Cita) -> Unit
 ) : ListAdapter<Cita, CitasRecepcionAdapter.CitaViewHolder>(DiffCallback) {
 
@@ -48,13 +47,13 @@ class CitasRecepcionAdapter(
             val ctx = binding.root.context
             val fechaUi = DateUtils.toUiDate(cita.fecha)
             binding.tvItemCitaHorario.text = when {
-                cita.horaInicio.isBlank() -> "Solicitud sin horario"
+                cita.horaInicio.isBlank() -> fechaUi
                 cita.horaFin.isNullOrBlank() -> "$fechaUi • ${cita.horaInicio}"
                 else -> "$fechaUi • ${cita.horaInicio} - ${cita.horaFin}"
             }
             binding.tvItemCitaPaciente.text = cita.paciente?.nombreCompleto ?: "Paciente"
             binding.tvItemCitaMedicoYExp.text =
-                "Exp: ${cita.paciente?.numeroExpediente ?: "N/D"} • ${cita.medicoNombre ?: "Médico por asignar"} (${cita.especialidad ?: "Consulta"})"
+                "Exp: ${cita.paciente?.numeroExpediente ?: "N/D"} • ${cita.medicoNombre ?: "Médico asignado"} (${cita.especialidad ?: "Consulta"})"
             binding.tvItemCitaMotivo.text = cita.motivo ?: "Consulta programada"
 
             // Resumen de signos vitales si existen
@@ -75,25 +74,22 @@ class CitasRecepcionAdapter(
             }
 
             // Badge de estado
-            binding.tvItemCitaEstado.text = EstadoCita.etiqueta(cita.estado)
-            when (cita.estado) {
-                "SOLICITADA" -> {
-                    binding.tvItemCitaEstado.setBackgroundResource(R.drawable.bg_pill_tertiary_fixed)
-                    binding.tvItemCitaEstado.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_tertiary_fixed))
-                }
-                "EN_ATENCION" -> {
+            val estadoNormalizado = if (cita.estado == EstadoCita.SOLICITADA) EstadoCita.AGENDADA else cita.estado
+            binding.tvItemCitaEstado.text = EstadoCita.etiqueta(estadoNormalizado)
+            when (estadoNormalizado) {
+                EstadoCita.EN_ATENCION -> {
                     binding.tvItemCitaEstado.setBackgroundResource(R.drawable.bg_pill_primary_fixed)
                     binding.tvItemCitaEstado.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_primary_fixed))
                 }
-                "EN_ESPERA" -> {
+                EstadoCita.EN_ESPERA -> {
                     binding.tvItemCitaEstado.setBackgroundResource(R.drawable.bg_pill_tertiary_fixed)
                     binding.tvItemCitaEstado.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_tertiary_fixed))
                 }
-                "AGENDADA" -> {
+                EstadoCita.AGENDADA -> {
                     binding.tvItemCitaEstado.setBackgroundResource(R.drawable.bg_pill_secondary_fixed)
                     binding.tvItemCitaEstado.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_secondary_fixed))
                 }
-                "CANCELADA" -> {
+                EstadoCita.CANCELADA, EstadoCita.NO_ASISTIO -> {
                     binding.tvItemCitaEstado.setBackgroundResource(R.drawable.bg_pill_error_container)
                     binding.tvItemCitaEstado.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_error_container))
                 }
@@ -103,23 +99,48 @@ class CitasRecepcionAdapter(
                 }
             }
 
-            // Acciones dinámicas por estado
-            binding.actionsCitaSolicitada.visibility =
-                if (cita.estado == EstadoCita.SOLICITADA) View.VISIBLE else View.GONE
-            binding.actionsCitaAgendada.visibility =
-                if (cita.estado == "AGENDADA") View.VISIBLE else View.GONE
-            binding.actionsCitaEnEspera.visibility =
-                if (cita.estado == "EN_ESPERA") View.VISIBLE else View.GONE
-            binding.bannerCitaEnAtencion.visibility =
-                if (cita.estado == "EN_ATENCION") View.VISIBLE else View.GONE
+            // Regla: la toma de signos vitales y llegada solo están habilitadas el día de la cita
+            val esHoy = cita.esDelDia()
+            val requiereDiaCita = estadoNormalizado == EstadoCita.AGENDADA || estadoNormalizado == EstadoCita.EN_ESPERA
+            if (requiereDiaCita && !esHoy) {
+                binding.tvCitaAvisoDia.visibility = View.VISIBLE
+                binding.tvCitaAvisoDia.text =
+                    "⏱ Toma de signos vitales y llegada habilitadas solo el día de la cita ($fechaUi)."
+            } else {
+                binding.tvCitaAvisoDia.visibility = View.GONE
+            }
 
-            binding.btnCitaRegistrarLlegada.setOnClickListener { onRegistrarLlegada(cita) }
+            binding.btnCitaRegistrarLlegada.isEnabled = esHoy
+            binding.btnCitaRegistrarLlegada.alpha = if (esHoy) 1.0f else 0.45f
+            binding.btnCitaTriajeAgendada.isEnabled = esHoy
+            binding.btnCitaTriajeAgendada.alpha = if (esHoy) 1.0f else 0.45f
+            binding.btnCitaTriajeSignos.isEnabled = esHoy
+            binding.btnCitaTriajeSignos.alpha = if (esHoy) 1.0f else 0.45f
+            binding.btnCitaPasarConsulta.isEnabled = esHoy
+            binding.btnCitaPasarConsulta.alpha = if (esHoy) 1.0f else 0.45f
+
+            // Acciones dinámicas por estado
+            binding.actionsCitaAgendada.visibility =
+                if (estadoNormalizado == EstadoCita.AGENDADA) View.VISIBLE else View.GONE
+            binding.actionsCitaEnEspera.visibility =
+                if (estadoNormalizado == EstadoCita.EN_ESPERA) View.VISIBLE else View.GONE
+            binding.bannerCitaEnAtencion.visibility =
+                if (estadoNormalizado == EstadoCita.EN_ATENCION) View.VISIBLE else View.GONE
+
+            binding.btnCitaRegistrarLlegada.setOnClickListener {
+                if (esHoy) onRegistrarLlegada(cita)
+            }
+            binding.btnCitaTriajeAgendada.setOnClickListener {
+                if (esHoy) onAbrirTriaje(cita)
+            }
             binding.btnCitaCancelarAgendada.setOnClickListener { onCancelarCita(cita) }
             binding.btnCitaReprogramar.setOnClickListener { onReprogramar(cita) }
-            binding.btnCitaConfirmarSolicitud.setOnClickListener { onConfirmarSolicitud(cita) }
-            binding.btnCitaRechazarSolicitud.setOnClickListener { onCancelarCita(cita) }
-            binding.btnCitaTriajeSignos.setOnClickListener { onAbrirTriaje(cita) }
-            binding.btnCitaPasarConsulta.setOnClickListener { onPasarDirectoAConsulta(cita) }
+            binding.btnCitaTriajeSignos.setOnClickListener {
+                if (esHoy) onAbrirTriaje(cita)
+            }
+            binding.btnCitaPasarConsulta.setOnClickListener {
+                if (esHoy) onPasarDirectoAConsulta(cita)
+            }
             binding.btnCitaCancelarEspera.setOnClickListener { onCancelarCita(cita) }
         }
     }

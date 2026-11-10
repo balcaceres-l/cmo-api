@@ -11,6 +11,7 @@ import com.cmo.hospital.core.domain.model.ProgramacionCita
 import com.cmo.hospital.core.domain.model.SignosVitales
 import com.cmo.hospital.core.domain.model.User
 import com.cmo.hospital.core.network.ApiValidationException
+import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 data class CitasUiEvent(
     val title: String,
@@ -83,14 +85,33 @@ class CitasViewModel(
     private val _filtroDoctor = MutableStateFlow(TODOS_LOS_MEDICOS)
     val filtroDoctor: StateFlow<String> = _filtroDoctor.asStateFlow()
 
-    /** Lista del mostrador (solicitudes y sala de espera primero) con los filtros aplicados. */
-    val citasFiltradas: StateFlow<List<Cita>> = combine(citas, _filtroEstado, _filtroDoctor) { lista, estado, doctor ->
-        EstadoCita.ordenarParaMostrador(lista).filter { cita ->
-            coincideEstado(cita.estado, estado) && (
-                doctor == TODOS_LOS_MEDICOS || doctor.isBlank() ||
-                    cita.medicoNombre?.contains(doctor, ignoreCase = true) == true
-                )
-        }
+    private val _filtroFecha = MutableStateFlow("")
+    val filtroFecha: StateFlow<String> = _filtroFecha.asStateFlow()
+
+    /** Lista del mostrador con filtros por estado, médico y fecha aplicados. */
+    val citasFiltradas: StateFlow<List<Cita>> = combine(
+        citas,
+        _filtroEstado,
+        _filtroDoctor,
+        _filtroFecha
+    ) { lista, estado, doctor, fecha ->
+        filtrarCitas(lista, estado, doctor, fecha)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // ─── Estado del Módulo de Calendario de Citas ──────────────────────────
+    private val _calendarioDoctor = MutableStateFlow(TODOS_LOS_MEDICOS)
+    val calendarioDoctor: StateFlow<String> = _calendarioDoctor.asStateFlow()
+
+    private val _calendarioFecha = MutableStateFlow(LocalDate.now().toString())
+    val calendarioFecha: StateFlow<String> = _calendarioFecha.asStateFlow()
+
+    /** Citas agendadas y activas para la vista de Calendario, filtradas por doctor y fecha. */
+    val citasCalendarioFiltradas: StateFlow<List<Cita>> = combine(
+        citas,
+        _calendarioDoctor,
+        _calendarioFecha
+    ) { lista, doctor, fecha ->
+        filtrarCitasCalendario(lista, doctor, fecha)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setFiltroEstado(estado: String) {
@@ -99,6 +120,22 @@ class CitasViewModel(
 
     fun setFiltroDoctor(doctor: String) {
         _filtroDoctor.value = doctor.ifBlank { TODOS_LOS_MEDICOS }
+    }
+
+    fun setFiltroFecha(fecha: String) {
+        _filtroFecha.value = fecha.trim()
+    }
+
+    fun limpiarFiltroFecha() {
+        _filtroFecha.value = ""
+    }
+
+    fun setCalendarioDoctor(doctor: String) {
+        _calendarioDoctor.value = doctor.ifBlank { TODOS_LOS_MEDICOS }
+    }
+
+    fun setCalendarioFecha(fecha: String) {
+        _calendarioFecha.value = fecha.trim()
     }
 
     private val _agenda = MutableStateFlow(AgendaUiState())
@@ -196,7 +233,7 @@ class CitasViewModel(
     }
 
     fun confirmarSolicitud(citaId: String, programacion: ProgramacionCita, onSuccess: () -> Unit) =
-        enviar(OrigenProgramacion.DIALOGO, onSuccess, "Solicitud confirmada") {
+        enviar(OrigenProgramacion.DIALOGO, onSuccess, "Cita agendada") {
             confirmarCitaUseCase(citaId, programacion)
         }
 
@@ -316,21 +353,65 @@ class CitasViewModel(
 
     private fun resumen(cita: Cita): String =
         "${cita.paciente?.nombreCompleto ?: "Paciente"} con ${cita.medicoNombre ?: "el médico"} " +
-            "el ${cita.fecha} a las ${cita.horaInicio}."
+            "el ${DateUtils.toUiDate(cita.fecha)} a las ${cita.horaInicio}."
 
     companion object {
         const val FILTRO_TODAS = "Todas"
         const val TODOS_LOS_MEDICOS = "Todos los Médicos"
-        val FILTROS_ESTADO = listOf(FILTRO_TODAS, "Solicitadas", "Pendientes", "En Espera", "En Atención", "Atendidas", "Canceladas")
+        val FILTROS_ESTADO = listOf(
+            FILTRO_TODAS,
+            "Agendadas",
+            "En Espera",
+            "En Atención",
+            "Atendidas",
+            "Canceladas"
+        )
 
         fun coincideEstado(estadoCita: String, filtro: String): Boolean = when (filtro) {
-            "Solicitadas" -> estadoCita == EstadoCita.SOLICITADA
-            "Pendientes" -> estadoCita == EstadoCita.AGENDADA
+            "Agendadas", "Pendientes" -> estadoCita == EstadoCita.AGENDADA || estadoCita == EstadoCita.SOLICITADA
             "En Espera" -> estadoCita == EstadoCita.EN_ESPERA
             "En Atención" -> estadoCita == EstadoCita.EN_ATENCION
             "Atendidas" -> estadoCita == EstadoCita.ATENDIDA
             "Canceladas" -> estadoCita == EstadoCita.CANCELADA || estadoCita == EstadoCita.NO_ASISTIO
             else -> true
+        }
+
+        fun filtrarCitas(
+            lista: List<Cita>,
+            estado: String = FILTRO_TODAS,
+            doctor: String = TODOS_LOS_MEDICOS,
+            fecha: String = ""
+        ): List<Cita> {
+            val fechaIso = DateUtils.toIsoDate(fecha.trim())
+            return EstadoCita.ordenarParaMostrador(lista).filter { cita ->
+                val okEstado = coincideEstado(cita.estado, estado)
+                val okDoctor = doctor == TODOS_LOS_MEDICOS || doctor.isBlank() ||
+                    cita.medicoNombre?.contains(doctor, ignoreCase = true) == true
+                val okFecha = fechaIso.isBlank() || DateUtils.toIsoDate(cita.fecha) == fechaIso
+                okEstado && okDoctor && okFecha
+            }
+        }
+
+        fun filtrarCitasCalendario(
+            lista: List<Cita>,
+            doctor: String = TODOS_LOS_MEDICOS,
+            fecha: String = ""
+        ): List<Cita> {
+            val fechaIso = DateUtils.toIsoDate(fecha.trim())
+            return lista
+                .filter { cita ->
+                    val esAgendadaOActiva = cita.estado != EstadoCita.CANCELADA && cita.estado != EstadoCita.NO_ASISTIO
+                    val okDoctor = doctor == TODOS_LOS_MEDICOS || doctor.isBlank() ||
+                        cita.medicoNombre?.contains(doctor, ignoreCase = true) == true
+                    val okFecha = fechaIso.isBlank() || DateUtils.toIsoDate(cita.fecha) == fechaIso
+                    esAgendadaOActiva && okDoctor && okFecha
+                }
+                .sortedWith(
+                    compareBy<Cita>(
+                        { DateUtils.toIsoDate(it.fecha) },
+                        { it.horaInicio }
+                    )
+                )
         }
 
         private val FECHA_ISO = Regex("^\\d{4}-\\d{2}-\\d{2}$")
