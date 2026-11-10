@@ -24,11 +24,15 @@ import com.cmo.hospital.features.recepcionista.shell.presentation.RecepcionistaT
 import com.google.android.material.chip.Chip
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
+import java.util.Locale
 
 class CitasFragment : Fragment() {
 
@@ -41,11 +45,13 @@ class CitasFragment : Fragment() {
     }
 
     private lateinit var citasAdapter: CitasRecepcionAdapter
+    private lateinit var calendarioAdapter: CalendarioCitasAdapter
     private lateinit var selector: SelectorAgendaController
 
     private var formAbierto = false
     private var pacienteSeleccionado: Paciente? = null
     private var especialidadSeleccionada: String? = null // null = todas
+    private var actualizandoCalendarioWidget = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -59,26 +65,36 @@ class CitasFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setupTabs()
         setupRecyclerView()
         setupFiltros()
+        setupCalendario()
         setupFormulario()
         observeState()
     }
 
     override fun onResume() {
         super.onResume()
-        // Trae citas nuevas (p. ej. solicitudes hechas desde la app del paciente).
         viewModel.refrescar()
+    }
+
+    private fun setupTabs() {
+        binding.tabLayoutCitasRecep.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                val esCalendario = tab?.position == 1
+                binding.scrollTabGestionCitas.visibility = if (esCalendario) View.GONE else View.VISIBLE
+                binding.scrollTabCalendarioCitas.visibility = if (esCalendario) View.VISIBLE else View.GONE
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab?) = Unit
+            override fun onTabReselected(tab: TabLayout.Tab?) = Unit
+        })
     }
 
     private fun setupRecyclerView() {
         citasAdapter = CitasRecepcionAdapter(
             onRegistrarLlegada = { cita -> viewModel.registrarLlegada(cita.id) },
-            onAbrirTriaje = { cita ->
-                TriajeCitaDialogFragment(cita) { signos, pasar ->
-                    viewModel.guardarTriajeOPasarConsulta(cita.id, signos, pasar)
-                }.show(childFragmentManager, "dialog_triaje_${cita.id}")
-            },
+            onAbrirTriaje = { cita -> abrirDialogoSignosVitales(cita) },
             onPasarDirectoAConsulta = { cita ->
                 viewModel.guardarTriajeOPasarConsulta(cita.id, cita.signosVitales, pasarAConsulta = true)
             },
@@ -87,6 +103,18 @@ class CitasFragment : Fragment() {
         )
         binding.rvCitasRecepcion.layoutManager = LinearLayoutManager(requireContext())
         binding.rvCitasRecepcion.adapter = citasAdapter
+
+        calendarioAdapter = CalendarioCitasAdapter(
+            onAbrirSignosVitales = { cita -> abrirDialogoSignosVitales(cita) }
+        )
+        binding.rvCalendarioCitas.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvCalendarioCitas.adapter = calendarioAdapter
+    }
+
+    private fun abrirDialogoSignosVitales(cita: Cita) {
+        TriajeCitaDialogFragment(cita) { signos, pasar ->
+            viewModel.guardarTriajeOPasarConsulta(cita.id, signos, pasar)
+        }.show(childFragmentManager, "dialog_triaje_${cita.id}")
     }
 
     /** Filtros de la agenda por estado, por médico y por fecha. */
@@ -117,6 +145,36 @@ class CitasFragment : Fragment() {
         }
     }
 
+    /** Configuración del Módulo de Calendario con filtros por doctor y por fecha. */
+    private fun setupCalendario() {
+        binding.actvCalendarioDoctor.setOnItemClickListener { _, _, position, _ ->
+            val elegido = binding.actvCalendarioDoctor.adapter?.getItem(position)?.toString().orEmpty()
+            viewModel.setCalendarioDoctor(elegido)
+        }
+        binding.actvCalendarioDoctor.doAfterTextChanged {
+            viewModel.setCalendarioDoctor(it?.toString().orEmpty().trim())
+        }
+
+        binding.calendarViewCitas.setOnDateChangeListener { _, year, month, dayOfMonth ->
+            if (actualizandoCalendarioWidget) return@setOnDateChangeListener
+            val iso = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+            viewModel.setCalendarioFecha(iso)
+        }
+
+        binding.etCalendarioFecha.setOnClickListener { abrirSelectorFechaCalendario() }
+        binding.tilCalendarioFecha.setOnClickListener { abrirSelectorFechaCalendario() }
+
+        binding.btnCalendarioHoy.setOnClickListener {
+            val hoyIso = LocalDate.now().toString()
+            viewModel.setCalendarioFecha(hoyIso)
+            sincronizarCalendarViewConFecha(hoyIso)
+        }
+
+        binding.btnCalendarioTodasFechas.setOnClickListener {
+            viewModel.setCalendarioFecha("")
+        }
+    }
+
     private fun abrirSelectorFiltroFecha() {
         if (childFragmentManager.findFragmentByTag("picker_filtro_fecha_cita") != null) return
         val picker = MaterialDatePicker.Builder.datePicker()
@@ -129,13 +187,46 @@ class CitasFragment : Fragment() {
         picker.show(childFragmentManager, "picker_filtro_fecha_cita")
     }
 
+    private fun abrirSelectorFechaCalendario() {
+        if (childFragmentManager.findFragmentByTag("picker_calendario_fecha") != null) return
+        val picker = MaterialDatePicker.Builder.datePicker()
+            .setTitleText("Seleccionar fecha en el calendario")
+            .build()
+        picker.addOnPositiveButtonClickListener { millis ->
+            val iso = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString()
+            viewModel.setCalendarioFecha(iso)
+            sincronizarCalendarViewConFecha(iso)
+        }
+        picker.show(childFragmentManager, "picker_calendario_fecha")
+    }
+
+    private fun sincronizarCalendarViewConFecha(fechaIso: String) {
+        if (fechaIso.isBlank()) return
+        try {
+            val ld = LocalDate.parse(DateUtils.toIsoDate(fechaIso))
+            val millis = ld.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            actualizandoCalendarioWidget = true
+            binding.calendarViewCitas.setDate(millis, true, true)
+            actualizandoCalendarioWidget = false
+        } catch (_: Exception) {
+            actualizandoCalendarioWidget = false
+        }
+    }
+
     private fun actualizarDropdownFiltroDoctores(citas: List<Cita>) {
         val medicosApi = viewModel.agenda.value.medicos.map { it.nombreCompleto }
-        val enCitas = citas.mapNotNull { c -> c.medicoNombre?.takeIf { it.isNotBlank() && c.idMedico != null } }
+        val enCitas = citas.mapNotNull { c -> c.medicoNombre?.takeIf { it.isNotBlank() } }
         val opciones = listOf(CitasViewModel.TODOS_LOS_MEDICOS) + (medicosApi + enCitas).distinct().sorted()
-        binding.actvFiltroDoctor.setSimpleItems(opciones.toTypedArray())
+        val array = opciones.toTypedArray()
+
+        binding.actvFiltroDoctor.setSimpleItems(array)
         if (binding.actvFiltroDoctor.text.isNullOrBlank()) {
             binding.actvFiltroDoctor.setText(CitasViewModel.TODOS_LOS_MEDICOS, false)
+        }
+
+        binding.actvCalendarioDoctor.setSimpleItems(array)
+        if (binding.actvCalendarioDoctor.text.isNullOrBlank()) {
+            binding.actvCalendarioDoctor.setText(CitasViewModel.TODOS_LOS_MEDICOS, false)
         }
     }
 
@@ -256,7 +347,7 @@ class CitasFragment : Fragment() {
         }
         MaterialAlertDialogBuilder(ctx)
             .setTitle("Cancelar cita")
-            .setMessage("${cita.paciente?.nombreCompleto ?: "Paciente"} • ${cita.fecha} ${cita.horaInicio}".trim())
+            .setMessage("${cita.paciente?.nombreCompleto ?: "Paciente"} • ${DateUtils.toUiDate(cita.fecha)} ${cita.horaInicio}".trim())
             .setView(contenedor)
             .setNegativeButton("Volver", null)
             .setPositiveButton("Cancelar cita") { _, _ ->
@@ -322,6 +413,27 @@ class CitasFragment : Fragment() {
                 }
 
                 launch {
+                    viewModel.citasCalendarioFiltradas.collect { citasCal ->
+                        calendarioAdapter.submitList(citasCal)
+                        binding.tvCalendarioTotalBadge.text = "${citasCal.size} citas"
+                        binding.tvCalendarioEmpty.visibility = if (citasCal.isEmpty()) View.VISIBLE else View.GONE
+                    }
+                }
+
+                launch {
+                    viewModel.calendarioFecha.collect { fechaCal ->
+                        if (fechaCal.isBlank()) {
+                            binding.etCalendarioFecha.setText("Todas las fechas")
+                            binding.tvCalendarioSubtituloLista.text = "Todas las citas agendadas"
+                        } else {
+                            val ui = DateUtils.toUiDate(fechaCal)
+                            binding.etCalendarioFecha.setText(ui)
+                            binding.tvCalendarioSubtituloLista.text = "Citas agendadas para el $ui"
+                        }
+                    }
+                }
+
+                launch {
                     viewModel.citas.collect { lista ->
                         binding.tvCitasTotalBadge.text = "${lista.size} citas"
                         actualizarDropdownFiltroDoctores(lista)
@@ -335,6 +447,7 @@ class CitasFragment : Fragment() {
                             medicosPintados = estado.medicos
                             pintarEspecialidades(estado.medicos)
                             selector.mostrarMedicos(medicosFiltrados(estado.medicos))
+                            actualizarDropdownFiltroDoctores(viewModel.citas.value)
                         }
                         if (estado.catalogosError != null) {
                             binding.selectorAgenda.tvAgendaAviso.text =
