@@ -180,4 +180,23 @@ class CamasRecepcionTest {
         assertTrue(cama("VIP-301").estaDisponible)
         assertTrue(DarAltaUseCase(repo)(cama("VIP-302")).isFailure)
     }
+
+    @Test
+    fun testParseaHabitacionesCuandoBackendDevuelveObjetoPorPlanta() {
+        val jsonObjetoPorPlanta = """
+            {
+              "2": [
+                {"codigo":"HAB-201","tipo":"SEMIPRIVADA","capacidad":2,"camas":[${camaJson("HAB-201-A")},${camaJson("HAB-201-B")}]}
+              ],
+              "3": [
+                {"codigo":"VIP-301","tipo":"VIP","capacidad":1,"camas":[${camaJson("VIP-301")}]}
+              ]
+            }
+        """.trimIndent()
+        val elem = Gson().fromJson(jsonObjetoPorPlanta, com.google.gson.JsonElement::class.java)
+        val parseadas = com.cmo.hospital.core.data.mapper.parsearHabitacionesJson(elem)
+        assertEquals(2, parseadas.size)
+        assertEquals("HAB-201", parseadas[0].codigo)
+        assertEquals("VIP-301", parseadas[1].codigo)
+    }
 }
