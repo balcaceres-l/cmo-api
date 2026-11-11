@@ -47,7 +47,28 @@ class SemiPrivateRoomsAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(sala: SalaSemiprivadaUi) {
-            binding.tvSalaCodigo.text = sala.codigoSala
+            val ctx = binding.root.context
+            binding.tvSalaCodigo.text = "Habitación ${sala.codigoSala} • 2ª Planta"
+
+            val dispCount = (if (sala.camaA.estaDisponible) 1 else 0) + (if (sala.camaB.estaDisponible) 1 else 0)
+            when (dispCount) {
+                2 -> {
+                    binding.tvSalaResumenEstado.text = "Disponible (2/2 libres)"
+                    binding.tvSalaResumenEstado.setBackgroundResource(R.drawable.bg_pill_primary_fixed)
+                    binding.tvSalaResumenEstado.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_primary_fixed))
+                }
+                1 -> {
+                    binding.tvSalaResumenEstado.text = "Parcial (1 libre • 1 ocupada)"
+                    binding.tvSalaResumenEstado.setBackgroundResource(R.drawable.bg_pill_tertiary_fixed)
+                    binding.tvSalaResumenEstado.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_tertiary_fixed))
+                }
+                else -> {
+                    binding.tvSalaResumenEstado.text = "Ocupada (2/2 ocupadas)"
+                    binding.tvSalaResumenEstado.setBackgroundResource(R.drawable.bg_pill_error_container)
+                    binding.tvSalaResumenEstado.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_error_container))
+                }
+            }
+
             bindSingleBedPill(
                 cama = sala.camaA,
                 letra = "A",
@@ -79,10 +100,15 @@ class SemiPrivateRoomsAdapter(
             when {
                 !cama.estaDisponible -> {
                     container.setBackgroundResource(R.drawable.bg_bed_semi_occupied)
-                    container.alpha = 0.76f
+                    container.alpha = 0.85f
                     dot.backgroundTintList =
                         ColorStateList.valueOf(ContextCompat.getColor(ctx, R.color.huc_error))
-                    label.text = cama.paciente?.nombreCompleto?.substringBefore(' ')?.let { "$letra: $it" } ?: "Cama $letra (Ocup.)"
+                    val nombre = cama.paciente?.nombreCompleto
+                    label.text = if (!nombre.isNullOrBlank()) {
+                        "Cama $letra • Ocupada\n$nombre"
+                    } else {
+                        "Cama $letra • Ocupada"
+                    }
                     label.setTextColor(ContextCompat.getColor(ctx, R.color.huc_error))
                     check.visibility = View.GONE
                     container.setOnClickListener { onSelectBed(cama) }
@@ -92,7 +118,7 @@ class SemiPrivateRoomsAdapter(
                     container.alpha = 1f
                     dot.backgroundTintList =
                         ColorStateList.valueOf(ContextCompat.getColor(ctx, R.color.huc_primary_fixed))
-                    label.text = "Cama $letra"
+                    label.text = "Cama $letra • Seleccionada"
                     label.setTextColor(ContextCompat.getColor(ctx, R.color.huc_primary_fixed))
                     check.visibility = View.VISIBLE
                     container.setOnClickListener { onSelectBed(cama) }
@@ -102,7 +128,7 @@ class SemiPrivateRoomsAdapter(
                     container.alpha = 1f
                     dot.backgroundTintList =
                         ColorStateList.valueOf(ContextCompat.getColor(ctx, R.color.huc_primary))
-                    label.text = "Cama $letra (Disp.)"
+                    label.text = "Cama $letra • Disponible"
                     label.setTextColor(ContextCompat.getColor(ctx, R.color.huc_primary))
                     check.visibility = View.GONE
                     container.setOnClickListener { onSelectBed(cama) }

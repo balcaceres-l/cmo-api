@@ -35,7 +35,6 @@ class CargarMedicosTratantesUseCase(private val repository: AdmisionRepository) 
 class BuscarPacientesIngresoUseCase(private val repository: AdmisionRepository) {
     suspend operator fun invoke(texto: String): Result<List<Paciente>> {
         val limpio = texto.trim()
-        if (limpio.length < 2) return Result.success(emptyList())
         return repository.buscarPacientes(limpio)
     }
 }

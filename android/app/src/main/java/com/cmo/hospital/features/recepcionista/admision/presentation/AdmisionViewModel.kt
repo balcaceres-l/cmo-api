@@ -9,6 +9,8 @@ import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.core.domain.model.User
 import com.cmo.hospital.core.network.ApiValidationException
 import com.cmo.hospital.features.recepcionista.admision.domain.usecase.*
+import com.cmo.hospital.features.recepcionista.pacientes.domain.repository.PacienteForm
+import com.cmo.hospital.features.recepcionista.pacientes.domain.usecase.GuardarPacienteUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,7 +46,8 @@ class AdmisionViewModel(
     private val buscarPacientesIngresoUseCase: BuscarPacientesIngresoUseCase,
     private val ingresarPacienteUseCase: IngresarPacienteUseCase,
     private val darAltaUseCase: DarAltaUseCase,
-    private val trasladarPacienteUseCase: TrasladarPacienteUseCase
+    private val trasladarPacienteUseCase: TrasladarPacienteUseCase,
+    private val guardarPacienteUseCase: GuardarPacienteUseCase? = null
 ) : ViewModel() {
 
     val capacidad: StateFlow<CapacidadHospitalaria> = observeCapacidadCamasUseCase()
@@ -54,7 +57,7 @@ class AdmisionViewModel(
             initialValue = CapacidadHospitalaria(0, 0, 0, emptyList(), emptyList())
         )
 
-    // ── Pestaña "Vista de habitaciones" (filtros por tipo, ocupación y búsqueda) ──
+    // ── Pestaña "Vista de habitaciones" (filtros por tipo/planta, ocupación y búsqueda) ──
     val habitaciones: StateFlow<List<HabitacionDetalleUi>> = observeHabitacionesDetalladasUseCase()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -105,6 +108,7 @@ class AdmisionViewModel(
     init {
         refrescarCamas()
         cargarMedicos()
+        cargarPacientesRegistrados()
     }
 
     fun refrescarCamas() {
@@ -112,7 +116,6 @@ class AdmisionViewModel(
             _uiState.update { it.copy(cargandoCamas = true, errorCamas = null) }
             val res = refrescarCamasUseCase()
             _uiState.update {
-                // Si la cama elegida dejó de estar libre, se descarta la selección.
                 val seleccion = it.codigoCamaSeleccionada?.takeIf { cod ->
                     res.getOrNull()?.any { c -> c.codigo == cod && c.estaDisponible } ?: true
                 }
@@ -141,6 +144,21 @@ class AdmisionViewModel(
         }
     }
 
+    /** Carga la lista de todos los pacientes registrados para mostrarlos en el selector desplegable. */
+    fun cargarPacientesRegistrados() {
+        busquedaJob?.cancel()
+        busquedaJob = viewModelScope.launch {
+            _uiState.update { it.copy(buscandoPacientes = true) }
+            val res = buscarPacientesIngresoUseCase("")
+            _uiState.update {
+                it.copy(
+                    pacientesEncontrados = res.getOrDefault(emptyList()),
+                    buscandoPacientes = false
+                )
+            }
+        }
+    }
+
     fun seleccionarMedico(idMedico: String) {
         _uiState.update { it.copy(idMedicoSeleccionado = idMedico) }
         limpiarErrorCampo("id_medico")
@@ -158,7 +176,7 @@ class AdmisionViewModel(
     fun buscarPacientes(texto: String) {
         busquedaJob?.cancel()
         busquedaJob = viewModelScope.launch {
-            delay(350)
+            delay(250)
             _uiState.update { it.copy(buscandoPacientes = true) }
             val res = buscarPacientesIngresoUseCase(texto)
             _uiState.update { it.copy(pacientesEncontrados = res.getOrDefault(emptyList()), buscandoPacientes = false) }
@@ -167,8 +185,122 @@ class AdmisionViewModel(
     }
 
     fun limpiarBusqueda() {
-        busquedaJob?.cancel()
-        _uiState.update { it.copy(pacientesEncontrados = emptyList(), buscandoPacientes = false) }
+        cargarPacientesRegistrados()
+    }
+
+    /** Registra un paciente nuevo y lo agrega al listado disponible para el ingreso. */
+    fun registrarNuevoPaciente(
+        form: PacienteForm,
+        onGuardado: (Paciente) -> Unit,
+        onTerminado: (ErrorIngreso?) -> Unit
+    ) {
+        val useCase = guardarPacienteUseCase
+        if (useCase == null) {
+            onTerminado(ErrorIngreso(null, "Servicio de registro de pacientes no disponible."))
+            return
+        }
+        viewModelScope.launch {
+            useCase(null, form).fold(
+                onSuccess = { creado ->
+                    _uiState.update { st ->
+                        st.copy(pacientesEncontrados = listOf(creado) + st.pacientesEncontrados.filter { it.id != creado.id })
+                    }
+                    _evento.value = AdmisionEvento(
+                        "Paciente registrado",
+                        "${creado.nombreCompleto} • Exp. ${creado.numeroExpediente ?: "asignado"}"
+                    )
+                    onGuardado(creado)
+                    onTerminado(null)
+                },
+                onFailure = { err ->
+                    onTerminado(
+                        ErrorIngreso(
+                            campo = (err as? ApiValidationException)?.campo,
+                            mensaje = err.message ?: "Revise los datos del paciente."
+                        )
+                    )
+                }
+            )
+        }
+    }
+
+    /**
+     * Si el recepcionista eligió registrar un nuevo paciente directamente en la sección de
+     * Ingreso a cama, primero valida y crea al paciente y luego ejecuta el ingreso en la cama elegida.
+     */
+    fun ingresarConNuevoPaciente(
+        form: PacienteForm,
+        motivo: String,
+        onPacienteCreado: (Paciente) -> Unit,
+        onSuccess: () -> Unit
+    ) {
+        val st = _uiState.value
+        if (st.enviando) return
+        val cama = capacidad.value.let { cap ->
+            (cap.vipCamas + cap.salasSemiprivadas.flatMap { listOf(it.camaA, it.camaB) })
+                .firstOrNull { it.codigo == st.codigoCamaSeleccionada }
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(enviando = true) }
+            _error.value = null
+
+            // Validar primero los campos del paciente nuevo
+            val errorValidacion = GuardarPacienteUseCase.validarCampo(form.copy(exigirDatosCompletos = true))
+            if (errorValidacion != null) {
+                _error.value = ErrorIngreso(errorValidacion.first, errorValidacion.second)
+                _uiState.update { it.copy(enviando = false) }
+                return@launch
+            }
+            if (st.idMedicoSeleccionado.isNullOrBlank()) {
+                _error.value = ErrorIngreso("id_medico", "Seleccione el médico tratante.")
+                _uiState.update { it.copy(enviando = false) }
+                return@launch
+            }
+            if (motivo.isBlank()) {
+                _error.value = ErrorIngreso("motivo", "Ingrese el motivo del ingreso.")
+                _uiState.update { it.copy(enviando = false) }
+                return@launch
+            }
+            if (cama == null) {
+                _error.value = ErrorIngreso("id_cama", "Seleccione una cama libre en el mapa.")
+                _uiState.update { it.copy(enviando = false) }
+                return@launch
+            }
+
+            val useCase = guardarPacienteUseCase
+            if (useCase == null) {
+                _error.value = ErrorIngreso(null, "Servicio de registro de pacientes no disponible.")
+                _uiState.update { it.copy(enviando = false) }
+                return@launch
+            }
+
+            useCase(null, form.copy(exigirDatosCompletos = true)).fold(
+                onSuccess = { nuevoPac ->
+                    _uiState.update { curr ->
+                        curr.copy(pacientesEncontrados = listOf(nuevoPac) + curr.pacientesEncontrados.filter { it.id != nuevoPac.id })
+                    }
+                    onPacienteCreado(nuevoPac)
+                    ingresarPacienteUseCase(nuevoPac.id, cama, st.idMedicoSeleccionado, motivo).fold(
+                        onSuccess = {
+                            _evento.value = AdmisionEvento(
+                                "Paciente creado e ingresado",
+                                "${nuevoPac.nombreCompleto} asignado a ${cama.codigo}."
+                            )
+                            _uiState.update { it.copy(codigoCamaSeleccionada = null) }
+                            onSuccess()
+                        },
+                        onFailure = { err ->
+                            _error.value = ErrorIngreso((err as? ApiValidationException)?.campo, err.message ?: "Revise los datos del ingreso.")
+                            refrescarCamas()
+                        }
+                    )
+                },
+                onFailure = { err ->
+                    _error.value = ErrorIngreso((err as? ApiValidationException)?.campo, err.message ?: "Revise los datos del paciente.")
+                }
+            )
+            _uiState.update { it.copy(enviando = false) }
+        }
     }
 
     fun ingresar(idPaciente: String?, motivo: String, onSuccess: () -> Unit) {
@@ -189,7 +321,6 @@ class AdmisionViewModel(
                 },
                 onFailure = { err ->
                     _error.value = ErrorIngreso((err as? ApiValidationException)?.campo, err.message ?: "Revise los datos.")
-                    // Otro puesto pudo ocupar la cama: refrescar el mapa.
                     refrescarCamas()
                 }
             )

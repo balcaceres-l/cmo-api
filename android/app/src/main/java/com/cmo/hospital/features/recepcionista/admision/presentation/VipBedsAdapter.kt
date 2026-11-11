@@ -45,17 +45,23 @@ class VipBedsAdapter(
         fun bind(cama: Cama) {
             val ctx = binding.root.context
             val isSelected = cama.codigo == selectedCode && cama.estaDisponible
-            binding.tvVipBedCode.text = cama.codigo
+            binding.tvVipBedCode.text = "Hab. ${cama.codigo}"
+            binding.tvVipBedFloor.text = "3ª Planta • VIP Individual"
 
             when {
                 !cama.estaDisponible -> {
                     binding.vipBedCardRoot.setBackgroundResource(R.drawable.bg_bed_vip_occupied)
-                    binding.vipBedCardRoot.alpha = 0.72f
+                    binding.vipBedCardRoot.alpha = 0.85f
                     binding.tvVipBedCode.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_surface))
+                    binding.tvVipBedFloor.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_surface_variant))
                     binding.dotVipBedStatus.backgroundTintList =
                         ColorStateList.valueOf(ContextCompat.getColor(ctx, R.color.huc_error))
-                    // Recepción ve el paciente; sin permiso solo "Ocupada".
-                    binding.tvVipBedState.text = cama.paciente?.nombreCompleto?.substringBefore(' ') ?: "Ocupada"
+                    val nombre = cama.paciente?.nombreCompleto
+                    binding.tvVipBedState.text = if (!nombre.isNullOrBlank()) {
+                        "Ocupada • $nombre"
+                    } else {
+                        "Ocupada"
+                    }
                     binding.tvVipBedState.setTextColor(ContextCompat.getColor(ctx, R.color.huc_error))
                     binding.ivVipBedCheck.visibility = View.GONE
                     binding.vipBedCardRoot.setOnClickListener { onSelectBed(cama) }
@@ -64,9 +70,10 @@ class VipBedsAdapter(
                     binding.vipBedCardRoot.setBackgroundResource(R.drawable.bg_bed_vip_selected)
                     binding.vipBedCardRoot.alpha = 1f
                     binding.tvVipBedCode.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_primary))
+                    binding.tvVipBedFloor.setTextColor(ContextCompat.getColor(ctx, R.color.huc_primary_fixed))
                     binding.dotVipBedStatus.backgroundTintList =
                         ColorStateList.valueOf(ContextCompat.getColor(ctx, R.color.huc_primary_fixed))
-                    binding.tvVipBedState.text = "Asignada"
+                    binding.tvVipBedState.text = "Seleccionada"
                     binding.tvVipBedState.setTextColor(ContextCompat.getColor(ctx, R.color.huc_primary_fixed))
                     binding.ivVipBedCheck.visibility = View.VISIBLE
                     binding.vipBedCardRoot.setOnClickListener { onSelectBed(cama) }
@@ -75,6 +82,7 @@ class VipBedsAdapter(
                     binding.vipBedCardRoot.setBackgroundResource(R.drawable.bg_bed_vip_available)
                     binding.vipBedCardRoot.alpha = 1f
                     binding.tvVipBedCode.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_surface))
+                    binding.tvVipBedFloor.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_surface_variant))
                     binding.dotVipBedStatus.backgroundTintList =
                         ColorStateList.valueOf(ContextCompat.getColor(ctx, R.color.huc_primary))
                     binding.tvVipBedState.text = "Disponible"

@@ -10,7 +10,7 @@
         android:title="Pacientes" />
     <item
         android:id="@+id/nav_recep_admision"
-        android:icon="@drawable/ic_how_to_reg"
+        android:icon="@drawable/ic_single_bed"
         android:title="Camas" />
     <item
         android:id="@+id/nav_recep_laboratorio"

@@ -1,7 +1,55 @@
 package com.cmo.hospital.core.data.mapper
 
 import com.cmo.hospital.core.domain.model.Cama
+import com.cmo.hospital.core.domain.model.Habitacion
 import com.cmo.hospital.core.domain.model.HabitacionDetalleUi
+import com.google.gson.Gson
+import com.google.gson.JsonElement
+
+/**
+ * Deserializa la respuesta de GET /habitaciones independientemente de si Laravel
+ * devuelve un objeto agrupado por planta ({"2":[...],"3":[...]}) o un arreglo ([[...],[...]]).
+ */
+fun parsearHabitacionesJson(elemento: JsonElement?, gson: Gson = Gson()): List<Habitacion> {
+    if (elemento == null || elemento.isJsonNull) return emptyList()
+    val resultado = mutableListOf<Habitacion>()
+    when {
+        elemento.isJsonArray -> {
+            for (item in elemento.asJsonArray) {
+                if (item.isJsonArray) {
+                    for (sub in item.asJsonArray) {
+                        if (sub.isJsonObject) {
+                            runCatching { gson.fromJson(sub, Habitacion::class.java) }.getOrNull()?.let { resultado += it }
+                        }
+                    }
+                } else if (item.isJsonObject) {
+                    runCatching { gson.fromJson(item, Habitacion::class.java) }.getOrNull()?.let { resultado += it }
+                }
+            }
+        }
+        elemento.isJsonObject -> {
+            for ((_, valor) in elemento.asJsonObject.entrySet()) {
+                resultado += parsearHabitacionesJson(valor, gson)
+            }
+        }
+    }
+    return resultado
+}
+
+/**
+ * Semilla de respaldo de las 11 habitaciones (17 camas: 5 VIP en 3ª Planta y 12 Semiprivadas en 2ª Planta).
+ */
+fun semillaCamasHospital(): List<Cama> {
+    val vips = (301..305).map { n ->
+        Cama(id = "seed-VIP-$n", codigo = "VIP-$n", estado = "DISPONIBLE")
+    }
+    val semis = (201..206).flatMap { n ->
+        listOf("A", "B").map { letra ->
+            Cama(id = "seed-HAB-$n-$letra", codigo = "HAB-$n-$letra", estado = "DISPONIBLE")
+        }
+    }
+    return (vips + semis).sortedBy { it.codigo }
+}
 
 /**
  * Agrupa las camas (de GET /habitaciones) por habitación para la pestaña

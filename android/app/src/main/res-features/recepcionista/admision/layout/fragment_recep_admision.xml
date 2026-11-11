@@ -28,7 +28,7 @@
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:icon="@drawable/ic_how_to_reg"
+            android:icon="@drawable/ic_single_bed"
             android:text="Ingreso a cama" />
 
         <com.google.android.material.tabs.TabItem
@@ -39,7 +39,7 @@
     </com.google.android.material.tabs.TabLayout>
 
     <!-- ─────────────────────────────────────────────────────────────────────────
-         TAB 1: Ingreso de un paciente registrado (POST /ingresos)
+         TAB 1: Ingreso de un paciente registrado o nuevo (POST /ingresos)
          ───────────────────────────────────────────────────────────────────────── -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scrollTabRegistro"
@@ -62,8 +62,7 @@
                 android:id="@+id/microBannerAdmision"
                 layout="@layout/comp_huc_micro_banner" />
 
-
-            <!-- Paso 1: paciente registrado, médico tratante y motivo (POST /ingresos) -->
+            <!-- Paso 1: Paciente (elegir de lista de registrados o ingresar nuevo paciente), médico tratante y motivo -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -77,40 +76,490 @@
                     android:id="@+id/stepHeader1"
                     layout="@layout/comp_section_step_header" />
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilAdmPacienteBuscar"
-                    style="@style/Widget.Huc.TextInputLayout"
+                <!-- Selector de modo: Elegir paciente registrado vs Ingresar nuevo paciente -->
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/toggleModoPacienteAdm"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnModoPacienteRegistrado"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="42dp"
+                        android:layout_weight="1"
+                        android:text="Elegir registrado"
+                        android:textAllCaps="false"
+                        android:textSize="12sp"
+                        app:icon="@drawable/ic_person"
+                        app:iconSize="16dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnModoPacienteNuevo"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="42dp"
+                        android:layout_weight="1"
+                        android:text="Nuevo paciente"
+                        android:textAllCaps="false"
+                        android:textSize="12sp"
+                        app:icon="@drawable/ic_add"
+                        app:iconSize="16dp" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                <!-- MODO 1: Seleccionar de la lista con todos los pacientes registrados -->
+                <LinearLayout
+                    android:id="@+id/containerAdmPacienteRegistrado"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:hint="Buscar paciente por nombre, DUI o expediente *"
-                    app:endIconMode="clear_text">
+                    android:orientation="vertical"
+                    android:visibility="visible">
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etAdmPacienteBuscar"
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilAdmPacienteBuscar"
+                        style="@style/Widget.Huc.TextInputLayout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="textPersonName" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:hint="Seleccionar o buscar paciente registrado *"
+                        app:endIconMode="dropdown_menu"
+                        app:helperText="Toque para desplegar todos los pacientes registrados o escriba para filtrar">
 
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/chipGroupAdmPacientes"
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/etAdmPacienteBuscar"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:completionThreshold="0"
+                            android:inputType="textPersonName"
+                            android:paddingHorizontal="14dp"
+                            android:paddingVertical="12dp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipGroupAdmPacientes"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        app:singleSelection="true" />
+
+                    <TextView
+                        android:id="@+id/tvAdmPacienteSeleccionado"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:background="@drawable/bg_surface_low_16"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="8dp"
+                        android:text="Ningún paciente seleccionado"
+                        android:textColor="@color/huc_on_surface_variant"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <!-- MODO 2: Ingresar un nuevo paciente directamente con todos sus datos y responsable si es menor -->
+                <LinearLayout
+                    android:id="@+id/containerAdmPacienteNuevo"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    app:singleSelection="true" />
-
-                <TextView
-                    android:id="@+id/tvAdmPacienteSeleccionado"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
+                    android:layout_marginTop="8dp"
                     android:background="@drawable/bg_surface_low_16"
-                    android:paddingHorizontal="12dp"
-                    android:paddingVertical="8dp"
-                    android:text="Ningún paciente seleccionado"
-                    android:textColor="@color/huc_on_surface_variant"
-                    android:textSize="12sp" />
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Datos del Nuevo Paciente"
+                        android:textAppearance="@style/TextAppearance.Huc.TitleSm"
+                        android:textColor="@color/huc_primary" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Complete los datos de filiación. Si es menor de 18 años se deshabilitará su DUI/Pasaporte y se solicitarán los datos del responsable."
+                        android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilAdmNuevoNombre"
+                        style="@style/Widget.Huc.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="Nombre completo *">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etAdmNuevoNombre"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPersonName|textCapWords"
+                            android:maxLength="150" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilAdmNuevoNacimiento"
+                        style="@style/Widget.Huc.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="Fecha de nacimiento * (DD/MM/AAAA)"
+                        app:startIconDrawable="@drawable/ic_event">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etAdmNuevoNacimiento"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:cursorVisible="false"
+                            android:focusable="false"
+                            android:inputType="none" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <TextView
+                        android:id="@+id/tvAdmNuevoEdadBadge"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textAppearance="@style/TextAppearance.Huc.BodySm"
+                        android:textColor="@color/huc_primary"
+                        android:textStyle="bold"
+                        android:visibility="gone"
+                        tools:text="Edad calculada: 10 años • Menor de edad (requiere responsable)"
+                        tools:visibility="visible" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Sexo *"
+                        android:textAppearance="@style/TextAppearance.Huc.LabelMd" />
+
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/toggleAdmNuevoSexo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        app:selectionRequired="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAdmSexoF"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="38dp"
+                            android:layout_weight="1"
+                            android:text="Femenino"
+                            android:textAllCaps="false"
+                            android:textSize="12sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnAdmSexoM"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="38dp"
+                            android:layout_weight="1"
+                            android:text="Masculino"
+                            android:textAllCaps="false"
+                            android:textSize="12sp" />
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Documento del paciente *"
+                            android:textAppearance="@style/TextAppearance.Huc.LabelMd" />
+
+                        <com.google.android.material.button.MaterialButtonToggleGroup
+                            android:id="@+id/toggleAdmNuevoTipoDoc"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            app:selectionRequired="true"
+                            app:singleSelection="true">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnAdmDocDui"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:minHeight="36dp"
+                                android:text="DUI"
+                                android:textAllCaps="false"
+                                android:textSize="12sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnAdmDocPasaporte"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:minHeight="36dp"
+                                android:text="Pasaporte"
+                                android:textAllCaps="false"
+                                android:textSize="12sp" />
+                        </com.google.android.material.button.MaterialButtonToggleGroup>
+                    </LinearLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilAdmNuevoDui"
+                        style="@style/Widget.Huc.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:hint="DUI o Pasaporte *"
+                        app:helperText="Formato DUI: 00000000-0">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etAdmNuevoDui"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textCapCharacters"
+                            android:maxLength="12" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilAdmNuevoTelefono"
+                        style="@style/Widget.Huc.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="Teléfono * (ej. 7000-0000)">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etAdmNuevoTelefono"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="phone"
+                            android:maxLength="25" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilAdmNuevoDireccion"
+                        style="@style/Widget.Huc.TextInputLayout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:hint="Dirección de residencia *">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etAdmNuevoDireccion"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textPostalAddress|textMultiLine"
+                            android:minLines="2" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <!-- Datos del Responsable cuando el nuevo paciente es menor de 18 años -->
+                    <LinearLayout
+                        android:id="@+id/containerAdmNuevoResponsable"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_surface_container_16"
+                        android:orientation="vertical"
+                        android:padding="12dp"
+                        android:visibility="gone"
+                        tools:visibility="visible">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Datos del Responsable (Menor de Edad)"
+                            android:textAppearance="@style/TextAppearance.Huc.TitleSm"
+                            android:textColor="@color/huc_primary" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilAdmRespNombre"
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:hint="Nombre completo del responsable *">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etAdmRespNombre"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="textPersonName|textCapWords"
+                                android:maxLength="150" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilAdmRespNacimiento"
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:hint="Fecha de nacimiento del responsable * (DD/MM/AAAA)"
+                            app:startIconDrawable="@drawable/ic_event">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etAdmRespNacimiento"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:cursorVisible="false"
+                                android:focusable="false"
+                                android:inputType="none" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="Documento del responsable *"
+                                android:textAppearance="@style/TextAppearance.Huc.LabelMd" />
+
+                            <com.google.android.material.button.MaterialButtonToggleGroup
+                                android:id="@+id/toggleAdmRespTipoDoc"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                app:selectionRequired="true"
+                                app:singleSelection="true">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnAdmRespDocDui"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="36dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    android:minHeight="36dp"
+                                    android:text="DUI"
+                                    android:textAllCaps="false"
+                                    android:textSize="12sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnAdmRespDocPasaporte"
+                                    style="@style/Widget.Material3.Button.OutlinedButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="36dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    android:minHeight="36dp"
+                                    android:text="Pasaporte"
+                                    android:textAllCaps="false"
+                                    android:textSize="12sp" />
+                            </com.google.android.material.button.MaterialButtonToggleGroup>
+                        </LinearLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilAdmRespDocumento"
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:hint="DUI o Pasaporte del responsable *"
+                            app:helperText="Formato DUI: 00000000-0">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etAdmRespDocumento"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="textCapCharacters"
+                                android:maxLength="12" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilAdmRespTelefono"
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:hint="Teléfono del responsable *">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etAdmRespTelefono"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="phone"
+                                android:maxLength="25" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilAdmRespParentesco"
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:hint="Parentesco *"
+                            app:endIconMode="dropdown_menu">
+
+                            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                                android:id="@+id/actvAdmRespParentesco"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:completionThreshold="0"
+                                android:inputType="textCapWords"
+                                android:paddingHorizontal="14dp"
+                                android:paddingVertical="12dp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+
+                    <!-- Datos clínicos opcionales (tipo de sangre y alergias) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilAdmNuevoTipoSangre"
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="4dp"
+                            android:layout_weight="1"
+                            android:hint="Tipo de sangre (opc.)"
+                            app:endIconMode="dropdown_menu">
+
+                            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                                android:id="@+id/etAdmNuevoTipoSangre"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:completionThreshold="0"
+                                android:inputType="textCapCharacters"
+                                android:maxLength="5"
+                                android:paddingHorizontal="12dp"
+                                android:paddingVertical="12dp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilAdmNuevoAlergias"
+                            style="@style/Widget.Huc.TextInputLayout"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:layout_weight="2"
+                            android:hint="Alergias (opcional)">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etAdmNuevoAlergias"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="text" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -151,7 +600,7 @@
                 </com.google.android.material.textfield.TextInputLayout>
             </LinearLayout>
 
-            <!-- Paso 2: mapa de camas desde GET /habitaciones -->
+            <!-- Paso 2: Mapa de Habitaciones por Piso desde GET /habitaciones -->
             <LinearLayout
                 android:id="@+id/cardPaso3Camas"
                 android:layout_width="match_parent"
@@ -171,7 +620,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Toque una cama libre para el ingreso, o una ocupada para dar el alta o trasladar."
+                    android:text="Toque una habitación/cama disponible para seleccionarla, o una ocupada para trasladar o dar de alta."
                     android:textAppearance="@style/TextAppearance.Huc.BodySm" />
 
                 <!-- Barra de Estado de Ocupación e Indicador Estricto -->
@@ -201,7 +650,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="6dp"
                             android:layout_weight="1"
-                            android:text="Capacidad Hospitalaria"
+                            android:text="Capacidad Hospitalaria (11 Habitaciones)"
                             android:textAppearance="@style/TextAppearance.Huc.TitleSm" />
 
                         <TextView
@@ -211,7 +660,7 @@
                             android:background="@drawable/bg_pill_primary_container"
                             android:paddingHorizontal="9dp"
                             android:paddingVertical="3dp"
-                            android:text="14 / 17 Ocupadas"
+                            android:text="0 / 17 Ocupadas"
                             android:textColor="@color/huc_primary_fixed"
                             android:textSize="11sp"
                             android:textStyle="bold" />
@@ -224,7 +673,7 @@
                         android:layout_height="8dp"
                         android:layout_marginTop="8dp"
                         android:max="100"
-                        android:progress="82"
+                        android:progress="0"
                         android:progressDrawable="@drawable/bg_progress_hospital_capacity" />
 
                     <LinearLayout
@@ -246,7 +695,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginStart="5dp"
                             android:layout_weight="1"
-                            android:text="3 Camas Disponibles"
+                            android:text="17 Camas Disponibles"
                             android:textColor="@color/huc_on_surface"
                             android:textSize="11sp"
                             android:textStyle="bold" />
@@ -269,7 +718,7 @@
                     </LinearLayout>
                 </LinearLayout>
 
-                <!-- Planta 3: VIP Individuales (VIP-301 a VIP-305) -->
+                <!-- Piso 3 — 3ª Planta: Habitaciones VIP Individuales (VIP-301 a VIP-305) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -289,14 +738,14 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
                         android:layout_weight="1"
-                        android:text="3ª Planta • VIP Individual"
+                        android:text="Piso 3 (3ª Planta) • Habitaciones VIP Individuales"
                         android:textAppearance="@style/TextAppearance.Huc.TitleSm" />
 
                     <TextView
                         android:id="@+id/tvVipCountLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="1 Disp. / 5 Totales"
+                        android:text="5 Disp. / 5 Totales"
                         android:textColor="@color/huc_on_surface_variant"
                         android:textSize="11sp"
                         android:textStyle="bold" />
@@ -310,7 +759,7 @@
                     android:nestedScrollingEnabled="false"
                     tools:listitem="@layout/item_cama_vip" />
 
-                <!-- Planta 2: Semiprivadas (HAB-201 a HAB-206 A/B) -->
+                <!-- Piso 2 — 2ª Planta: Habitaciones Semiprivadas (HAB-201 a HAB-206 A/B) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -322,7 +771,7 @@
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:contentDescription="@null"
-                        android:src="@drawable/ic_meeting_room"
+                        android:src="@drawable/ic_single_bed"
                         app:tint="@color/huc_primary_container" />
 
                     <TextView
@@ -330,14 +779,14 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
                         android:layout_weight="1"
-                        android:text="2ª Planta • Semiprivadas (A / B)"
+                        android:text="Piso 2 (2ª Planta) • Habitaciones Semiprivadas (A / B)"
                         android:textAppearance="@style/TextAppearance.Huc.TitleSm" />
 
                     <TextView
                         android:id="@+id/tvSemiCountLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="2 Disp. / 12 Totales"
+                        android:text="12 Disp. / 12 Totales"
                         android:textColor="@color/huc_on_surface_variant"
                         android:textSize="11sp"
                         android:textStyle="bold" />
@@ -373,7 +822,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
                         android:layout_weight="1"
-                        android:text="Cama elegida:"
+                        android:text="Habitación / Cama elegida:"
                         android:textAppearance="@style/TextAppearance.Huc.LabelMd" />
 
                     <TextView
@@ -417,7 +866,7 @@
     </androidx.core.widget.NestedScrollView>
 
     <!-- ─────────────────────────────────────────────────────────────────────────
-         TAB 2: Vista de Habitaciones (Panel Detallado con Pacientes Internados)
+         TAB 2: Vista de Habitaciones (Panel Detallado por Piso con Pacientes Internados)
          ───────────────────────────────────────────────────────────────────────── -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/layoutTabHabitaciones"
@@ -463,7 +912,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
                         android:letterSpacing="0.06"
-                        android:text="HOSPITALIZACIÓN CMO"
+                        android:text="MAPA GENERAL DE HABITACIONES POR PISO"
                         android:textColor="@color/huc_primary_container"
                         android:textSize="11sp"
                         android:textStyle="bold" />
@@ -473,14 +922,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="Vista de Habitaciones &amp; Pacientes"
+                    android:text="Vista de Habitaciones &amp; Ocupantes"
                     android:textAppearance="@style/TextAppearance.Huc.HeadlineSm" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Consulte la ocupación por habitación y el detalle clínico de pacientes internados."
+                    android:text="Consulte el estado detallado de las habitaciones de 3ª Planta (VIP) y 2ª Planta (Semiprivadas), junto con la ficha ordenada de los pacientes que las ocupan."
                     android:textAppearance="@style/TextAppearance.Huc.BodySm" />
 
                 <!-- Métricas Rápidas -->
@@ -512,7 +961,7 @@
                             android:background="@drawable/bg_pill_primary_container"
                             android:paddingHorizontal="9dp"
                             android:paddingVertical="3dp"
-                            android:text="14 Ocupadas"
+                            android:text="0 Ocupadas"
                             android:textColor="@color/huc_primary_fixed"
                             android:textSize="11sp"
                             android:textStyle="bold" />
@@ -525,7 +974,7 @@
                         android:layout_height="8dp"
                         android:layout_marginTop="6dp"
                         android:max="100"
-                        android:progress="82"
+                        android:progress="0"
                         android:progressDrawable="@drawable/bg_progress_hospital_capacity" />
 
                     <TextView
@@ -533,14 +982,14 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="3 Camas Disponibles para Asignación Inmediata"
+                        android:text="17 Camas Disponibles para Asignación Inmediata"
                         android:textColor="@color/huc_primary"
                         android:textSize="11sp"
                         android:textStyle="bold" />
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Filtros de Habitaciones: Tipo y Disponibilidad -->
+            <!-- Filtros de Habitaciones: Piso / Tipo y Disponibilidad -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -569,7 +1018,7 @@
                         android:layout_marginStart="6dp"
                         android:layout_weight="1"
                         android:letterSpacing="0.06"
-                        android:text="FILTRAR HABITACIONES"
+                        android:text="FILTRAR HABITACIONES POR PISO Y ESTADO"
                         android:textColor="@color/huc_primary"
                         android:textSize="11sp"
                         android:textStyle="bold" />
@@ -608,7 +1057,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:hint="Buscar por código, paciente o motivo..."
+                    android:hint="Buscar por habitación, piso o nombre de paciente..."
                     app:endIconMode="clear_text"
                     app:startIconDrawable="@drawable/ic_search">
 
@@ -620,12 +1069,12 @@
                         android:maxLines="1" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- 1. Filtro por Tipo de Habitación -->
+                <!-- 1. Filtro por Piso / Tipo de Habitación -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:text="1. Tipo de Habitación"
+                    android:text="1. Piso y Tipo de Habitación"
                     android:textAppearance="@style/TextAppearance.Huc.LabelMd"
                     android:textColor="@color/huc_on_surface_variant" />
 
@@ -649,7 +1098,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:checked="true"
-                            android:text="Todas (11)"
+                            android:text="Todos los pisos (11)"
                             android:textSize="12sp" />
 
                         <com.google.android.material.chip.Chip
@@ -657,7 +1106,7 @@
                             style="@style/Widget.Material3.Chip.Filter"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="VIP Individual (5)"
+                            android:text="Piso 3 • VIP (5)"
                             android:textSize="12sp" />
 
                         <com.google.android.material.chip.Chip
@@ -665,7 +1114,7 @@
                             style="@style/Widget.Material3.Chip.Filter"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Semiprivadas (6)"
+                            android:text="Piso 2 • Semiprivadas (6)"
                             android:textSize="12sp" />
                     </com.google.android.material.chip.ChipGroup>
                 </HorizontalScrollView>
@@ -682,7 +1131,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="2. Disponibilidad de Camas"
+                    android:text="2. Estado de Ocupación"
                     android:textAppearance="@style/TextAppearance.Huc.LabelMd"
                     android:textColor="@color/huc_on_surface_variant" />
 

@@ -2,6 +2,8 @@ package com.cmo.hospital.core.data.datasource
 
 import com.cmo.hospital.core.data.mapper.aOrdenLaboratorio
 import com.cmo.hospital.core.data.mapper.agruparHabitaciones
+import com.cmo.hospital.core.data.mapper.parsearHabitacionesJson
+import com.cmo.hospital.core.data.mapper.semillaCamasHospital
 import com.cmo.hospital.core.domain.model.*
 import com.cmo.hospital.core.network.ApiService
 import com.cmo.hospital.core.network.dto.ConsultaDto
@@ -313,7 +315,9 @@ class HospitalClinicalDataSource(
 
     suspend fun buscarPacientes(texto: String): Result<List<Paciente>> {
         val api = apiService ?: return sinApi()
-        return llamarApi { api.getPacientes(query = texto, perPage = 8) }.map { it.data }
+        val limpio = texto.trim()
+        val perPage = if (limpio.isEmpty()) 50 else 8
+        return llamarApi { api.getPacientes(query = limpio.ifBlank { null }, perPage = perPage) }.map { it.data }
     }
 
     suspend fun agendarCita(
@@ -438,7 +442,7 @@ class HospitalClinicalDataSource(
     // ─────────────────────────────────────────────────────────────────────────
 
     fun construirCapacidadHospitalaria(): CapacidadHospitalaria {
-        val todas = _camasState.value
+        val todas = _camasState.value.ifEmpty { semillaCamasHospital() }
         val vips = todas.filter { it.esVip }
         val semis = todas.filter { !it.esVip }
         val salasMap = semis.groupBy { cama ->
@@ -464,15 +468,23 @@ class HospitalClinicalDataSource(
     }
 
     /** Camas agrupadas por habitación para la pestaña Habitaciones (VIP individual o semiprivada A/B). */
-    fun construirHabitacionesDetalladas(): List<HabitacionDetalleUi> = agruparHabitaciones(_camasState.value)
+    fun construirHabitacionesDetalladas(): List<HabitacionDetalleUi> =
+        agruparHabitaciones(_camasState.value.ifEmpty { semillaCamasHospital() })
 
     /** Mapa de camas real: GET /habitaciones devuelve las habitaciones agrupadas por planta. */
     suspend fun syncCamasFromRemote(): Result<List<Cama>> {
         val api = apiService ?: return sinApi()
-        return llamarApi { api.getHabitaciones() }.map { plantas ->
-            val camas = plantas.flatten().flatMap { it.camas }.sortedBy { it.codigo }
+        return llamarApi { api.getHabitaciones() }.map { elemento ->
+            val camas = parsearHabitacionesJson(elemento)
+                .flatMap { it.camas }
+                .sortedBy { it.codigo }
+                .ifEmpty { semillaCamasHospital() }
             _camasState.value = camas
             camas
+        }.onFailure {
+            if (_camasState.value.isEmpty()) {
+                _camasState.value = semillaCamasHospital()
+            }
         }
     }
 

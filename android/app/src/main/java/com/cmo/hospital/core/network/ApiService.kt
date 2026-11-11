@@ -109,7 +109,7 @@ interface ApiService {
 
     // Habitaciones y Camas Hospitalarias (17 camas estrictas)
     @GET("habitaciones")
-    suspend fun getHabitaciones(): Response<ApiResponse<List<List<Habitacion>>>>
+    suspend fun getHabitaciones(): Response<ApiResponse<com.google.gson.JsonElement>>
 
     @POST("ingresos")
     suspend fun ingresarPaciente(

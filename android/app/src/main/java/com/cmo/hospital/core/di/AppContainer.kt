@@ -171,7 +171,8 @@ class AppContainer(context: Context) {
             buscarPacientesIngresoUseCase = BuscarPacientesIngresoUseCase(admisionRepository),
             ingresarPacienteUseCase = IngresarPacienteUseCase(admisionRepository),
             darAltaUseCase = DarAltaUseCase(admisionRepository),
-            trasladarPacienteUseCase = TrasladarPacienteUseCase(admisionRepository)
+            trasladarPacienteUseCase = TrasladarPacienteUseCase(admisionRepository),
+            guardarPacienteUseCase = GuardarPacienteUseCase(pacientesRepository)
         )
 
     fun createAmbulanciaGuardiaViewModel(): AmbulanciaGuardiaViewModel =
