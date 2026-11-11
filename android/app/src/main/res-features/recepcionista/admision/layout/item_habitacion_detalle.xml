@@ -263,6 +263,17 @@
                 android:textColor="@color/huc_on_surface_variant"
                 android:textSize="11sp"
                 tools:text="Motivo: Síndrome coronario agudo en observación." />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGestionarCamaA"
+                style="@style/Widget.Huc.Button.Outlined"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:layout_marginTop="8dp"
+                android:minHeight="36dp"
+                android:text="Gestionar Cama (Trasladar / Dar de Alta)"
+                android:textAllCaps="false"
+                android:textSize="11sp" />
         </LinearLayout>
     </LinearLayout>
 
@@ -454,6 +465,17 @@
                 android:textColor="@color/huc_on_surface_variant"
                 android:textSize="11sp"
                 tools:text="Motivo: Post-operatorio de apendicectomía, evolución favorable." />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGestionarCamaB"
+                style="@style/Widget.Huc.Button.Outlined"
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:layout_marginTop="8dp"
+                android:minHeight="36dp"
+                android:text="Gestionar Cama (Trasladar / Dar de Alta)"
+                android:textAllCaps="false"
+                android:textSize="11sp" />
         </LinearLayout>
     </LinearLayout>
 

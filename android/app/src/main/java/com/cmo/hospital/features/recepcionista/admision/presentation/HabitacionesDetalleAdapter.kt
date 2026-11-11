@@ -12,7 +12,8 @@ import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.databinding.ItemHabitacionDetalleBinding
 
 class HabitacionesDetalleAdapter(
-    private val onAsignarCama: (Cama) -> Unit
+    private val onAsignarCama: (Cama) -> Unit,
+    private val onGestionarCamaOcupada: (Cama) -> Unit = {}
 ) : RecyclerView.Adapter<HabitacionesDetalleAdapter.HabitacionViewHolder>() {
 
     private var items: List<HabitacionDetalleUi> = emptyList()
@@ -44,11 +45,12 @@ class HabitacionesDetalleAdapter(
         fun bind(hab: HabitacionDetalleUi) {
             val ctx = binding.root.context
 
-            binding.tvHabitacionCodigo.text = hab.codigo
-            binding.tvHabitacionTipoYPlanta.text = "${hab.tipo} (${hab.totalCamas} Camas) • ${hab.planta}"
+            binding.tvHabitacionCodigo.text = "Habitación ${hab.codigo}"
+            val textoCapacidad = if (hab.totalCamas == 1) "1 Cama Individual" else "${hab.totalCamas} Camas (A y B)"
+            binding.tvHabitacionTipoYPlanta.text = "${hab.planta} • ${hab.tipo} ($textoCapacidad)"
 
             val esVip = hab.tipo.contains("VIP", ignoreCase = true)
-            binding.ivHabitacionIcon.setImageResource(if (esVip) R.drawable.ic_star else R.drawable.ic_meeting_room)
+            binding.ivHabitacionIcon.setImageResource(if (esVip) R.drawable.ic_star else R.drawable.ic_single_bed)
 
             when {
                 hab.estaCompletamenteDisponible -> {
@@ -57,18 +59,18 @@ class HabitacionesDetalleAdapter(
                     binding.tvHabitacionEstadoBadge.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_primary_fixed))
                 }
                 hab.estaParcialmenteOcupada -> {
-                    binding.tvHabitacionEstadoBadge.text = "${hab.camasDisponibles} de ${hab.totalCamas} Disp."
+                    binding.tvHabitacionEstadoBadge.text = "${hab.camasDisponibles} Disp. • ${hab.camasOcupadas} Ocup."
                     binding.tvHabitacionEstadoBadge.setBackgroundResource(R.drawable.bg_pill_tertiary_fixed)
                     binding.tvHabitacionEstadoBadge.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_tertiary_fixed))
                 }
                 else -> {
-                    binding.tvHabitacionEstadoBadge.text = "Ocupada (${hab.totalCamas}/${hab.totalCamas})"
+                    binding.tvHabitacionEstadoBadge.text = "Ocupada (${hab.camasOcupadas}/${hab.totalCamas})"
                     binding.tvHabitacionEstadoBadge.setBackgroundResource(R.drawable.bg_pill_error_container)
                     binding.tvHabitacionEstadoBadge.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_error_container))
                 }
             }
 
-            // 1. Cama A (o Cama única)
+            // 1. Cama A (o Cama única en VIP)
             val camaA = hab.camas.firstOrNull()
             if (camaA != null) {
                 binding.cardCamaA.visibility = View.VISIBLE
@@ -97,11 +99,23 @@ class HabitacionesDetalleAdapter(
                         p?.nombreCompleto ?: "Paciente Internado"
                     }
                     binding.tvPacienteANombre.text = nombre
-                    binding.tvPacienteAExpediente.text = "Exp: ${p?.numeroExpediente ?: "S/E"}"
-                    binding.tvPacienteADocumento.text = "DUI: ${p?.dui ?: "04829101-1"}"
-                    binding.tvPacienteASexoEdad.text = "${p?.sexo ?: "M"} • ${p?.edad ?: 35} años"
-                    binding.tvPacienteATriage.text = "Triage: Estable"
-                    binding.tvPacienteADiagnostico.text = "Motivo: Hospitalización clínica en ${camaA.codigo}."
+                    binding.tvPacienteAExpediente.text = "Exp: ${p?.numeroExpediente ?: "Asignado"}"
+                    binding.tvPacienteADocumento.text = p?.dui?.takeIf { it.isNotBlank() }?.let { "Doc: $it" }
+                        ?: "Doc: Registrado en padrón"
+                    val sexoTexto = when (p?.sexo?.uppercase()) {
+                        "F" -> "Femenino"
+                        "M" -> "Masculino"
+                        else -> "Hospitalizado"
+                    }
+                    val edadTexto = if (!p?.fechaNacimiento.isNullOrBlank() && (p?.edad ?: 0) > 0) {
+                        " • ${p?.edad} años"
+                    } else ""
+                    binding.tvPacienteASexoEdad.text = "$sexoTexto$edadTexto"
+                    binding.tvPacienteATriage.text = "Internado Activo"
+                    val telInfo = p?.telefono?.takeIf { it.isNotBlank() }?.let { " • Tel: $it" }.orEmpty()
+                    binding.tvPacienteADiagnostico.text =
+                        "Ubicación: ${hab.planta} • Habitación ${hab.codigo} (Cama ${camaA.codigo})$telInfo"
+                    binding.btnGestionarCamaA.setOnClickListener { onGestionarCamaOcupada(camaA) }
                 }
             } else {
                 binding.cardCamaA.visibility = View.GONE
@@ -136,11 +150,23 @@ class HabitacionesDetalleAdapter(
                         p?.nombreCompleto ?: "Paciente Internado"
                     }
                     binding.tvPacienteBNombre.text = nombre
-                    binding.tvPacienteBExpediente.text = "Exp: ${p?.numeroExpediente ?: "S/E"}"
-                    binding.tvPacienteBDocumento.text = "DUI: ${p?.dui ?: "02391020-4"}"
-                    binding.tvPacienteBSexoEdad.text = "${p?.sexo ?: "F"} • ${p?.edad ?: 28} años"
-                    binding.tvPacienteBTriage.text = "Triage: Observación"
-                    binding.tvPacienteBDiagnostico.text = "Motivo: Hospitalización clínica en ${camaB.codigo}."
+                    binding.tvPacienteBExpediente.text = "Exp: ${p?.numeroExpediente ?: "Asignado"}"
+                    binding.tvPacienteBDocumento.text = p?.dui?.takeIf { it.isNotBlank() }?.let { "Doc: $it" }
+                        ?: "Doc: Registrado en padrón"
+                    val sexoTexto = when (p?.sexo?.uppercase()) {
+                        "F" -> "Femenino"
+                        "M" -> "Masculino"
+                        else -> "Hospitalizado"
+                    }
+                    val edadTexto = if (!p?.fechaNacimiento.isNullOrBlank() && (p?.edad ?: 0) > 0) {
+                        " • ${p?.edad} años"
+                    } else ""
+                    binding.tvPacienteBSexoEdad.text = "$sexoTexto$edadTexto"
+                    binding.tvPacienteBTriage.text = "Internado Activo"
+                    val telInfo = p?.telefono?.takeIf { it.isNotBlank() }?.let { " • Tel: $it" }.orEmpty()
+                    binding.tvPacienteBDiagnostico.text =
+                        "Ubicación: ${hab.planta} • Habitación ${hab.codigo} (Cama ${camaB.codigo})$telInfo"
+                    binding.btnGestionarCamaB.setOnClickListener { onGestionarCamaOcupada(camaB) }
                 }
             } else {
                 binding.cardCamaB.visibility = View.GONE
