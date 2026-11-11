@@ -33,7 +33,8 @@ data class PacientesUiEvent(
 class PacientesViewModel(
     private val buscarPacientesUseCase: BuscarPacientesUseCase,
     private val guardarPacienteUseCase: GuardarPacienteUseCase,
-    private val generarCodigoActivacionUseCase: GenerarCodigoActivacionUseCase
+    private val generarCodigoActivacionUseCase: GenerarCodigoActivacionUseCase,
+    private val onSolicitarExpediente: (String?) -> Unit = {}
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(PacientesUiState())
@@ -79,7 +80,12 @@ class PacientesViewModel(
      * [onTerminado] recibe null si se guardó, o el error para mostrarlo dentro del
      * formulario: el toast del shell queda detrás del diálogo y no se vería.
      */
-    fun guardar(paciente: Paciente?, form: PacienteForm, onTerminado: (ErrorFormulario?) -> Unit) {
+    fun guardar(
+        paciente: Paciente?,
+        form: PacienteForm,
+        onGuardadoExitoso: (Paciente) -> Unit = {},
+        onTerminado: (ErrorFormulario?) -> Unit
+    ) {
         viewModelScope.launch {
             guardarPacienteUseCase(paciente?.id, form).fold(
                 onSuccess = { guardado ->
@@ -88,6 +94,7 @@ class PacientesViewModel(
                     } else {
                         PacientesUiEvent("Datos actualizados", guardado.nombreCompleto)
                     }
+                    onGuardadoExitoso(guardado)
                     onTerminado(null)
                     cargar()
                 },
@@ -116,6 +123,18 @@ class PacientesViewModel(
                 }
             )
         }
+    }
+
+    fun solicitarExpedienteCompleto(paciente: Paciente): String {
+        val exp = paciente.numeroExpediente?.takeIf { it.isNotBlank() }
+            ?: Paciente.generarNumeroExpediente(paciente.nombreCompleto)
+        onSolicitarExpediente(exp)
+        val detalle = "Se registró la solicitud del expediente completo ($exp) de ${paciente.nombreCompleto}."
+        _uiEvent.value = PacientesUiEvent(
+            title = "Expediente solicitado",
+            message = detalle
+        )
+        return detalle
     }
 
     fun consumeEvent() {

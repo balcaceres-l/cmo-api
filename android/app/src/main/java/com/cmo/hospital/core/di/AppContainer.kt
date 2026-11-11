@@ -152,7 +152,8 @@ class AppContainer(context: Context) {
         PacientesViewModel(
             buscarPacientesUseCase = BuscarPacientesUseCase(pacientesRepository),
             guardarPacienteUseCase = GuardarPacienteUseCase(pacientesRepository),
-            generarCodigoActivacionUseCase = GenerarCodigoActivacionUseCase(pacientesRepository)
+            generarCodigoActivacionUseCase = GenerarCodigoActivacionUseCase(pacientesRepository),
+            onSolicitarExpediente = clinicalDataSource::solicitarAperturaExpediente
         )
 
     fun createLaboratorioRecepcionViewModel(): LaboratorioRecepcionViewModel =

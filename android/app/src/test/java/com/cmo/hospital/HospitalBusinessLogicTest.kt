@@ -494,4 +494,16 @@ class HospitalBusinessLogicTest {
         val calSofia = CitasViewModel.filtrarCitasCalendario(lista, doctor = "Sofía", fecha = "")
         assertEquals(listOf("c-11"), calSofia.map { it.id })
     }
+
+    @Test
+    fun testSolicitudExpedienteCompletoDesdeFichaPaciente() {
+        val dataSource = HospitalClinicalDataSource(apiService = null)
+        assertNull(dataSource.expedienteSolicitado.value)
+
+        dataSource.solicitarAperturaExpediente("EXP-2026-000012")
+        assertEquals("EXP-2026-000012", dataSource.expedienteSolicitado.value)
+
+        dataSource.consumirExpedienteSolicitado()
+        assertNull(dataSource.expedienteSolicitado.value)
+    }
 }
