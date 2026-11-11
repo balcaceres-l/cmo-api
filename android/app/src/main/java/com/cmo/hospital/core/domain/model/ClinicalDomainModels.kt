@@ -117,6 +117,38 @@ data class Paciente(
             }
         }
 
+    val esMenorDeEdad: Boolean
+        get() = !fechaNacimiento.isNullOrBlank() && edad < 18
+
+    val direccionLimpia: String?
+        get() = direccion?.substringBefore(" | Resp:")?.trim()?.ifBlank { null }
+
+    val responsableEfectivo: ResponsableMenor?
+        get() {
+            if (responsableMenor != null) return responsableMenor
+            val raw = direccion ?: return null
+            if (!raw.contains(" | Resp:")) return null
+            val bloque = raw.substringAfter(" | Resp:").trim()
+            val nombre = bloque.substringBefore(" (").trim()
+            val interior = bloque.substringAfter("(", "").substringBeforeLast(")", "")
+            val partes = interior.split(",").map { it.trim() }
+            val parentesco = partes.getOrNull(0).orEmpty().ifBlank { "Responsable" }
+            val docParte = partes.firstOrNull { it.startsWith("DUI:", true) || it.startsWith("PASAPORTE:", true) }.orEmpty()
+            val tipoDoc = if (docParte.startsWith("PASAPORTE", true)) "PASAPORTE" else "DUI"
+            val docValor = docParte.substringAfter(":", "").trim()
+            val telValor = partes.firstOrNull { it.startsWith("Tel:", true) }?.substringAfter(":", "")?.trim().orEmpty()
+            val nacValor = partes.firstOrNull { it.startsWith("Nac:", true) }?.substringAfter(":", "")?.trim()?.ifBlank { null }
+            if (nombre.isBlank()) return null
+            return ResponsableMenor(
+                tipoDocumento = tipoDoc,
+                documento = docValor,
+                nombreCompleto = nombre,
+                telefono = telValor,
+                parentesco = parentesco,
+                fechaNacimiento = nacValor
+            )
+        }
+
     companion object {
         fun extraerIniciales(nombreCompleto: String): String {
             val tokens = nombreCompleto.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
@@ -317,7 +349,8 @@ data class ResponsableMenor(
     val documento: String,
     @SerializedName("nombre_completo") val nombreCompleto: String,
     val telefono: String,
-    val parentesco: String
+    val parentesco: String,
+    @SerializedName("fecha_nacimiento") val fechaNacimiento: String? = null
 )
 
 data class HabitacionDetalleUi(

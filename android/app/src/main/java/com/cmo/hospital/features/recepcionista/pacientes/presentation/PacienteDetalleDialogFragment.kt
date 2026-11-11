@@ -72,7 +72,12 @@ class PacienteDetalleDialogFragment(
             binding.tvDetPacEstadoApp.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_secondary_fixed))
         }
 
-        binding.tvDetPacDui.text = p.dui?.takeIf { it.isNotBlank() } ?: "No registrado"
+        val resp = p.responsableEfectivo
+        binding.tvDetPacDui.text = when {
+            !p.dui.isNullOrBlank() -> p.dui
+            resp != null -> "Menor (${resp.tipoDocumento}: ${resp.documento})"
+            else -> "No registrado"
+        }
         binding.tvDetPacSexo.text = when (p.sexo?.uppercase()) {
             "F" -> "Femenino"
             "M" -> "Masculino"
@@ -80,9 +85,18 @@ class PacienteDetalleDialogFragment(
         }
         binding.tvDetPacFechaNacimiento.text = p.fechaNacimiento?.takeIf { it.isNotBlank() }
             ?.let { DateUtils.toUiDate(it) } ?: "No registrada"
-        binding.tvDetPacEdad.text = if (!p.fechaNacimiento.isNullOrBlank()) "${p.edad} años" else "N/D"
-        binding.tvDetPacTelefono.text = p.telefono?.takeIf { it.isNotBlank() } ?: "Sin teléfono registrado"
-        binding.tvDetPacDireccion.text = p.direccion?.takeIf { it.isNotBlank() } ?: "Sin dirección registrada"
+        binding.tvDetPacEdad.text = if (!p.fechaNacimiento.isNullOrBlank()) {
+            if (p.esMenorDeEdad) "${p.edad} años (Menor)" else "${p.edad} años"
+        } else "N/D"
+        binding.tvDetPacTelefono.text = p.telefono?.takeIf { it.isNotBlank() }
+            ?: resp?.telefono?.takeIf { it.isNotBlank() }
+            ?: "Sin teléfono registrado"
+        val dirLimpia = p.direccionLimpia ?: "Sin dirección registrada"
+        binding.tvDetPacDireccion.text = if (resp != null) {
+            "$dirLimpia\nResponsable: ${resp.nombreCompleto} (${resp.parentesco} • Tel: ${resp.telefono})"
+        } else {
+            dirLimpia
+        }
 
         binding.btnDetPacCodigoApp.isEnabled = !tieneCuenta
         binding.btnDetPacCodigoApp.text = if (tieneCuenta) "App vinculada" else "Código App"
