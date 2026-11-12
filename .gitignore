@@ -11,3 +11,9 @@ Thumbs.db
 .env.backup
 .env.production
 
+# Herramientas y diagnósticos locales (fuera de GitHub)
+check_api.py
+*.report.json
+
+
+.env.n8n

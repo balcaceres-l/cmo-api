@@ -10,10 +10,14 @@ class TurnoSeeder extends Seeder
 {
     public function run(): void
     {
-        $inicio = now()->startOfWeek();
+        $hoy = now();
+        $inicio = $hoy->copy()->startOfWeek();
         foreach (User::where('rol', '!=', 'PACIENTE')->get() as $u) {
-            foreach (range(0, 4) as $d) {
-                TurnoPersonal::updateOrCreate(['id_usuario' => $u->id, 'fecha' => $inicio->copy()->addDays($d)->toDateString(), 'hora_inicio' => '08:00:00'], ['hora_fin' => '16:00:00', 'area' => $u->cargo ?? 'Hospital']);
+            foreach (range(0, 6) as $d) {
+                TurnoPersonal::updateOrCreate(
+                    ['id_usuario' => $u->id, 'fecha' => $inicio->copy()->addDays($d)->toDateString(), 'hora_inicio' => '08:00:00'],
+                    ['hora_fin' => '16:00:00', 'area' => $u->cargo ?? 'Hospital']
+                );
             }
         }
     }

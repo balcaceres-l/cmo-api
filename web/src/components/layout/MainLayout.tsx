@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { CopilotFloatingWidget } from '../copilot/CopilotFloatingWidget';
 
 export const MainLayout: React.FC = () => {
   return (
@@ -13,6 +14,8 @@ export const MainLayout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+      {/* Copiloto Flotante Persistente para Administradores */}
+      <CopilotFloatingWidget />
     </div>
   );
 };
