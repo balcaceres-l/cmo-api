@@ -1,6 +1,6 @@
 # 🏥 Guía de Despliegue e Instrucciones de Uso: Backend & Android
 
-Este documento detalla paso a paso las instrucciones necesarias para levantar el backend en **PHP / Laravel** y posteriormente compilar, probar y ejecutar la aplicación móvil en **Android (Kotlin / Jetpack Compose)**.
+Este documento detalla paso a paso las instrucciones necesarias para levantar el backend en **PHP / Laravel** y posteriormente compilar, probar y ejecutar la aplicación móvil en **Android (Kotlin, vistas XML + MVVM)**.
 
 ---
 

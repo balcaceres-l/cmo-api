@@ -108,7 +108,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/huc_space_sm"
-                android:hint="Buscar por Nombre, DNI o N° Expediente (ej. CM-2026-001)"
+                android:hint="Buscar por nombre, DUI o N° Expediente (ej. CM-2026-001)"
                 app:startIconDrawable="@drawable/ic_search"
                 app:startIconTint="@color/huc_primary_container">
 

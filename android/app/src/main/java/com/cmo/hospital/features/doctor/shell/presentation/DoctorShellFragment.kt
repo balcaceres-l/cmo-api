@@ -63,9 +63,11 @@ class DoctorShellFragment : Fragment(), DoctorShellHost {
                 )
             },
             onLogoutClick = {
-                viewLifecycleOwner.lifecycleScope.launch {
+                // En el alcance de la actividad: este fragmento se destruye al navegar.
+                val actividad = requireActivity()
+                actividad.lifecycleScope.launch {
                     appContainer.logoutUseCase()
-                    (activity as? AuthNavigationHost)?.onLogoutCompleted()
+                    (actividad as? AuthNavigationHost)?.onLogoutCompleted()
                 }
             }
         )

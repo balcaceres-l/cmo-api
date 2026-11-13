@@ -84,6 +84,18 @@ class HospitalClinicalDataSource(
         )
     }
 
+    /** Borra todo lo cargado del usuario anterior (al cerrar sesión o si vence). */
+    fun limpiar() {
+        _camasState.value = emptyList()
+        _citasState.value = emptyList()
+        _turnoEnBox.value = null
+        _consultaActiva.value = ConsultaActiva.vacia()
+        _ordenesLab.value = emptyList()
+        _examenesCatalogo.value = emptyList()
+        _expedientes.value = emptyList()
+        _expedienteSolicitado.value = null
+    }
+
     fun solicitarAperturaExpediente(numeroExpediente: String?) {
         if (!numeroExpediente.isNullOrBlank()) {
             _citasState.value.firstOrNull { cita ->

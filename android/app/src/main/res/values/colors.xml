@@ -21,7 +21,7 @@
     <color name="huc_on_secondary_fixed">#001D34</color>
     <color name="huc_on_secondary_fixed_variant">#004A78</color>
 
-    <!-- Tertiary (Ámbar / Protección Ley 19.628 / Triage Nivel II-III) -->
+    <!-- Tertiary (Ámbar / Datos protegidos / Triage Nivel II-III) -->
     <color name="huc_tertiary">#442700</color>
     <color name="huc_on_tertiary">#FFFFFF</color>
     <color name="huc_tertiary_container">#623B00</color>

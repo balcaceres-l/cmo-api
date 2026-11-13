@@ -46,7 +46,7 @@ object HucTopBarBinder {
             val nombre = currentUser?.nombreCompleto ?: "Usuario CMO"
             val rol = currentUser?.rol ?: "OPERADOR"
             popup.menu.add(0, 1, 0, "$nombre • $rol").isEnabled = false
-            popup.menu.add(0, 2, 1, "Cerrar sesión Sanctum")
+            popup.menu.add(0, 2, 1, "Cerrar sesión")
             popup.setOnMenuItemClickListener { item ->
                 if (item.itemId == 2) {
                     onLogoutClick()

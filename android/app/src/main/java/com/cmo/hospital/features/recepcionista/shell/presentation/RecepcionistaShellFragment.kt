@@ -66,9 +66,11 @@ class RecepcionistaShellFragment : Fragment(), RecepcionistaToastHost {
                 binding.bottomNavRecepcionista.selectedItemId = R.id.nav_recep_ambulancia
             },
             onLogoutClick = {
-                viewLifecycleOwner.lifecycleScope.launch {
+                // En el alcance de la actividad: este fragmento se destruye al navegar.
+                val actividad = requireActivity()
+                actividad.lifecycleScope.launch {
                     appContainer.logoutUseCase()
-                    (activity as? AuthNavigationHost)?.onLogoutCompleted()
+                    (actividad as? AuthNavigationHost)?.onLogoutCompleted()
                 }
             }
         )

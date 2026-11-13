@@ -77,7 +77,7 @@ enum class NivelTriageManchester(
 
 /**
  * Entidad de dominio Paciente con cálculo dinámico de edad, generación de expediente
- * (LB-2026-001) y anonimización para monitores públicos (Ley 19.628).
+ * (LB-2026-001) y anonimización para monitores públicos (datos protegidos).
  */
 data class Paciente(
     @SerializedName(value = "id", alternate = ["id_paciente"]) val id: String? = null,
@@ -174,7 +174,7 @@ data class Paciente(
         }
 
         /**
-         * Anonimización Ley 19.628 para pantallas y llamador de sala: "C. M**** (Protegido)".
+         * Anonimización de datos protegidos para pantallas y llamador de sala: "C. M**** (Protegido)".
          */
         fun anonimizarNombre(nombreCompleto: String): String {
             val tokens = nombreCompleto.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
@@ -641,13 +641,5 @@ object CatalogoClinico {
         "Urocultivo & Antibiograma",
         "Examen General de Orina (EGO)",
         "Dímero D Cuantitativo"
-    )
-
-    val OPCIONES_PREVISION: List<String> = listOf(
-        "Fonasa Tramo D",
-        "Isapre Colmena",
-        "Isapre Banmédica",
-        "Particular / Privado",
-        "Convenio Mutual"
     )
 }

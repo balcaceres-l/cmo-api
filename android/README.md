@@ -1,26 +1,56 @@
 # App Android (Kotlin)
 
-App del Hospital Universitario para recepción, enfermería y doctores. Consume la API de [`../backend`](../backend).
+App del Hospital Universitario para **recepción** y **médicos**. Consume la API de [`../backend`](../backend). Los roles `ADMINISTRADOR` y `PACIENTE` no entran a esta app (usan la web y la app iOS).
 
-## Crear el proyecto
+## Tecnología
 
-En Android Studio: **New Project → Empty Activity (Compose)** y guárdalo en **esta misma carpeta** (`android/`), con:
+- Kotlin, vistas **XML con ViewBinding** (no Jetpack Compose), Material Components.
+- Arquitectura **MVVM** por módulo: `Fragment` → `ViewModel` (StateFlow) → casos de uso → repositorio → `ApiService` (Retrofit + OkHttp).
+- Corrutinas y `Flow`. Inyección manual en `core/di/AppContainer.kt`.
+- Minimum SDK 26, target SDK 34.
 
-- Lenguaje: Kotlin
-- Build: Gradle Kotlin DSL
-- Minimum SDK: API 26 o superior
+## Estructura
 
-## Lineamientos
+```
+app/src/main/java/com/cmo/hospital/
+├── core/        red (Retrofit, interceptores), sesión, tiempo real (Reverb), modelos, utilidades de UI
+├── components/  barra superior y avisos reutilizables
+└── features/
+    ├── auth/           login y cierre de sesión
+    ├── recepcionista/  citas, pacientes, camas (admisión), laboratorio, ambulancia
+    └── doctor/         inicio (citas, turnos, pacientes, ambulancia), consulta, expedientes, laboratorio
+```
 
-- Arquitectura MVVM: `ui` (Compose) → `ViewModel` → `repository` → `data/remote` (Retrofit).
-- Asincronía con corrutinas y `Flow`.
-- Token Bearer guardado en DataStore cifrado; se envía en cada petición con un interceptor de OkHttp.
-- URL base de la API y variables de entorno cargadas automáticamente desde `.env` (ubicado en `../.env` en la raíz de `cmo-api`):
+Los layouts de cada módulo están en `app/src/main/res-features/<módulo>`.
 
-  ```env
-  API_BASE_URL=http://10.0.2.2:8000/api/v1/
-  ```
+## Configuración
 
-  `10.0.2.2` es la IP con la que el emulador llega al `localhost` de la computadora (o la IP local si usas un dispositivo físico). Opcionalmente se puede sobreescribir en `local.properties` (`api.baseUrl=...`) para pruebas locales específicas.
-- Dependencias y plugins gestionados mediante **Gradle Version Catalog** (`gradle/libs.versions.toml`).
-- Tiempo real (estado de la ambulancia y ocupación): cliente Pusher compatible con Reverb, canales públicos `ambulancia` y `ocupacion`. Si no hay conexión, consulta `GET /publico/ambulancia` cada 10 segundos.
+La URL de la API y los datos de Reverb se leen del `.env` de la raíz del repositorio (`../.env`) al compilar; se pueden sobrescribir en `local.properties` (`api.baseUrl=...`). Con el teléfono por USB:
+
+```bash
+adb reverse tcp:8000 tcp:8000
+adb reverse tcp:8080 tcp:8080
+```
+
+## Sesión
+
+- El token Bearer de Sanctum se guarda en `SharedPreferences` privadas de la app y se envía en cada petición desde `AuthInterceptor`.
+- Si la API responde **401** (token vencido o revocado), la app borra la sesión y vuelve al login.
+- Al cerrar sesión se revoca el token en el servidor y se borran los datos cargados del usuario.
+
+## Tiempo real
+
+Cliente propio del protocolo Pusher sobre el WebSocket de OkHttp (`core/realtime/ReverbClient.kt`):
+
+- `ambulancia` (público): estado de la ambulancia.
+- `private-personal` (privado, autorizado con `POST /api/v1/broadcasting/auth`): reportes del traslado.
+
+Requiere `php artisan reverb:start` en el backend. Si se cae la conexión, se reintenta cada 5 segundos.
+
+## Compilar y probar
+
+```bash
+./gradlew testDebugUnitTest assembleDebug
+```
+
+Las pruebas unitarias usan una API simulada con las respuestas del backend. El APK queda en `app/build/outputs/apk/debug/app-debug.apk`.

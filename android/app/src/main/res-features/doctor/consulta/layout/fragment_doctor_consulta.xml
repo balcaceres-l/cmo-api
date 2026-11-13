@@ -194,7 +194,7 @@
                     android:background="@drawable/bg_pill_tertiary_fixed"
                     android:paddingHorizontal="10dp"
                     android:paddingVertical="3dp"
-                    android:text="Ley 19.628"
+                    android:text="Protegido"
                     android:textAppearance="@style/TextAppearance.Huc.LabelSm"
                     android:textColor="@color/huc_on_tertiary_fixed"
                     android:visibility="gone" />
@@ -226,7 +226,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="45 años • Nac: 1981-05-14 • DNI: 14.891.203-K • Fonasa Tramo D"
+                android:text="45 años • Nac: 1981-05-14 • DUI: 04567891-2"
                 android:textAppearance="@style/TextAppearance.Huc.BodySm" />
 
             <!-- Alerta Farmacológica -->

@@ -47,7 +47,7 @@ class CitasMedicoAdapter(
             binding.tvCitaDocPacienteNombre.text = nombre
             binding.tvCitaDocLeyBadge.visibility =
                 if (pac?.protegido == true) View.VISIBLE else View.GONE
-            binding.tvCitaDocExpedienteMeta.text = "EXP: $exp • DNI: $dni"
+            binding.tvCitaDocExpedienteMeta.text = "EXP: $exp • DUI: $dni"
             binding.tvCitaDocMotivo.text =
                 "Motivo: ${cita.motivo ?: "Evaluación médica programada"}"
 

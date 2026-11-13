@@ -437,7 +437,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:hint="Buscar paciente por nombre, DNI o expediente"
+                android:hint="Buscar paciente por nombre, DUI o expediente"
                 android:visibility="gone"
                 app:startIconDrawable="@drawable/ic_search"
                 app:startIconTint="@color/huc_primary_container">
