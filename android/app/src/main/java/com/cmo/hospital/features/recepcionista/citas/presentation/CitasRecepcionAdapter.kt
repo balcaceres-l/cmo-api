@@ -121,8 +121,8 @@ class CitasRecepcionAdapter(
             binding.btnCitaTriajeAgendada.alpha = if (esHoy) 1.0f else 0.45f
             binding.btnCitaTriajeSignos.isEnabled = esHoy
             binding.btnCitaTriajeSignos.alpha = if (esHoy) 1.0f else 0.45f
-            binding.btnCitaPasarConsulta.isEnabled = esHoy
-            binding.btnCitaPasarConsulta.alpha = if (esHoy) 1.0f else 0.45f
+            // La consulta la abre el médico desde su app (POST /citas/{id}/consulta).
+            binding.btnCitaPasarConsulta.visibility = View.GONE
 
             // Acciones dinámicas por estado
             binding.actionsCitaSolicitada.visibility =

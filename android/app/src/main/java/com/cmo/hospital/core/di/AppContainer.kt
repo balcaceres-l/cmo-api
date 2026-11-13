@@ -66,6 +66,8 @@ import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.Finaliz
 import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.ObservarAmbulanciaEnVivoUseCase
 import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.SolicitarDespachoAmbulanciaUseCase
 import com.cmo.hospital.features.recepcionista.ambulancia.presentation.AmbulanciaGuardiaViewModel
+import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.CargarAmbulanciaMedicoUseCase
+import com.cmo.hospital.features.doctor.inicio.presentation.AmbulanciaMedicoViewModel
 import com.cmo.hospital.core.realtime.ReverbClient
 import com.cmo.hospital.features.recepcionista.citas.data.repository.CitaRepositoryImpl
 import com.cmo.hospital.features.recepcionista.citas.domain.repository.CitaRepository
@@ -179,6 +181,13 @@ class AppContainer(context: Context) {
             cargarPanelAmbulanciaUseCase = CargarPanelAmbulanciaUseCase(ambulanciaRepository),
             solicitarDespachoAmbulanciaUseCase = SolicitarDespachoAmbulanciaUseCase(ambulanciaRepository),
             finalizarServicioAmbulanciaUseCase = FinalizarServicioAmbulanciaUseCase(ambulanciaRepository),
+            enviarReporteAmbulanciaUseCase = EnviarReporteAmbulanciaUseCase(ambulanciaRepository),
+            observarAmbulanciaEnVivoUseCase = ObservarAmbulanciaEnVivoUseCase(ambulanciaRepository)
+        )
+
+    fun createAmbulanciaMedicoViewModel(): AmbulanciaMedicoViewModel =
+        AmbulanciaMedicoViewModel(
+            cargarAmbulanciaMedicoUseCase = CargarAmbulanciaMedicoUseCase(ambulanciaRepository),
             enviarReporteAmbulanciaUseCase = EnviarReporteAmbulanciaUseCase(ambulanciaRepository),
             observarAmbulanciaEnVivoUseCase = ObservarAmbulanciaEnVivoUseCase(ambulanciaRepository)
         )

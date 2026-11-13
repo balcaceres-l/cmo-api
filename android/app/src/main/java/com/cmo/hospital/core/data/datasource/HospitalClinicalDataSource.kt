@@ -33,7 +33,7 @@ class HospitalClinicalDataSource(
     private val _camasState = MutableStateFlow<List<Cama>>(emptyList())
     val camasState: StateFlow<List<Cama>> = _camasState.asStateFlow()
 
-    private val _citasState = MutableStateFlow(seedInitialCitas())
+    private val _citasState = MutableStateFlow<List<Cita>>(emptyList())
     val citasState: StateFlow<List<Cita>> = _citasState.asStateFlow()
 
     private val _turnoEnBox = MutableStateFlow(
@@ -45,13 +45,13 @@ class HospitalClinicalDataSource(
     private val _consultaActiva = MutableStateFlow(ConsultaActiva.vacia())
     val consultaActiva: StateFlow<ConsultaActiva> = _consultaActiva.asStateFlow()
 
-    private val _ordenesLab = MutableStateFlow(seedInitialOrdenesLab())
+    private val _ordenesLab = MutableStateFlow<List<OrdenLaboratorioItem>>(emptyList())
     val ordenesLab: StateFlow<List<OrdenLaboratorioItem>> = _ordenesLab.asStateFlow()
 
     private val _examenesCatalogo = MutableStateFlow<List<ExamenDto>>(emptyList())
     val examenesCatalogo: StateFlow<List<ExamenDto>> = _examenesCatalogo.asStateFlow()
 
-    private val _expedientes = MutableStateFlow(seedInitialExpedientes())
+    private val _expedientes = MutableStateFlow<List<ExpedienteDetalle>>(emptyList())
     val expedientes: StateFlow<List<ExpedienteDetalle>> = _expedientes.asStateFlow()
 
     private val _expedienteSolicitado = MutableStateFlow<String?>(null)
@@ -144,12 +144,14 @@ class HospitalClinicalDataSource(
             val res = apiService?.getPacientes()
             if (res != null && res.isSuccessful && res.body()?.success == true) {
                 val remotos = res.body()?.data?.data.orEmpty()
-                remotos.forEach { pac ->
-                    val conExp = pac.copy(
-                        numeroExpediente = pac.numeroExpediente
-                            ?: Paciente.generarNumeroExpediente(pac.nombreCompleto)
+                // La lista se reemplaza: solo quedan los pacientes que devuelve la API.
+                val previos = _expedientes.value.associateBy { it.paciente.id }
+                _expedientes.value = remotos.map { pac ->
+                    previos[pac.id]?.copy(paciente = pac) ?: ExpedienteDetalle(
+                        paciente = pac,
+                        signosVitales = SignosVitales(),
+                        alergiasCriticas = listOfNotNull(pac.alergias?.trim()?.ifBlank { null })
                     )
-                    ensurePacienteEnExpedientes(conExp)
                 }
             }
         } catch (_: Exception) {
@@ -660,6 +662,21 @@ class HospitalClinicalDataSource(
         )
     }
 
+    /**
+     * PUT /citas/{id}/signos-vitales. Al guardarse, la cita (y la consulta abierta
+     * de esa cita, si la hay) muestran los signos que devolvió la API.
+     */
+    suspend fun guardarSignosVitales(citaId: String, signos: SignosVitales): Result<SignosVitales> {
+        val api = apiService ?: return sinApi()
+        if (!signos.hasAnyData) {
+            return Result.failure(IllegalArgumentException("Ingrese al menos un signo vital."))
+        }
+        return llamarApi { api.guardarSignosVitales(citaId, signos) }.onSuccess { guardados ->
+            _citasState.value = _citasState.value.map { if (it.id == citaId) it.copy(signosVitales = guardados) else it }
+            if (_consultaActiva.value.citaId == citaId) actualizarSignosConsulta(guardados)
+        }
+    }
+
     fun actualizarSignosConsulta(signos: SignosVitales) {
         val actual = _consultaActiva.value
         _consultaActiva.value = actual.copy(signosVitales = signos)
@@ -904,227 +921,4 @@ class HospitalClinicalDataSource(
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Datos Semilla Clínicos (17 camas estrictas, citas, consulta y LIS)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private fun seedInitialCitas(): List<Cita> {
-        val hoy = LocalDate.now().toString()
-        val manana = LocalDate.now().plusDays(1).toString()
-        return listOf(
-            Cita(
-                id = "c-101",
-                fecha = hoy,
-                horaInicio = "08:30",
-                horaFin = "09:00",
-                estado = "EN_ATENCION",
-                motivo = "Control de hipertensión y dolor torácico leve",
-                paciente = PacienteInfo("p-carlos", "Carlos Mendoza", "CM-2026-001", "14.891.203-K", "M", "1981-05-14", protegido = true),
-                consultorio = ConsultorioInfo("cs-1", "Medicina Interna", "Box 03"),
-                medicoNombre = "Dr. Alejandro Restrepo",
-                especialidad = "Medicina Interna",
-                signosVitales = SignosVitales(
-                    presionSistolica = 120,
-                    presionDiastolica = 80,
-                    frecuenciaCardiaca = 78,
-                    frecuenciaRespiratoria = 18,
-                    temperaturaC = 36.6,
-                    pesoKg = 74.0,
-                    tallaCm = 172.0,
-                    saturacionOxigeno = 98,
-                    observaciones = "Normotenso en reposo, hemodinámicamente estable"
-                )
-            ),
-            Cita(
-                id = "c-102",
-                fecha = hoy,
-                horaInicio = "09:00",
-                horaFin = "09:30",
-                estado = "EN_ESPERA",
-                motivo = "Cefalea persistente y mareos matutinos",
-                paciente = PacienteInfo("p-2", "Lucía Morales Castillo", "LM-2026-002", "16.782.341-8", "F", "1992-08-20"),
-                consultorio = ConsultorioInfo("cs-1", "Medicina General", "Box 03"),
-                medicoNombre = "Dr. Alejandro Restrepo",
-                especialidad = "Medicina General",
-                signosVitales = SignosVitales(
-                    presionSistolica = 110,
-                    presionDiastolica = 70,
-                    frecuenciaCardiaca = 82,
-                    saturacionOxigeno = 99
-                )
-            ),
-            Cita(
-                id = "c-103",
-                fecha = hoy,
-                horaInicio = "10:00",
-                horaFin = "10:30",
-                estado = "AGENDADA",
-                motivo = "Evaluación de dermatitis y rinitis alérgica",
-                paciente = PacienteInfo("p-3", "Rodrigo Valenzuela", "RV-2026-003", "05192834-9", "M", "2001-11-03"),
-                consultorio = ConsultorioInfo("cs-2", "Alergología", "Box 02"),
-                medicoNombre = "Dra. Sofía Valenzuela",
-                especialidad = "Medicina General"
-            ),
-            Cita(
-                id = "c-104",
-                fecha = hoy,
-                horaInicio = "08:00",
-                horaFin = "08:30",
-                estado = "ATENDIDA",
-                motivo = "Seguimiento post-alta bronquitis aguda",
-                paciente = PacienteInfo("p-4", "Elena Beatriz Campos", "EC-2026-004", "01928374-1", "F", "1975-02-17"),
-                consultorio = ConsultorioInfo("cs-1", "Medicina Interna", "Box 03"),
-                medicoNombre = "Dr. Alejandro Restrepo",
-                especialidad = "Medicina Interna"
-            ),
-            Cita(
-                id = "c-105",
-                fecha = manana,
-                horaInicio = "11:00",
-                horaFin = "11:30",
-                estado = "AGENDADA",
-                motivo = "Control preventivo y revisión de exámenes",
-                paciente = PacienteInfo("p-5", "Mariana Silva Rivas", "MS-2026-002", "04829102-1", "F", "1988-03-10"),
-                consultorio = ConsultorioInfo("cs-3", "Cardiología", "Box 01"),
-                medicoNombre = "Dr. Carlos Fuentes",
-                especialidad = "Cardiología"
-            )
-        )
-    }
-
-    private fun seedInitialOrdenesLab(): List<OrdenLaboratorioItem> = listOf(
-        OrdenLaboratorioItem(
-            id = "ord-01",
-            pacienteId = "p-mariana",
-            pacienteNombre = "Mariana Silva Rivas",
-            numeroExpediente = "MS-2026-002",
-            examenNombre = "Hemograma Completo + Plaquetas",
-            tipoTubo = "Tubo EDTA",
-            prioridad = "STAT",
-            estado = "En Proceso",
-            fechaSolicitud = "Hoy, 10:30",
-            observaciones = "Control urgente de hematocrito y leucocitos.",
-            medicoSolicitante = "Dr. Alejandro Restrepo"
-        ),
-        OrdenLaboratorioItem(
-            id = "ord-02",
-            pacienteId = "p-carlos",
-            pacienteNombre = "Carlos Mendoza",
-            numeroExpediente = "CM-2026-001",
-            examenNombre = "Troponina I Alta Sensibilidad (hs-cTnI)",
-            tipoTubo = "Protocolo SCA",
-            prioridad = "STAT",
-            estado = "En Espera",
-            fechaSolicitud = "Hoy, 10:32",
-            observaciones = "Cinética enzimática 0h - 1h por dolor torácico.",
-            medicoSolicitante = "Dr. Alejandro Restrepo"
-        ),
-        OrdenLaboratorioItem(
-            id = "ord-03",
-            pacienteId = "p-luis",
-            pacienteNombre = "Luis Barillas",
-            numeroExpediente = "LB-2026-003",
-            examenNombre = "Gasometría Arterial y Electrolitos",
-            tipoTubo = "Heparina Li",
-            prioridad = "STAT",
-            estado = "Realizado",
-            fechaSolicitud = "Hoy, 09:15",
-            fechaResultado = "Hoy, 09:42",
-            observaciones = "pH: 7.39, pO2: 92, pCO2: 38, Lactato 1.1 mmol/L.",
-            medicoSolicitante = "Dr. Alejandro Restrepo"
-        ),
-        OrdenLaboratorioItem(
-            id = "ord-04",
-            pacienteId = "p-luis",
-            pacienteNombre = "Luis Barillas",
-            numeroExpediente = "LB-2026-003",
-            examenNombre = "Perfil Lipídico & Glucemia en Ayunas",
-            tipoTubo = "Suero Gel",
-            prioridad = "RUTINA",
-            estado = "Agendado",
-            fechaSolicitud = "Hoy, 08:00",
-            observaciones = "Colesterol total, HDL, LDL, Triglicéridos y Glucosa basal.",
-            medicoSolicitante = "Dr. Alejandro Restrepo"
-        ),
-        OrdenLaboratorioItem(
-            id = "ord-05",
-            pacienteId = "p-mariana",
-            pacienteNombre = "Mariana Silva Rivas",
-            numeroExpediente = "MS-2026-002",
-            examenNombre = "Urocultivo & Antibiograma Automatizado",
-            tipoTubo = "Frasco Estéril",
-            prioridad = "RUTINA",
-            estado = "Cancelado",
-            fechaSolicitud = "Ayer, 16:40",
-            observaciones = "Cancelado a solicitud médica: muestra contaminada, se repetirá.",
-            medicoSolicitante = "Dr. Alejandro Restrepo"
-        )
-    )
-
-    private fun seedInitialExpedientes(): List<ExpedienteDetalle> {
-        val todasOrdenes = seedInitialOrdenesLab()
-        return listOf(
-            ExpedienteDetalle(
-                paciente = Paciente(
-                    id = "p-carlos",
-                    nombreCompleto = "Carlos Mendoza",
-                    fechaNacimiento = "1981-05-14",
-                    dui = "14.891.203-K",
-                    sexo = "M",
-                    telefono = "+503 7123-4567",
-                    numeroExpediente = "CM-2026-001",
-                    prevision = "Fonasa Tramo D"
-                ),
-                cama = "Box 03 (En Consulta)",
-                signosVitales = SignosVitales(120, 80, 78, 18, 36.6, 74.0, 172.0, 98),
-                alergiasCriticas = listOf("Alergia a Dipirona / AINEs"),
-                comorbilidades = listOf("Hipertensión Arterial"),
-                atencionesPrevias = listOf(
-                    AtencionHistorica("Hoy", "08:30", "Medicina Interna", "I10 - Hipertensión", "Dr. Alejandro Restrepo", "Consulta en curso.")
-                ),
-                ordenesLaboratorio = todasOrdenes.filter { it.numeroExpediente == "CM-2026-001" }
-            ),
-            ExpedienteDetalle(
-                paciente = Paciente(
-                    id = "p-mariana",
-                    nombreCompleto = "Mariana Silva Rivas",
-                    fechaNacimiento = "1988-03-24",
-                    dui = "15.902.341-2",
-                    sexo = "F",
-                    telefono = "+503 7890-1234",
-                    numeroExpediente = "MS-2026-002",
-                    prevision = "Isapre Colmena"
-                ),
-                cama = "Cama VIP-301 (Planta 3)",
-                signosVitales = SignosVitales(125, 82, 72, 16, 36.5, 62.0, 165.0, 98),
-                alergiasCriticas = listOf("ALERGIA SEVERA: PENICILINA", "Alergia moderada a sulfas"),
-                comorbilidades = listOf("HTA Grado I", "Asma Leve", "Losartán 50mg/d"),
-                atencionesPrevias = listOf(
-                    AtencionHistorica("Hoy", "09:40", "Cardiología Adultos", "I10 - Hipertensión controlada", "Dr. Alejandro Restrepo", "Ecocardiograma normal. Se mantiene pauta terapéutica."),
-                    AtencionHistorica("12 Sep 2026", "11:15", "Consulta Externa", "J45 - Asma bronquial leve", "Dra. Sofía Valenzuela", "Espirometría estable con broncodilatador.")
-                ),
-                ordenesLaboratorio = todasOrdenes.filter { it.numeroExpediente == "MS-2026-002" }
-            ),
-            ExpedienteDetalle(
-                paciente = Paciente(
-                    id = "p-luis",
-                    nombreCompleto = "Luis Barillas",
-                    fechaNacimiento = "1975-09-12",
-                    dui = "03456789-1",
-                    sexo = "M",
-                    telefono = "+503 7654-9870",
-                    numeroExpediente = "LB-2026-003",
-                    prevision = "Fonasa Tramo D"
-                ),
-                cama = "Cama HAB-202-A (Planta 2)",
-                signosVitales = SignosVitales(130, 85, 74, 17, 36.8, 78.5, 176.0, 97),
-                alergiasCriticas = listOf("Alergia a Contrastes Yodados"),
-                comorbilidades = listOf("Diabetes Mellitus Tipo 2", "Dislipidemia"),
-                atencionesPrevias = listOf(
-                    AtencionHistorica("Ayer", "16:00", "Medicina Interna", "E11 - Diabetes Mellitus Tipo 2", "Dr. Alejandro Restrepo", "Se indican controles metabólicos y gasometría.")
-                ),
-                ordenesLaboratorio = todasOrdenes.filter { it.numeroExpediente == "LB-2026-003" }
-            )
-        )
-    }
 }

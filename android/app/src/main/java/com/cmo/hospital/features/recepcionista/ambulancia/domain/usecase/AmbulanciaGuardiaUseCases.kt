@@ -87,4 +87,12 @@ class EnviarReporteAmbulanciaUseCase(private val repository: AmbulanciaGuardiaRe
 
 class ObservarAmbulanciaEnVivoUseCase(private val repository: AmbulanciaGuardiaRepository) {
     operator fun invoke(): Flow<EventoTiempoReal> = repository.cambiosEnVivo()
+
+    /** Reportes del equipo en ruta (canal privado, requiere token del personal). */
+    fun reportes(): Flow<EventoTiempoReal> = repository.reportesEnVivo()
+}
+
+/** Estado de la ambulancia para el médico (GET /ambulancia en su forma reducida). */
+class CargarAmbulanciaMedicoUseCase(private val repository: AmbulanciaGuardiaRepository) {
+    suspend operator fun invoke(): Result<AmbulanciaRecurso> = repository.ambulancia()
 }

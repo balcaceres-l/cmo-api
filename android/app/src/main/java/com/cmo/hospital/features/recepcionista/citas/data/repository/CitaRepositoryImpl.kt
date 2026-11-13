@@ -46,25 +46,18 @@ class CitaRepositoryImpl(
         signosVitales: SignosVitales?,
         pasarAConsulta: Boolean
     ): Result<String> {
+        if (pasarAConsulta) {
+            return Result.failure(
+                IllegalStateException("La consulta la inicia el médico desde su app; recepción registra la llegada y los signos.")
+            )
+        }
         val citaPrevia = dataSource.citasState.value.firstOrNull { it.id == citaId }
             ?: return Result.failure(IllegalArgumentException("No se encontró la cita seleccionada."))
         if (!citaPrevia.esDelDia()) {
-            return Result.failure(
-                IllegalStateException("La toma de signos vitales solo está habilitada el día de la cita.")
-            )
+            return Result.failure(IllegalStateException("La toma de signos vitales solo está habilitada el día de la cita."))
         }
-        val transferida = dataSource.actualizarTriajeOPasarAConsulta(
-            citaId = citaId,
-            signosVitales = signosVitales,
-            pasarAConsulta = pasarAConsulta
-        )
-        return if (pasarAConsulta && transferida != null) {
-            Result.success(
-                "Paciente ${transferida.paciente?.nombreCompleto} transferido a Consulta Activa en ${transferida.consultorio?.codigo ?: "su consultorio"}."
-            )
-        } else {
-            Result.success("Signos vitales de triaje guardados correctamente.")
-        }
+        return dataSource.guardarSignosVitales(citaId, signosVitales ?: SignosVitales())
+            .map { "Signos vitales de ${citaPrevia.paciente?.nombreCompleto ?: "el paciente"} guardados." }
     }
 
     override fun reLlamarTurno(): Cita? = dataSource.reLlamarTurno()

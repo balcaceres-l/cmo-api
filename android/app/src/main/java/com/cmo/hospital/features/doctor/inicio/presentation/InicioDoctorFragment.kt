@@ -21,6 +21,10 @@ import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.core.domain.model.ResumenTurnos
 import com.cmo.hospital.core.domain.model.TurnoPersonal
 import java.time.format.DateTimeFormatter
+import com.cmo.hospital.databinding.DialogReporteAmbulanciaBinding
+import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.CatalogoAmbulancia
+import com.cmo.hospital.features.recepcionista.citas.presentation.chipAgenda
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.Locale
 import com.cmo.hospital.core.ui.simpleViewModelFactory
 import com.cmo.hospital.databinding.FragmentDoctorInicioBinding
@@ -32,6 +36,11 @@ class InicioDoctorFragment : Fragment() {
 
     private var _binding: FragmentDoctorInicioBinding? = null
     private val binding get() = _binding!!
+
+    private val ambulanciaViewModel: AmbulanciaMedicoViewModel by viewModels {
+        val container = (requireActivity().application as CmoApplication).appContainer
+        simpleViewModelFactory { container.createAmbulanciaMedicoViewModel() }
+    }
 
     private val viewModel: InicioDoctorViewModel by viewModels {
         simpleViewModelFactory {
@@ -152,6 +161,9 @@ class InicioDoctorFragment : Fragment() {
                     viewModel.turnos.collect { res -> renderTurnos(res) }
                 }
                 launch {
+                    ambulanciaViewModel.estado.collect { renderAmbulancia(it) }
+                }
+                launch {
                     viewModel.toastEvent.collect { evt ->
                         if (evt != null) {
                             val host = parentFragment as? DoctorShellHost
@@ -167,6 +179,79 @@ class InicioDoctorFragment : Fragment() {
             }
         }
     }
+
+    private fun renderAmbulancia(st: AmbulanciaMedicoUiState) {
+        val amb = st.ambulancia
+        val srv = amb?.servicioActivo
+        binding.tvAmbMedEstado.text = amb?.let { CatalogoAmbulancia.etiqueta(it.estado) } ?: "—"
+        binding.tvAmbMedDetalle.text = when {
+            amb == null -> st.error?.let { "No se pudo cargar: $it" } ?: "Cargando…"
+            srv == null -> "Sin traslados en curso."
+            else -> buildString {
+                append("Prioridad ${CatalogoAmbulancia.etiqueta(srv.prioridad).lowercase()} • salió ${horaLocal(srv.horaSalida)}")
+                val r = srv.ultimoReporte
+                if (r == null) {
+                    append("\nSin reportes del equipo en ruta.")
+                } else {
+                    append("\nÚltimo reporte ${horaLocal(r.fecha)} • ${CatalogoAmbulancia.etiqueta(r.estadoPaciente)}")
+                    r.llegadaEstimada?.let { append(" • llega ${horaLocal(it)}") }
+                    r.observaciones?.takeIf { it.isNotBlank() }?.let { append("\n$it") }
+                }
+            }
+        }
+        binding.tvAmbMedEnVivo.text = when {
+            st.enVivo && st.reportesEnVivo -> "● En vivo (estado y reportes)"
+            st.enVivo -> "● En vivo (estado) • reportes al actualizar"
+            else -> "○ Sin conexión en vivo: se actualiza al volver a la pantalla"
+        }
+        binding.btnAmbMedReportar.visibility = if (srv != null) View.VISIBLE else View.GONE
+        binding.btnAmbMedReportar.setOnClickListener { srv?.let { abrirReporteAmbulancia(it.id) } }
+        st.resultadoReporte?.let { res ->
+            val host = parentFragment as? DoctorShellHost
+            res.fold(
+                onSuccess = { host?.showToastSuccess("Reporte enviado", it) },
+                onFailure = { host?.showToastError("No se envió el reporte", it.message ?: "Intente de nuevo.") }
+            )
+            ambulanciaViewModel.consumirResultado()
+        }
+    }
+
+    /** Mismo formulario que usa recepción (estado del paciente, minutos y observaciones). */
+    private fun abrirReporteAmbulancia(idServicio: String) {
+        val ctx = requireContext()
+        val b = DialogReporteAmbulanciaBinding.inflate(layoutInflater)
+        var estadoElegido: String? = null
+        fun pintar() {
+            b.chipGroupEstadoPaciente.removeAllViews()
+            CatalogoAmbulancia.ESTADOS_PACIENTE.forEach { e ->
+                b.chipGroupEstadoPaciente.addView(chipAgenda(ctx, CatalogoAmbulancia.etiqueta(e), e == estadoElegido).apply {
+                    setOnClickListener { estadoElegido = e; pintar() }
+                })
+            }
+        }
+        pintar()
+        val dialogo = MaterialAlertDialogBuilder(ctx).setView(b.root).create()
+        b.btnReporteCancelar.setOnClickListener { dialogo.dismiss() }
+        b.btnReporteEnviar.setOnClickListener {
+            if (estadoElegido == null) {
+                b.tvReporteError.text = "Seleccione el estado del paciente."
+                b.tvReporteError.visibility = View.VISIBLE
+                return@setOnClickListener
+            }
+            ambulanciaViewModel.enviarReporte(
+                idServicio, estadoElegido, b.etReporteObservaciones.text?.toString(), b.etReporteMinutos.text?.toString().orEmpty()
+            )
+            dialogo.dismiss()
+        }
+        dialogo.show()
+    }
+
+    private fun horaLocal(iso: String?): String = iso?.let {
+        runCatching {
+            java.time.OffsetDateTime.parse(it).atZoneSameInstant(java.time.ZoneId.systemDefault())
+                .format(DateTimeFormatter.ofPattern("HH:mm"))
+        }.getOrNull()
+    } ?: "—"
 
     private fun renderTurnos(res: Result<ResumenTurnos>?) {
         val formato = DateTimeFormatter.ofPattern("EEE d MMM", Locale("es"))

@@ -166,6 +166,7 @@ class AmbulanciaRecepcionTest {
         override suspend fun reportar(idServicio: String, estadoPaciente: String, observaciones: String?, minutosLlegada: Int?) =
             Result.failure<ReporteAmbulancia>(UnsupportedOperationException())
         override fun cambiosEnVivo(): Flow<EventoTiempoReal> = eventos.receiveAsFlow()
+        override fun reportesEnVivo(): Flow<EventoTiempoReal> = kotlinx.coroutines.flow.emptyFlow()
     }
 
     @Test

@@ -203,7 +203,8 @@ class HospitalBusinessLogicTest {
         val emitirUseCase = EmitirOrdenLabUseCase(LaboratorioRepositoryImpl(dataSource))
 
         assertTrue(emitirUseCase(emptyList(), "RUTINA", "").isFailure)
-        val res = emitirUseCase(listOf("Hemograma completo"), "RUTINA", "", dataSource.expedientes.value.first().paciente)
+        val paciente = Paciente(id = "u-p1", nombreCompleto = "Ana López", numeroExpediente = "EXP-2026-000001")
+        val res = emitirUseCase(listOf("Hemograma completo"), "RUTINA", "", paciente)
         assertTrue(res.exceptionOrNull()!!.message!!.contains("consulta abierta"))
     }
 
@@ -214,13 +215,24 @@ class HospitalBusinessLogicTest {
         val iniciarUseCase = IniciarORetomarConsultaMedicoUseCase(inicioRepo)
         val construirPacientesUseCase = ConstruirPacientesMedicoUseCase()
 
-        // 1. La página principal construye la lista completa de pacientes del médico (citas + expedientes)
+        // Sin datos de ejemplo: la app arranca vacía hasta que responde la API.
+        assertTrue(dataSource.citasState.value.isEmpty())
+        assertTrue(dataSource.expedientes.value.isEmpty())
+        // Citas creadas solo en el teléfono (ids "c-"), como las que quedan si la API no responde.
+        listOf(
+            Cita(id = "c-101", fecha = "2026-11-13", horaInicio = "08:30", horaFin = "09:00", estado = "EN_ATENCION",
+                paciente = PacienteInfo("p-1", "Carlos Mendoza", "CM-2026-001", null, "M")),
+            Cita(id = "c-102", fecha = "2026-11-13", horaInicio = "09:00", horaFin = "09:30", estado = "EN_ESPERA",
+                paciente = PacienteInfo("p-2", "Lucía Morales Castillo", "LM-2026-002", null, "F"))
+        ).forEach { dataSource.prependCita(it) }
+
+        // 1. La página principal construye la lista de pacientes del médico (citas + expedientes)
         val todosPacientes = construirPacientesUseCase(
             citas = dataSource.citasState.value,
             expedientes = dataSource.expedientes.value,
             query = ""
         )
-        assertTrue(todosPacientes.size >= 5)
+        assertEquals(2, todosPacientes.size)
         val filtradoLucia = construirPacientesUseCase(
             citas = dataSource.citasState.value,
             expedientes = dataSource.expedientes.value,
@@ -450,11 +462,17 @@ class HospitalBusinessLogicTest {
         assertFalse(citaManana.esDelDia(hoy.toString()))
 
         val signos = SignosVitales(presionSistolica = 120, presionDiastolica = 80, temperaturaC = 36.7)
+        // Sin API (apiService = null) el guardado falla, pero no por la regla del día:
+        // los signos se guardan en PUT /citas/{id}/signos-vitales (ver FuncionesApiPendientesTest).
         val resHoy = useCase("c-hoy-test", signos, pasarAConsulta = false)
-        assertTrue("El día de la cita debe permitir tomar signos vitales", resHoy.isSuccess)
+        assertFalse(
+            "El día de la cita no debe bloquearse por la regla del día",
+            resHoy.exceptionOrNull()?.message.orEmpty().contains("día de la cita")
+        )
 
         val resManana = useCase("c-manana-test", signos, pasarAConsulta = false)
         assertTrue("En una cita futura no se debe permitir tomar signos vitales", resManana.isFailure)
+        assertTrue(resManana.exceptionOrNull()!!.message!!.contains("día de la cita"))
     }
 
     @Test

@@ -574,10 +574,12 @@ data class AmbulanciaRecurso(
     @SerializedName("id_ambulancia") val id: String? = null,
     val placa: String = "",
     val estado: String = "DISPONIBLE", // DISPONIBLE, EN_SERVICIO, EN_MANTENIMIENTO
-    val servicios: List<ServicioAmbulanciaDetalle> = emptyList()
+    val servicios: List<ServicioAmbulanciaDetalle> = emptyList(),
+    /** Forma reducida que la API entrega al médico: sin paciente ni dirección. */
+    @SerializedName("servicio_activo") val servicioActivoMedico: ServicioAmbulanciaDetalle? = null
 ) {
     val servicioActivo: ServicioAmbulanciaDetalle?
-        get() = servicios.firstOrNull { it.estado == "EN_CURSO" }
+        get() = servicios.firstOrNull { it.estado == "EN_CURSO" } ?: servicioActivoMedico
 }
 
 /** Médico con turno en curso (GET /publico/medicos-de-turno). */

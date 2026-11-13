@@ -31,4 +31,7 @@ interface AmbulanciaGuardiaRepository {
 
     /** Eventos del canal público `ambulancia`; termina si se cae la conexión. */
     fun cambiosEnVivo(): Flow<EventoTiempoReal>
+
+    /** Canal privado `personal`: avisos de reportes enviados desde la ambulancia. */
+    fun reportesEnVivo(): Flow<EventoTiempoReal>
 }

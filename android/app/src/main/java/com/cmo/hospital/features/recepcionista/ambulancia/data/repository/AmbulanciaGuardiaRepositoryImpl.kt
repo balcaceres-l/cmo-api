@@ -59,4 +59,10 @@ class AmbulanciaGuardiaRepositoryImpl(
     }
 
     override fun cambiosEnVivo(): Flow<EventoTiempoReal> = reverb.canal("ambulancia")
+
+    override fun reportesEnVivo(): Flow<EventoTiempoReal> =
+        reverb.canalPrivado("personal") { socketId, canal ->
+            val res = api.autorizarCanal(mapOf("socket_id" to socketId, "channel_name" to canal))
+            if (res.isSuccessful) res.body()?.get("auth") else null
+        }
 }

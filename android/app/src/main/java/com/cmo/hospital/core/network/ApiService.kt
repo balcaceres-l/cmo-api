@@ -49,6 +49,13 @@ interface ApiService {
         @Body request: Map<String, Any?>
     ): Response<ApiResponse<Cita>>
 
+    /** Signos vitales del día de la cita (recepción o el médico de la cita); reemplaza los anteriores. */
+    @PUT("citas/{id}/signos-vitales")
+    suspend fun guardarSignosVitales(
+        @Path("id") id: String,
+        @Body signos: SignosVitales
+    ): Response<ApiResponse<SignosVitales>>
+
     /** Convierte una solicitud del paciente (SOLICITADA) en cita AGENDADA. */
     @PATCH("citas/{id}/confirmar")
     suspend fun confirmarCita(
@@ -151,6 +158,12 @@ interface ApiService {
         @Path("id") id: String,
         @Body request: Map<String, Any?>
     ): Response<ApiResponse<ReporteAmbulancia>>
+
+    /** Firma la suscripción a un canal privado de Reverb (responde {"auth": "..."}, sin envoltorio). */
+    @POST("broadcasting/auth")
+    suspend fun autorizarCanal(
+        @Body request: Map<String, String>
+    ): Response<Map<String, String>>
 
     @GET("ambulancia/servicios")
     suspend fun getBitacoraAmbulancia(
