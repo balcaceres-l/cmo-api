@@ -13,13 +13,13 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 /**
  * Vista ampliada de la ficha del paciente en Recepción.
  * Muestra la información básica de filiación y centraliza las acciones:
- * Editar datos, generar Código App y Solicitar expediente completo.
+ * Editar datos y generar Código App. Recepción no ve el expediente clínico:
+ * la API solo lo entrega al médico tratante, al administrador y al paciente.
  */
 class PacienteDetalleDialogFragment(
     pacienteInicial: Paciente,
     private val onEditar: (Paciente) -> Unit,
-    private val onCodigoActivacion: (Paciente) -> Unit,
-    private val onSolicitarExpedienteCompleto: (Paciente) -> Unit
+    private val onCodigoActivacion: (Paciente) -> Unit
 ) : DialogFragment() {
 
     private var pacienteActual: Paciente = pacienteInicial
@@ -39,10 +39,6 @@ class PacienteDetalleDialogFragment(
 
         binding.btnDetPacCodigoApp.setOnClickListener {
             onCodigoActivacion(pacienteActual)
-        }
-
-        binding.btnDetPacSolicitarExpediente.setOnClickListener {
-            onSolicitarExpedienteCompleto(pacienteActual)
         }
 
         return MaterialAlertDialogBuilder(requireContext())

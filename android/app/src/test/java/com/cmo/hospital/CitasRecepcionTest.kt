@@ -125,6 +125,8 @@ class CitasRecepcionTest {
         assertEquals(listOf("u-sol", "u-age"), ds.citasState.value.map { it.id })
         val solicitud = cita("u-sol")
         assertEquals("", solicitud.horaInicio)
+        // La solicitud no se convierte en AGENDADA: recepción debe asignarle horario.
+        assertEquals("SOLICITADA", solicitud.estado)
         assertNull(solicitud.horaFin)
         assertEquals("Médico por asignar", solicitud.medicoNombre)
         val agendada = cita("u-age")

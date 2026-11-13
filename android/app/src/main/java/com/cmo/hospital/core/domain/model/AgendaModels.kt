@@ -53,7 +53,8 @@ object EstadoCita {
 
     fun etiqueta(estado: String): String = when (estado) {
         NO_ASISTIO -> "No asistió"
-        AGENDADA, SOLICITADA -> "Agendada"
+        SOLICITADA -> "Solicitada"
+        AGENDADA -> "Agendada"
         EN_ESPERA -> "En espera"
         EN_ATENCION -> "En atención"
         ATENDIDA -> "Atendida"
@@ -62,7 +63,7 @@ object EstadoCita {
     }
 
     /**
-     * Primero lo que pide acción en el mostrador (sala de espera, en atención y
+     * Primero lo que pide acción en el mostrador (solicitudes, sala de espera, en atención y
      * agendadas de la más próxima a la más lejana); al final el historial
      * cerrado, del más reciente al más antiguo.
      */

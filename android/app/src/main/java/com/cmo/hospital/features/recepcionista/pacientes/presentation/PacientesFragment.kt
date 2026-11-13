@@ -77,9 +77,6 @@ class PacientesFragment : Fragment() {
             },
             onCodigoActivacion = { actual ->
                 confirmarCodigo(actual)
-            },
-            onSolicitarExpedienteCompleto = { actual ->
-                solicitarExpedienteCompleto(actual)
             }
         )
         detalleDialog.show(childFragmentManager, "dialog_detalle_paciente_${paciente.id ?: "item"}")
@@ -116,17 +113,6 @@ class PacientesFragment : Fragment() {
             .setTitle(codigo)
             .setMessage("Entregue este código a ${paciente.nombreCompleto}. Lo ingresará al registrarse en la app con su DUI.")
             .setPositiveButton("Listo", null)
-            .show()
-    }
-
-    private fun solicitarExpedienteCompleto(paciente: Paciente) {
-        val mensaje = viewModel.solicitarExpedienteCompleto(paciente)
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Solicitud de expediente completo")
-            .setMessage(
-                "$mensaje\n\nEl expediente clínico completo queda marcado para apertura prioritaria por el personal médico autorizado."
-            )
-            .setPositiveButton("Entendido", null)
             .show()
     }
 

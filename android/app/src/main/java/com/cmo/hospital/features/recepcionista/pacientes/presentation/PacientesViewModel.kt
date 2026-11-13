@@ -33,8 +33,7 @@ data class PacientesUiEvent(
 class PacientesViewModel(
     private val buscarPacientesUseCase: BuscarPacientesUseCase,
     private val guardarPacienteUseCase: GuardarPacienteUseCase,
-    private val generarCodigoActivacionUseCase: GenerarCodigoActivacionUseCase,
-    private val onSolicitarExpediente: (String?) -> Unit = {}
+    private val generarCodigoActivacionUseCase: GenerarCodigoActivacionUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(PacientesUiState())
@@ -123,18 +122,6 @@ class PacientesViewModel(
                 }
             )
         }
-    }
-
-    fun solicitarExpedienteCompleto(paciente: Paciente): String {
-        val exp = paciente.numeroExpediente?.takeIf { it.isNotBlank() }
-            ?: Paciente.generarNumeroExpediente(paciente.nombreCompleto)
-        onSolicitarExpediente(exp)
-        val detalle = "Se registró la solicitud del expediente completo ($exp) de ${paciente.nombreCompleto}."
-        _uiEvent.value = PacientesUiEvent(
-            title = "Expediente solicitado",
-            message = detalle
-        )
-        return detalle
     }
 
     fun consumeEvent() {

@@ -360,6 +360,7 @@ class CitasViewModel(
         const val TODOS_LOS_MEDICOS = "Todos los Médicos"
         val FILTROS_ESTADO = listOf(
             FILTRO_TODAS,
+            "Solicitadas",
             "Agendadas",
             "En Espera",
             "En Atención",
@@ -368,7 +369,8 @@ class CitasViewModel(
         )
 
         fun coincideEstado(estadoCita: String, filtro: String): Boolean = when (filtro) {
-            "Agendadas", "Pendientes" -> estadoCita == EstadoCita.AGENDADA || estadoCita == EstadoCita.SOLICITADA
+            "Solicitadas" -> estadoCita == EstadoCita.SOLICITADA
+            "Agendadas", "Pendientes" -> estadoCita == EstadoCita.AGENDADA
             "En Espera" -> estadoCita == EstadoCita.EN_ESPERA
             "En Atención" -> estadoCita == EstadoCita.EN_ATENCION
             "Atendidas" -> estadoCita == EstadoCita.ATENDIDA

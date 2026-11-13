@@ -18,7 +18,8 @@ class CitasRecepcionAdapter(
     private val onAbrirTriaje: (Cita) -> Unit,
     private val onPasarDirectoAConsulta: (Cita) -> Unit,
     private val onCancelarCita: (Cita) -> Unit,
-    private val onReprogramar: (Cita) -> Unit
+    private val onReprogramar: (Cita) -> Unit,
+    private val onConfirmarSolicitud: (Cita) -> Unit
 ) : ListAdapter<Cita, CitasRecepcionAdapter.CitaViewHolder>(DiffCallback) {
 
     object DiffCallback : DiffUtil.ItemCallback<Cita>() {
@@ -74,9 +75,13 @@ class CitasRecepcionAdapter(
             }
 
             // Badge de estado
-            val estadoNormalizado = if (cita.estado == EstadoCita.SOLICITADA) EstadoCita.AGENDADA else cita.estado
+            val estadoNormalizado = cita.estado
             binding.tvItemCitaEstado.text = EstadoCita.etiqueta(estadoNormalizado)
             when (estadoNormalizado) {
+                EstadoCita.SOLICITADA -> {
+                    binding.tvItemCitaEstado.setBackgroundResource(R.drawable.bg_pill_tertiary_fixed)
+                    binding.tvItemCitaEstado.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_tertiary_fixed))
+                }
                 EstadoCita.EN_ATENCION -> {
                     binding.tvItemCitaEstado.setBackgroundResource(R.drawable.bg_pill_primary_fixed)
                     binding.tvItemCitaEstado.setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_primary_fixed))
@@ -120,6 +125,10 @@ class CitasRecepcionAdapter(
             binding.btnCitaPasarConsulta.alpha = if (esHoy) 1.0f else 0.45f
 
             // Acciones dinámicas por estado
+            binding.actionsCitaSolicitada.visibility =
+                if (estadoNormalizado == EstadoCita.SOLICITADA) View.VISIBLE else View.GONE
+            binding.btnCitaConfirmarSolicitud.setOnClickListener { onConfirmarSolicitud(cita) }
+            binding.btnCitaRechazarSolicitud.setOnClickListener { onCancelarCita(cita) }
             binding.actionsCitaAgendada.visibility =
                 if (estadoNormalizado == EstadoCita.AGENDADA) View.VISIBLE else View.GONE
             binding.actionsCitaEnEspera.visibility =

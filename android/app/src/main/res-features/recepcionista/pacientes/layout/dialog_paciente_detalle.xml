@@ -319,21 +319,5 @@
                 app:iconSize="16dp" />
         </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnDetPacSolicitarExpediente"
-            style="@style/Widget.Huc.Button.Secondary"
-            android:layout_width="match_parent"
-            android:layout_height="46dp"
-            android:layout_marginTop="10dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:minHeight="46dp"
-            android:text="Solicitar expediente completo"
-            android:textAllCaps="false"
-            android:textSize="13sp"
-            app:icon="@drawable/ic_folder_shared"
-            app:iconGravity="textStart"
-            app:iconSize="18dp" />
-
     </LinearLayout>
 </ScrollView>

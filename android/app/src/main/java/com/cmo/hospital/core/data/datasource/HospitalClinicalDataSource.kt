@@ -3,7 +3,6 @@ package com.cmo.hospital.core.data.datasource
 import com.cmo.hospital.core.data.mapper.aOrdenLaboratorio
 import com.cmo.hospital.core.data.mapper.agruparHabitaciones
 import com.cmo.hospital.core.data.mapper.parsearHabitacionesJson
-import com.cmo.hospital.core.data.mapper.semillaCamasHospital
 import com.cmo.hospital.core.domain.model.*
 import com.cmo.hospital.core.network.ApiService
 import com.cmo.hospital.core.network.dto.ConsultaDto
@@ -175,11 +174,8 @@ class HospitalClinicalDataSource(
                         val hf = raw.horaFin?.take(5)
                             ?: hi.takeIf { it.isNotEmpty() }?.let { Cita.calcularFin30Minutos(it) }
                         val estadoRaw = (raw.estado as String?)?.uppercase()?.trim().orEmpty()
-                        val estadoNorm = if (estadoRaw.isBlank() || estadoRaw == EstadoCita.SOLICITADA || estadoRaw == "PENDIENTE") {
-                            EstadoCita.AGENDADA
-                        } else {
-                            estadoRaw
-                        }
+                        // SOLICITADA se conserva: es la solicitud del paciente que recepción debe confirmar.
+                        val estadoNorm = estadoRaw.ifBlank { EstadoCita.AGENDADA }
                         val citaNorm = raw.copy(
                             id = safeId,
                             fecha = (raw.fecha as String?)?.take(10).orEmpty(),
@@ -289,13 +285,7 @@ class HospitalClinicalDataSource(
     private suspend fun alCambiarCita(resultado: Result<Cita>): Result<Cita> {
         val cita = resultado.getOrElse { return Result.failure(it) }
         syncCitasFromRemote()
-        val actualizada = _citasState.value.firstOrNull { it.id == cita.id } ?: cita
-        val normalizada = if (actualizada.estado.isBlank() || actualizada.estado == EstadoCita.SOLICITADA) {
-            actualizada.copy(estado = EstadoCita.AGENDADA)
-        } else {
-            actualizada
-        }
-        return Result.success(normalizada)
+        return Result.success(_citasState.value.firstOrNull { it.id == cita.id } ?: cita)
     }
 
     suspend fun getMedicosAgenda(): Result<List<User>> {
@@ -442,7 +432,7 @@ class HospitalClinicalDataSource(
     // ─────────────────────────────────────────────────────────────────────────
 
     fun construirCapacidadHospitalaria(): CapacidadHospitalaria {
-        val todas = _camasState.value.ifEmpty { semillaCamasHospital() }
+        val todas = _camasState.value
         val vips = todas.filter { it.esVip }
         val semis = todas.filter { !it.esVip }
         val salasMap = semis.groupBy { cama ->
@@ -469,7 +459,7 @@ class HospitalClinicalDataSource(
 
     /** Camas agrupadas por habitación para la pestaña Habitaciones (VIP individual o semiprivada A/B). */
     fun construirHabitacionesDetalladas(): List<HabitacionDetalleUi> =
-        agruparHabitaciones(_camasState.value.ifEmpty { semillaCamasHospital() })
+        agruparHabitaciones(_camasState.value)
 
     /** Mapa de camas real: GET /habitaciones devuelve las habitaciones agrupadas por planta. */
     suspend fun syncCamasFromRemote(): Result<List<Cama>> {
@@ -478,13 +468,10 @@ class HospitalClinicalDataSource(
             val camas = parsearHabitacionesJson(elemento)
                 .flatMap { it.camas }
                 .sortedBy { it.codigo }
-                .ifEmpty { semillaCamasHospital() }
+            // Sin camas de ejemplo: si la API falla, la pantalla muestra el error. Unas camas
+            // inventadas (ids "seed-…") harían que la API rechace cualquier ingreso sobre ellas.
             _camasState.value = camas
             camas
-        }.onFailure {
-            if (_camasState.value.isEmpty()) {
-                _camasState.value = semillaCamasHospital()
-            }
         }
     }
 

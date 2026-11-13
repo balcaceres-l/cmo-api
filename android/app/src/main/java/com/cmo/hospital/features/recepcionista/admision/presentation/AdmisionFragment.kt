@@ -605,6 +605,7 @@ class AdmisionFragment : Fragment() {
                         pintarPacientes(st.pacientesEncontrados, st.buscandoPacientes)
                         binding.tvAdmCamasAviso.text = when {
                             st.cargandoCamas && viewModel.capacidad.value.totalCamas == 0 -> "Cargando mapa de habitaciones…"
+                            st.errorCamas != null -> "No se pudo cargar el mapa de camas: ${st.errorCamas}"
                             else -> "Toque una habitación/cama libre para seleccionarla, o una ocupada para ver el paciente, trasladar o dar de alta."
                         }
                         binding.btnConfirmarIngreso.isEnabled = !st.enviando

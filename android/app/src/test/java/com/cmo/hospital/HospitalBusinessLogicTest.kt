@@ -401,7 +401,7 @@ class HospitalBusinessLogicTest {
     }
 
     @Test
-    fun testCitasAgendadasPorDefectoYSinFiltroSolicitadas() {
+    fun testCitasAgendadasPorDefectoYSolicitudesAparte() {
         val citaPorDefecto = Cita(
             id = "c-def-1",
             fecha = "2026-11-10",
@@ -409,8 +409,13 @@ class HospitalBusinessLogicTest {
             horaFin = "09:30"
         )
         assertEquals(EstadoCita.AGENDADA, citaPorDefecto.estado)
-        assertFalse("No debe existir el filtro Solicitadas en recepción", CitasViewModel.FILTROS_ESTADO.contains("Solicitadas"))
         assertTrue("Debe existir el filtro Agendadas", CitasViewModel.FILTROS_ESTADO.contains("Agendadas"))
+        // Las solicitudes de la app del paciente llegan sin fecha ni médico: recepción
+        // las ve aparte para asignarles horario (PATCH /citas/{id}/confirmar).
+        assertTrue(CitasViewModel.FILTROS_ESTADO.contains("Solicitadas"))
+        assertTrue(CitasViewModel.coincideEstado(EstadoCita.SOLICITADA, "Solicitadas"))
+        assertFalse(CitasViewModel.coincideEstado(EstadoCita.SOLICITADA, "Agendadas"))
+        assertEquals("Solicitada", EstadoCita.etiqueta(EstadoCita.SOLICITADA))
     }
 
     @Test
@@ -496,7 +501,7 @@ class HospitalBusinessLogicTest {
     }
 
     @Test
-    fun testSolicitudExpedienteCompletoDesdeFichaPaciente() {
+    fun testAperturaDeExpedientePedidaDesdeElInicioDelMedico() {
         val dataSource = HospitalClinicalDataSource(apiService = null)
         assertNull(dataSource.expedienteSolicitado.value)
 

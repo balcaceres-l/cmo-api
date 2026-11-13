@@ -53,7 +53,7 @@ class CalendarioCitasAdapter(
             }
 
             // Estado de la cita
-            val estadoNormalizado = if (cita.estado == EstadoCita.SOLICITADA) EstadoCita.AGENDADA else cita.estado
+            val estadoNormalizado = cita.estado
             binding.tvCalCitaEstado.text = EstadoCita.etiqueta(estadoNormalizado)
             when (estadoNormalizado) {
                 EstadoCita.EN_ATENCION -> {

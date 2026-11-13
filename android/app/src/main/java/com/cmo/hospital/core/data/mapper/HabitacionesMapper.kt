@@ -37,21 +37,6 @@ fun parsearHabitacionesJson(elemento: JsonElement?, gson: Gson = Gson()): List<H
 }
 
 /**
- * Semilla de respaldo de las 11 habitaciones (17 camas: 5 VIP en 3ª Planta y 12 Semiprivadas en 2ª Planta).
- */
-fun semillaCamasHospital(): List<Cama> {
-    val vips = (301..305).map { n ->
-        Cama(id = "seed-VIP-$n", codigo = "VIP-$n", estado = "DISPONIBLE")
-    }
-    val semis = (201..206).flatMap { n ->
-        listOf("A", "B").map { letra ->
-            Cama(id = "seed-HAB-$n-$letra", codigo = "HAB-$n-$letra", estado = "DISPONIBLE")
-        }
-    }
-    return (vips + semis).sortedBy { it.codigo }
-}
-
-/**
  * Agrupa las camas (de GET /habitaciones) por habitación para la pestaña
  * "Vista de habitaciones": VIP individual en planta 3, semiprivadas A/B en planta 2.
  */

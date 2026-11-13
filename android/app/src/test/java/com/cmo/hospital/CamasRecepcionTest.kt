@@ -33,6 +33,7 @@ class CamasRecepcionTest {
     /** Ocupación del servidor: código de cama → id de ingreso. */
     private val ocupadas = mutableMapOf("VIP-301" to "u-ing-1")
     private var camaOcupadaPorOtro = false
+    private var habitacionesCaidas = false
 
     private fun ok(data: String, code: Int = 200) = code to """{"success":true,"message":"ok","data":$data}"""
 
@@ -57,7 +58,7 @@ class CamasRecepcionTest {
     }
 
     private fun responder(metodo: String, ruta: String): Pair<Int, String> = when ("$metodo $ruta") {
-        "GET habitaciones" -> ok(habitaciones())
+        "GET habitaciones" -> if (habitacionesCaidas) 500 to """{"success":false,"message":"Error interno","errors":null}""" else ok(habitaciones())
         "POST ingresos" ->
             if (camaOcupadaPorOtro) {
                 409 to """{"success":false,"message":"La cama seleccionada está ocupada.","errors":null}"""
@@ -118,6 +119,16 @@ class CamasRecepcionTest {
         assertEquals("u-ing-1", vip.idIngreso)
         assertEquals("Ana López", vip.paciente?.nombreCompleto)
         assertNull(cama("HAB-201-A").idIngreso)
+    }
+
+    @Test
+    fun testSiLaApiFallaNoSeInventanCamas() = runTest {
+        habitacionesCaidas = true
+
+        assertTrue(repo.refrescarCamas().isFailure)
+        assertTrue(ds.camasState.value.isEmpty())
+        assertEquals(0, repo.obtenerCapacidadActual().totalCamas)
+        assertTrue(repo.obtenerHabitacionesDetalladas().isEmpty())
     }
 
     @Test
