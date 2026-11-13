@@ -44,8 +44,14 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleDemoLogin = () => {
+  const handleDemoAdmin = () => {
     setUsuario('admin');
+    setPassword('Hospital2026!');
+    setErrorMessage(null);
+  };
+
+  const handleDemoOperaciones = () => {
+    setUsuario('operaciones');
     setPassword('Hospital2026!');
     setErrorMessage(null);
   };
@@ -346,33 +352,57 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        {/* Demo Fast Login Button */}
+        {/* Demo Fast Login Buttons */}
         <div
           style={{
             marginTop: '24px',
             paddingTop: '20px',
             borderTop: '1px solid #e2ece7',
-            textAlign: 'center',
+            display: 'grid',
+            gap: '8px',
           }}
         >
-          <button
-            type="button"
-            onClick={handleDemoLogin}
-            style={{
-              background: '#eaf5f1',
-              border: '1px dashed #0b5d4b',
-              color: '#0b5d4b',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              width: '100%',
-              transition: 'background 0.15s ease',
-            }}
-          >
-            ⚡ Cargar credenciales Demo (admin)
-          </button>
+          <span style={{ fontSize: '0.72rem', color: '#526b60', fontWeight: 700, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Acceso Rápido de Demostración
+          </span>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={handleDemoAdmin}
+              style={{
+                background: '#eaf5f1',
+                border: '1px dashed #0b5d4b',
+                color: '#0b5d4b',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'background 0.15s ease',
+              }}
+            >
+              👑 Admin General
+            </button>
+            <button
+              type="button"
+              onClick={handleDemoOperaciones}
+              style={{
+                background: '#eff6ff',
+                border: '1px dashed #2563eb',
+                color: '#1d4ed8',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                textAlign: 'center',
+                transition: 'background 0.15s ease',
+              }}
+            >
+              ⚙️ Jefe Operaciones
+            </button>
+          </div>
         </div>
 
         {/* Security Policy Badge */}

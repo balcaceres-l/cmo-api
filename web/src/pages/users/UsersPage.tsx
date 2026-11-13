@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { isJefeOperaciones, getRoleBadgeConfig } from '../../utils/roles';
 import { apiClient, ApiError } from '../../api/client';
 
 interface UsuarioItem {
-  id: number;
+  id: number | string;
   nombre_completo: string;
   usuario: string;
   email: string | null;
@@ -15,12 +17,15 @@ interface UsuarioItem {
 
 export const UsersPage: React.FC = () => {
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
+  const isOps = isJefeOperaciones(currentUser);
+
   const [usuarios, setUsuarios] = useState<UsuarioItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
-  // Estado para Modal de Creación / Edición
+  // Estado para Modal de Creación / Edición (Exclusivo Administrador General)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UsuarioItem | null>(null);
   const [formData, setFormData] = useState({
@@ -37,8 +42,23 @@ export const UsersPage: React.FC = () => {
   // Cargar usuarios de la API
   const fetchUsuarios = async () => {
     try {
-      const res = await apiClient.get<UsuarioItem[]>('/usuarios');
-      setUsuarios(Array.isArray(res) ? res : []);
+      const res: any = await apiClient.get('/usuarios');
+      const list = Array.isArray(res) ? res : res?.data || [];
+      if (list.length > 0) {
+        const mapped: UsuarioItem[] = list.map((u: any) => ({
+          id: u.id,
+          nombre_completo: u.nombre_completo,
+          usuario: u.usuario,
+          email: u.email,
+          rol: u.rol,
+          cargo: u.cargo,
+          activo: u.estado === 'ACTIVO',
+          created_at: u.created_at,
+        }));
+        setUsuarios(mapped);
+        return;
+      }
+      setUsuarios([]);
     } catch {
       // Datos de muestra si el backend no está encendido en local
       setUsuarios([
@@ -53,8 +73,8 @@ export const UsersPage: React.FC = () => {
         },
         {
           id: 2,
-          nombre_completo: 'Dra. Carolina Valenzuela',
-          usuario: 'carolina.valenzuela',
+          nombre_completo: 'Lic. Carolina Valenzuela',
+          usuario: 'operaciones',
           email: 'c.valenzuela@hospitalcmo.com',
           rol: 'ADMINISTRADOR',
           cargo: 'Jefe de Operaciones',
@@ -114,6 +134,7 @@ export const UsersPage: React.FC = () => {
   }, []);
 
   const handleOpenCreate = () => {
+    if (isOps) return;
     setEditingUser(null);
     setFormData({
       nombre_completo: '',
@@ -128,6 +149,7 @@ export const UsersPage: React.FC = () => {
   };
 
   const handleToggleEstado = async (targetUser: UsuarioItem) => {
+    if (isOps) return;
     if (currentUser?.id === targetUser.id) {
       alert('Seguridad: No puedes desactivar tu propia cuenta de Administrador.');
       return;
@@ -139,12 +161,13 @@ export const UsersPage: React.FC = () => {
     }
 
     try {
-      await apiClient.patch(`/usuarios/${targetUser.id}/estado`, { activo: !targetUser.activo });
+      await apiClient.patch(`/usuarios/${targetUser.id}/estado`, {
+        estado: targetUser.activo ? 'INACTIVO' : 'ACTIVO',
+      });
       setUsuarios((prev) =>
         prev.map((u) => (u.id === targetUser.id ? { ...u, activo: !u.activo } : u))
       );
     } catch {
-      // Simular cambio local si la API está desconectada
       setUsuarios((prev) =>
         prev.map((u) => (u.id === targetUser.id ? { ...u, activo: !u.activo } : u))
       );
@@ -153,6 +176,7 @@ export const UsersPage: React.FC = () => {
 
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isOps) return;
     if (!formData.nombre_completo || !formData.usuario) {
       setFormError('Por favor completa todos los campos requeridos.');
       return;
@@ -218,33 +242,53 @@ export const UsersPage: React.FC = () => {
         }}
       >
         <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <span
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                background: isOps ? '#0284c7' : '#0b5d4b',
+                color: '#ffffff',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+              }}
+            >
+              {isOps ? 'Directorio Operativo' : 'Gestión de Cuentas'}
+            </span>
+          </div>
           <h1 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#073f33', margin: '0 0 4px' }}>
-            Gestión de Personal y Cuentas
+            {isOps ? 'Directorio de Personal Hospitalario' : 'Gestión de Personal y Cuentas'}
           </h1>
           <p style={{ margin: 0, color: '#526b60', fontSize: '0.88rem' }}>
-            Control de usuarios con roles de Administrador, Médicos y Personal Operativo (HU-30).
+            {isOps
+              ? 'Consulta de colaboradores, especialidades, turnos y canales de comunicación operativa.'
+              : 'Control de usuarios con roles de Administrador, Médicos y Personal Operativo (HU-30).'}
           </p>
         </div>
 
-        <button
-          onClick={handleOpenCreate}
-          style={{
-            background: 'linear-gradient(135deg, #0b5d4b 0%, #158066 100%)',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '10px 20px',
-            fontWeight: 700,
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(11, 93, 75, 0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <span>+ Nuevo Colaborador</span>
-        </button>
+        {!isOps && (
+          <button
+            onClick={handleOpenCreate}
+            style={{
+              background: 'linear-gradient(135deg, #0b5d4b 0%, #158066 100%)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '10px 20px',
+              fontWeight: 700,
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(11, 93, 75, 0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <span>+ Nuevo Colaborador</span>
+          </button>
+        )}
       </div>
 
       {/* Filtros */}
@@ -338,7 +382,9 @@ export const UsersPage: React.FC = () => {
               <th style={{ padding: '12px 18px', fontWeight: 700 }}>Rol del Sistema</th>
               <th style={{ padding: '12px 18px', fontWeight: 700 }}>Cargo Específico</th>
               <th style={{ padding: '12px 18px', fontWeight: 700 }}>Estado</th>
-              <th style={{ padding: '12px 18px', fontWeight: 700, textAlign: 'right' }}>Acciones</th>
+              <th style={{ padding: '12px 18px', fontWeight: 700, textAlign: 'right' }}>
+                {isOps ? 'Gestión de Guardias' : 'Acciones'}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -348,34 +394,38 @@ export const UsersPage: React.FC = () => {
                 <tr key={u.id} style={{ borderBottom: '1px solid #e8efeb', transition: 'background 0.15s ease' }}>
                   <td style={{ padding: '14px 18px' }}>
                     <div style={{ fontWeight: 700, color: '#13221c' }}>{u.nombre_completo}</div>
-                    <div style={{ fontSize: '0.78rem', color: '#526b60' }}>{u.email || 'Sin correo registrado'}</div>
+                    <div style={{ fontSize: '0.78rem', color: '#526b60' }}>
+                      {u.email ? (
+                        <a href={`mailto:${u.email}`} style={{ color: '#0b5d4b', textDecoration: 'none' }}>
+                          ✉️ {u.email}
+                        </a>
+                      ) : (
+                        'Sin correo registrado'
+                      )}
+                    </div>
                   </td>
                   <td style={{ padding: '14px 18px', fontFamily: 'monospace', color: '#0b5d4b', fontWeight: 600 }}>
                     @{u.usuario}
                   </td>
                   <td style={{ padding: '14px 18px' }}>
-                    <span
-                      style={{
-                        padding: '3px 10px',
-                        borderRadius: '999px',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        background:
-                          u.rol === 'ADMINISTRADOR'
-                            ? '#d6ebe3'
-                            : u.rol === 'MEDICO'
-                            ? '#dbebf4'
-                            : '#fae9c8',
-                        color:
-                          u.rol === 'ADMINISTRADOR'
-                            ? '#0b5d4b'
-                            : u.rol === 'MEDICO'
-                            ? '#0e5c86'
-                            : '#85560a',
-                      }}
-                    >
-                      {u.rol}
-                    </span>
+                    {(() => {
+                      const badge = getRoleBadgeConfig(u.rol);
+                      return (
+                        <span
+                          style={{
+                            padding: '3px 10px',
+                            borderRadius: '999px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            background: badge.bg,
+                            color: badge.color,
+                            border: badge.border,
+                          }}
+                        >
+                          {u.rol}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td style={{ padding: '14px 18px', fontWeight: 600, color: '#33483f' }}>
                     {u.cargo || '—'}
@@ -403,24 +453,44 @@ export const UsersPage: React.FC = () => {
                     </span>
                   </td>
                   <td style={{ padding: '14px 18px', textAlign: 'right' }}>
-                    <button
-                      onClick={() => handleToggleEstado(u)}
-                      disabled={isSelf}
-                      title={isSelf ? 'No puedes desactivar tu propia cuenta' : ''}
-                      style={{
-                        background: u.activo ? '#fef2f2' : '#f0fdf4',
-                        color: u.activo ? '#991b1b' : '#166534',
-                        border: `1px solid ${u.activo ? '#fecaca' : '#bbf7d0'}`,
-                        borderRadius: '6px',
-                        padding: '6px 12px',
-                        fontSize: '0.78rem',
-                        fontWeight: 600,
-                        cursor: isSelf ? 'not-allowed' : 'pointer',
-                        opacity: isSelf ? 0.4 : 1,
-                      }}
-                    >
-                      {u.activo ? 'Desactivar' : 'Activar'}
-                    </button>
+                    {isOps ? (
+                      /* Vista Jefe de Operaciones: Botón directo a consultar/programar turnos */
+                      <button
+                        onClick={() => navigate('/turnos')}
+                        style={{
+                          background: '#f0fdf4',
+                          color: '#166534',
+                          border: '1px solid #bbf7d0',
+                          borderRadius: '6px',
+                          padding: '6px 12px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Ver Turnos →
+                      </button>
+                    ) : (
+                      /* Vista Administrador General: Activar / Desactivar cuenta */
+                      <button
+                        onClick={() => handleToggleEstado(u)}
+                        disabled={isSelf}
+                        title={isSelf ? 'No puedes desactivar tu propia cuenta' : ''}
+                        style={{
+                          background: u.activo ? '#fef2f2' : '#f0fdf4',
+                          color: u.activo ? '#991b1b' : '#166534',
+                          border: `1px solid ${u.activo ? '#fecaca' : '#bbf7d0'}`,
+                          borderRadius: '6px',
+                          padding: '6px 12px',
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          cursor: isSelf ? 'not-allowed' : 'pointer',
+                          opacity: isSelf ? 0.4 : 1,
+                        }}
+                      >
+                        {u.activo ? 'Desactivar' : 'Activar'}
+                      </button>
+                    )}
                   </td>
                 </tr>
               );
@@ -436,8 +506,8 @@ export const UsersPage: React.FC = () => {
         </table>
       </div>
 
-      {/* Modal Crear / Editar */}
-      {isModalOpen && (
+      {/* Modal Crear / Editar (Solo visible para Admin General) */}
+      {!isOps && isModalOpen && (
         <div
           style={{
             position: 'fixed',
@@ -562,7 +632,7 @@ export const UsersPage: React.FC = () => {
                   <input
                     type="text"
                     required
-                    placeholder="Ej. Jefe de Operaciones, Alergista..."
+                    placeholder="Ej. Medicina General, Emergencias..."
                     value={formData.cargo}
                     onChange={(e) => setFormData({ ...formData, cargo: e.target.value })}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #d1dcd6', fontSize: '0.9rem' }}

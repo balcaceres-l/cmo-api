@@ -1,0 +1,342 @@
+{
+  "name": "CMO - Copiloto de Inteligencia Operativa y Clínica",
+  "nodes": [
+    {
+      "id": "node-webhook",
+      "name": "Webhook Entrada",
+      "webhookId": "cmo-admin-copilot",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin-copilot",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-auth-check",
+      "name": "Validar con Laravel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput",
+      "position": [
+        420,
+        300
+      ],
+      "parameters": {
+        "url": "http://192.168.110.200:8000/api/v1/auth/me",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.body.token.startsWith('Bearer ') ? $json.body.token : 'Bearer ' + $json.body.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "node-if-admin",
+      "name": "¿Es Administrador?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        640,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.data.usuario.rol }}",
+              "rightValue": "ADMINISTRADOR",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-deny",
+      "name": "403 Acceso Denegado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        860,
+        480
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"ok\": false,\n  \"error\": \"Acceso denegado. Este servicio es exclusivo para personal de Administración.\"\n}",
+        "options": {
+          "responseCode": 403
+        }
+      }
+    },
+    {
+      "id": "node-get-metrics",
+      "name": "Obtener Métricas Dashboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        860,
+        200
+      ],
+      "parameters": {
+        "url": "http://192.168.110.200:8000/api/v1/dashboard/metricas",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Webhook Entrada').item.json.body.token.startsWith('Bearer ') ? $('Webhook Entrada').item.json.body.token : 'Bearer ' + $('Webhook Entrada').item.json.body.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-get-inventory",
+      "name": "Obtener Detalle Inventario",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        200
+      ],
+      "parameters": {
+        "url": "http://192.168.110.200:8000/api/v1/recursos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Webhook Entrada').item.json.body.token.startsWith('Bearer ') ? $('Webhook Entrada').item.json.body.token : 'Bearer ' + $('Webhook Entrada').item.json.body.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-get-inpatients",
+      "name": "Obtener Hospitalizados",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        200
+      ],
+      "parameters": {
+        "url": "http://192.168.110.200:8000/api/v1/ingresos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Webhook Entrada').item.json.body.token.startsWith('Bearer ') ? $('Webhook Entrada').item.json.body.token : 'Bearer ' + $('Webhook Entrada').item.json.body.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-get-lab",
+      "name": "Obtener Órdenes Lab",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        200
+      ],
+      "parameters": {
+        "url": "http://192.168.110.200:8000/api/v1/ordenes-laboratorio",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $('Webhook Entrada').item.json.body.token.startsWith('Bearer ') ? $('Webhook Entrada').item.json.body.token : 'Bearer ' + $('Webhook Entrada').item.json.body.token }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-cross-intel",
+      "name": "Generar Inteligencia Cruzada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1740,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const body = $('Webhook Entrada').item.json.body || {};\nconst pregunta = body.mensaje || '';\nconst historial = body.historial || [];\nconst token = body.token || '';\n\nconst metricasRaw = $('Obtener Métricas Dashboard').item.json.data || {};\nconst recursosData = $('Obtener Detalle Inventario').item.json.data || {};\nconst ingresosData = $('Obtener Hospitalizados').item.json.data || {};\nconst labData = $('Obtener Órdenes Lab').item.json.data || {};\n\nlet recursos = [];\nif (Array.isArray(recursosData)) {\n  recursos = recursosData;\n} else if (Array.isArray(recursosData.data)) {\n  recursos = recursosData.data;\n} else if (Array.isArray(recursosData.data?.data)) {\n  recursos = recursosData.data.data;\n}\n\nconst ingresos = Array.isArray(ingresosData) ? ingresosData : (ingresosData.data || []);\nconst lab = Array.isArray(labData) ? labData : (labData.data || []);\n\n// 1. Inventario en Bodega Central\nconst medBajos = [];\nconst medOptimos = [];\nconst insBajos = [];\nconst insOptimos = [];\nconst eqBajos = [];\nconst eqOptimos = [];\n\nrecursos.forEach(r => {\n  const cat = (r.categoria || '').toLowerCase();\n  const isBajo = Number(r.cantidad || 0) < Number(r.stock_minimo || 0) || r.bajo_minimo === true;\n  const line = `- ${r.nombre}: Stock actual ${r.cantidad} ${r.unidad} (Mínimo: ${r.stock_minimo} ${r.unidad})${isBajo ? ` [DÉFICIT: ${Number(r.stock_minimo) - Number(r.cantidad)} ${r.unidad}]` : ' [Óptimo]'}`;\n  \n  if (cat.includes('medicamento')) {\n    if (isBajo) medBajos.push(line); else medOptimos.push(line);\n  } else if (cat.includes('insumo')) {\n    if (isBajo) insBajos.push(line); else insOptimos.push(line);\n  } else {\n    if (isBajo) eqBajos.push(line); else eqOptimos.push(line);\n  }\n});\n\nconst stockCriticoCount = medBajos.length + insBajos.length + eqBajos.length;\nconst medBajosText = medBajos.length > 0 ? ('  Bajo stock crítico:\\n  ' + medBajos.join('\\n  ')) : '  Bajo stock: Ninguno.';\nconst insBajosText = insBajos.length > 0 ? ('  Bajo stock crítico:\\n  ' + insBajos.join('\\n  ')) : '  Bajo stock: Ninguno.';\nconst eqBajosText = eqBajos.length > 0 ? ('  Bajo stock crítico:\\n  ' + eqBajos.join('\\n  ')) : '  Bajo stock: Ninguno.';\n\n// 2. Camas dinámicas\nconst ocupacionArr = metricasRaw.ocupacion || [];\nconst p2Disp = ocupacionArr.find(o => o.planta === 2 && o.estado === 'DISPONIBLE')?.total || 0;\nconst p2Ocup = ocupacionArr.find(o => o.planta === 2 && o.estado === 'OCUPADA')?.total || 0;\nconst p3Disp = ocupacionArr.find(o => o.planta === 3 && o.estado === 'DISPONIBLE')?.total || 0;\nconst p3Ocup = ocupacionArr.find(o => o.planta === 3 && o.estado === 'OCUPADA')?.total || 0;\n\n// 3. Hospitalizados con motivos de ingreso clínicos\nconst internadosLines = ingresos.filter(i => !i.fecha_alta).map(i => {\n  const pacNombre = i.paciente?.nombre_completo || 'Paciente';\n  const camaCod = i.cama?.codigo || 'Cama s/c';\n  const habTipo = i.cama?.habitacion?.tipo || 'Habitación';\n  const planta = i.cama?.habitacion?.planta || 2;\n  const motivo = i.motivo || 'Observación médica general';\n  const med = i.medico?.nombre_completo || 'Médico tratante';\n  return `• Paciente: ${pacNombre} | Cama: ${camaCod} (${habTipo}, Planta ${planta}) | Motivo de ingreso: ${motivo} | Médico tratante: ${med}`;\n});\n\n// 4. Lab clínico activo y resumen de órdenes\nconst labSummary = metricasRaw.laboratorio || [];\nconst labPend = labSummary.find(l => l.estado === 'PENDIENTE')?.total || 0;\nconst labProc = labSummary.find(l => l.estado === 'EN_PROCESO')?.total || 0;\nconst labComp = labSummary.find(l => l.estado === 'COMPLETADO')?.total || 0;\nconst labCanc = labSummary.find(l => l.estado === 'CANCELADA')?.total || 0;\nconst labActivas = labPend + labProc;\nconst labTotal = labActivas + labComp + labCanc;\n\nconst labLines = lab.filter(l => ['PENDIENTE', 'EN_PROCESO'].includes(l.estado)).map(l => {\n  return `• Examen: ${l.examen?.nombre || 'Prueba'} | Paciente: ${l.paciente?.nombre_completo || 'Paciente'} | Estado: ${l.estado}`;\n});\n\n// 5. Personal y Pacientes registrados\nconst totalColaboradores = metricasRaw.personal_activo || 0;\nconst totalPacientes = metricasRaw.pacientes || 0;\n\n// 6. Ambulancia\nconst amb = metricasRaw.ambulancia || { estado: 'DISPONIBLE', servicios_mes: 0 };\n\nconst radiografia = `=== RADIOGRAFÍA OPERATIVA INMEDIATA (HOSPITAL CMO) ===\n\n👥 PERSONAL Y PACIENTES REGISTRADOS EN EL SISTEMA:\n• Colaboradores activos en hospital: Exactamente ${totalColaboradores} colaboradores (médicos, recepción, enfermería y administración).\n• Pacientes registrados en sistema: Exactamente ${totalPacientes} pacientes con expediente clínico abierto.\n\n🛏️ HOSPITALIZACIÓN Y OCUPACIÓN DE CAMAS:\n• Planta 2 (Habitaciones Semiprivadas): ${p2Ocup} cama ocupada, ${p2Disp} camas libres disponibles (Total: ${p2Ocup + p2Disp} camas).\n• Planta 3 (Suites VIP Individuales): ${p3Ocup} suites ocupadas, ${p3Disp} suites VIP libres disponibles (Total: ${p3Ocup + p3Disp} suites).\n• Total global del hospital: ${p2Ocup + p3Ocup} cama ocupada, ${p2Disp + p3Disp} camas libres disponibles (Total general: ${p2Ocup + p3Ocup + p2Disp + p3Disp} camas).\n• Detalle de internados actualmente en camas:\n${internadosLines.length > 0 ? internadosLines.join('\\n') : 'Sin pacientes internados actualmente en camas.'}\n\n🚑 UNIDAD DE TRASLADO MÓVIL (AMBULANCIA):\n• Estado actual: ${amb.estado}\n• Servicios atendidos/completados este mes: ${amb.servicios_mes} servicio(s)\n• Capacidad móvil instalada: Exactamente 1 ambulancia privada propia del hospital.\n\n📦 INVENTARIO EN BODEGA CENTRAL (Total: ${recursos.length} ítems | Críticos bajo mínimo: ${stockCriticoCount}):\n• MEDICAMENTOS:\n${medBajosText}\n  Con stock suficiente:\n  ${medOptimos.join('\\n  ')}\n\n• INSUMOS MÉDICOS:\n${insBajosText}\n  Con stock suficiente:\n  ${insOptimos.join('\\n  ')}\n\n• EQUIPOS MÉDICOS:\n${eqBajosText}\n  Con stock suficiente:\n  ${eqOptimos.join('\\n  ')}\n\n🧪 LABORATORIO CLÍNICO:\n• Órdenes activas en curso: ${labActivas} órdenes (${labPend} PENDIENTES, ${labProc} EN_PROCESO).\n• Histórico y balance general: ${labComp} COMPLETADA, ${labCanc} CANCELADAS (Total histórico registrado: ${labTotal} órdenes).\n• Detalle de órdenes activas:\n${labLines.length > 0 ? labLines.join('\\n') : 'Sin órdenes activas en curso.'}`;\n\nconst cleanHistory = Array.isArray(historial)\n  ? historial.slice(-6).map(h => ({\n      role: h.role === 'user' ? 'user' : 'assistant',\n      content: String(h.content || '')\n    }))\n  : [];\n\nconst hoyStr = new Date().toISOString().split('T')[0];\nconst bearerToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;\nconst qLower = pregunta.toLowerCase();\n\n// DETECCIÓN DE MÓDULO OBJETIVO PARA ENRUTAMIENTO DETERMINÍSTICO\nlet targetEndpoint = null;\nlet targetModule = null;\n\nconst isClinicalCorrelation = qLower.includes('ingresad') || qLower.includes('internad') || qLower.includes('hace falta') || qLower.includes('necesita');\n\nif (!isClinicalCorrelation) {\n  if (\n    qLower.includes('turno') || qLower.includes('horario') || qLower.includes('jornada') || \n    qLower.includes('hora') || qLower.includes('carga laboral') || qLower.includes('promedio') || \n    qLower.includes('top') || qLower.includes('ranking') || qLower.includes('trabaja') ||\n    qLower.includes('cubrir') || qLower.includes('cobertura') || qLower.includes('guardia')\n  ) {\n    targetModule = 'turnos';\n    targetEndpoint = '/api/v1/turnos?per_page=100';\n  } else if (qLower.includes('cita') || qLower.includes('agenda')) {\n    targetModule = 'citas';\n    targetEndpoint = '/api/v1/citas?per_page=60';\n  } else if ((qLower.includes('médic') || qLower.includes('medic') || qLower.includes('doctor') || qLower.includes('especialista')) && !qLower.includes('medicamento')) {\n    targetModule = 'medicos';\n    targetEndpoint = '/api/v1/medicos';\n  } else if (qLower.includes('consultorio')) {\n    targetModule = 'consultorios';\n    targetEndpoint = '/api/v1/consultorios';\n  } else if (qLower.includes('aviso') || qLower.includes('comunicado')) {\n    targetModule = 'avisos';\n    targetEndpoint = '/api/v1/avisos';\n  } else if (qLower.includes('bitácora') || qLower.includes('bitacora') || qLower.includes('traslado')) {\n    targetModule = 'bitacora';\n    targetEndpoint = '/api/v1/ambulancia/servicios';\n  } else if (qLower.includes('catálogo') || qLower.includes('catalogo') || (qLower.includes('precio') && qLower.includes('examen'))) {\n    targetModule = 'examenes';\n    targetEndpoint = '/api/v1/examenes';\n  } else if (qLower.includes('buscar paciente') || qLower.includes('directorio de paciente') || qLower.includes('lista de paciente')) {\n    targetModule = 'pacientes';\n    targetEndpoint = '/api/v1/pacientes';\n  }\n}\n\nlet contextBlock = '';\n\nif (targetEndpoint) {\n  try {\n    const apiRes = await this.helpers.httpRequest({\n      url: `http://192.168.110.200:8000${targetEndpoint}`,\n      method: 'GET',\n      headers: {\n        'Authorization': bearerToken,\n        'Accept': 'application/json'\n      },\n      json: true,\n      timeout: 20000\n    });\n\n    let rawData = apiRes.data || [];\n    if (rawData && rawData.data && Array.isArray(rawData.data)) {\n      rawData = rawData.data;\n    }\n    const items = Array.isArray(rawData) ? rawData : [rawData];\n\n    if (targetModule === 'turnos') {\n      const stats = {};\n      items.forEach(t => {\n        const u = t.usuario || {};\n        const rol = u.rol || 'PERSONAL';\n        const nom = u.nombre_completo || 'Personal';\n        if (rol !== 'MEDICO') return;\n        \n        if (!stats[nom]) {\n          stats[nom] = {\n            nombre: nom,\n            cargo: u.cargo || 'Médico',\n            totalTurnos: 0,\n            totalHoras: 0,\n            areas: new Set(),\n            dias: new Set()\n          };\n        }\n        stats[nom].totalTurnos += 1;\n        stats[nom].areas.add(t.area || 'General');\n        if (t.fecha) stats[nom].dias.add(t.fecha);\n        \n        if (t.hora_inicio && t.hora_fin) {\n          const [h1, m1] = t.hora_inicio.split(':').map(Number);\n          const [h2, m2] = t.hora_fin.split(':').map(Number);\n          let dur = (h2 + (m2 || 0) / 60) - (h1 + (m1 || 0) / 60);\n          if (dur < 0) dur += 24;\n          stats[nom].totalHoras += dur;\n        }\n      });\n\n      const medicosArr = Object.values(stats).sort((a, b) => b.totalHoras - a.totalHoras);\n      \n      let calcBlock = `=== MOTOR ALGEBRAICO EXACTO: REPORTE DE HORAS Y TURNOS ===\\nTotal de médicos activos en el hospital: Exactamente ${medicosArr.length} médicos (${medicosArr.map(m => m.nombre).join(', ')}).\\n\\nDESGLOSE MATEMÁTICO DETERMINÍSTICO:\\n`;\n      medicosArr.forEach((m, idx) => {\n        const prom = m.totalTurnos > 0 ? (m.totalHoras / m.totalTurnos).toFixed(1) : 0;\n        calcBlock += `${idx + 1}. ${m.nombre} (${m.cargo}):\\n   - Horas totales acumuladas: ${m.totalHoras.toFixed(1)} horas exactas\\n   - Turnos laborados: ${m.totalTurnos} días\\n   - Promedio por jornada: ${prom} horas/turno\\n   - Áreas asignadas: ${Array.from(m.areas).join(', ')}\\n`;\n      });\n      calcBlock += `\\nRANKING DE CARGA HORARIA TOTAL:\\n${medicosArr.map((m, idx) => `Puesto #${idx + 1}: ${m.nombre} (${m.totalHoras.toFixed(1)} horas)`).join('\\n')}\\n(Nota: Si piden Top 5 o Top 10, aclara que solo existen ${medicosArr.length} médicos en total en el hospital).\\n\\n`;\n      \n      const turnosHoy = items.filter(t => (t.fecha || '') === hoyStr);\n      calcBlock += `TURNOS DE HOY (${hoyStr}):\\n` + (turnosHoy.length > 0 \n        ? turnosHoy.map(t => `- ${t.usuario?.nombre_completo || 'Personal'} (${t.usuario?.rol}): ${t.hora_inicio} a ${t.hora_fin} | Área: ${t.area}`).join('\\n')\n        : 'Sin turnos programados para hoy.');\n        \n      contextBlock = calcBlock;\n    } else if (targetModule === 'citas') {\n      const hoyCitas = items.filter(c => (c.fecha || '').startsWith(hoyStr));\n      const atendidas = items.filter(c => c.estado === 'ATENDIDA').length;\n      const agendadas = items.filter(c => c.estado === 'AGENDADA').length;\n      const canceladas = items.filter(c => c.estado === 'CANCELADA').length;\n      \n      let calcCitas = `=== REPORTE DETERMINÍSTICO DE CITAS MÉDICAS ===\\nTotal de citas en registro: ${items.length}\\nCitas para hoy (${hoyStr}): ${hoyCitas.length}\\nResumen por estado: Atendidas: ${atendidas} | Agendadas: ${agendadas} | Canceladas: ${canceladas}\\n\\n`;\n      calcCitas += 'CITAS RECIENTES/PROGRAMADAS:\\n' + items.slice(0, 15).map(c => \n        `- Fecha: ${c.fecha || ''} ${c.hora_inicio || ''} a ${c.hora_fin || ''} | Paciente: ${c.paciente?.nombre_completo || 'Paciente'} | Médico: ${c.medico?.nombre_completo || 'Médico'} | Estado: ${c.estado || ''} | Motivo: ${c.motivo || ''}`\n      ).join('\\n');\n      contextBlock = calcCitas;\n    } else if (targetModule === 'medicos') {\n      contextBlock = '=== DIRECTORIO MÉDICO ACTIVO ===\\n' + items.map(m =>\n        `- ${m.nombre_completo || ''} | Cargo/Especialidad: ${m.cargo || m.especialidad || 'Medicina General'} | Estado: ${m.estado || 'ACTIVO'}`\n      ).join('\\n');\n    } else if (targetModule === 'consultorios') {\n      contextBlock = '=== CONSULTORIOS MÉDICOS ===\\n' + items.map(cs =>\n        `- ${cs.nombre || cs.codigo || ''} | Ubicación: ${cs.ubicacion || 'Planta 1'} | Estado: ${cs.estado || 'ACTIVO'}`\n      ).join('\\n');\n    } else if (targetModule === 'avisos') {\n      contextBlock = '=== AVISOS INSTITUCIONALES ===\\n' + items.map(a =>\n        `- ${a.titulo || ''} (${a.fecha || ''}): ${a.contenido || a.mensaje || ''}`\n      ).join('\\n');\n    } else {\n      contextBlock = `=== REGISTROS DE ${targetModule.toUpperCase()} ===\\n` + JSON.stringify(items.slice(0, 15));\n    }\n  } catch (err) {\n    contextBlock = `Error al consultar ${targetEndpoint}: ${err.message}`;\n  }\n} else {\n  contextBlock = radiografia;\n}\n\nconst systemPrompt = `Eres el Asistente Operativo de Dirección del Hospital CMO (Centro Médico de Occidente). Asistes al Administrador y Jefe de Operaciones.\nFecha actual del sistema: ${hoyStr}.\n\nREGLAS FUNDAMENTALES Y GUARDRAILS DE SEGURIDAD INSTITUCIONAL:\n\n1. MODO CONSULTA / SOLO LECTURA (CERO ALUCINACIÓN DE ACCIÓN):\n   - Operas EXCLUSIVAMENTE en modo de consulta, diagnóstico y análisis operativo (Solo Lectura). No tienes facultades ni permisos de escritura en la base de datos.\n   - Si el usuario te ordena ejecutar acciones que alteren el sistema (ej. \"cancela la cita\", \"agenda a X paciente\", \"compra 50 cajas\", \"genera una orden de compra\", \"despide a X\", \"modifica un turno\"):\n     NUNCA finjas ni digas que realizaste la acción (PROHIBIDO decir \"se ha generado la orden\" o \"cita cancelada\").\n     Aclara de forma directa que como copiloto de consulta no tienes permisos para ejecutar cambios en la base de datos, e indica el módulo oficial donde el usuario debe realizar la gestión (ej. módulo de Citas y Agenda, o Compras/Almacén).\n\n2. LÍMITE DE RESPONSABILIDAD CLÍNICA (NO PRESCRIPCIÓN NI ALTA):\n   - Tu rol se limita a reportar la información operativa del hospital.\n   - NUNCA prescribas medicamentos, no valides dosis/posologías (mg, intervalos) ni autorices o aconsejes dar el alta médica a un paciente.\n   - Ante preguntas sobre recetar o dar el alta: aclara que por protocolo institucional y seguridad del paciente, la prescripción farmacológica y el alta corresponden exclusivamente al criterio del médico tratante a cargo.\n\n3. CORRELACIÓN CLÍNICA ENTRE INGRESADOS E INVENTARIO:\n   - Si el usuario pregunta si los pacientes ingresados o internados necesitan los medicamentos o insumos en déficit (ej. Amoxicilina, Guantes):\n     Revisa los motivos de ingreso de los pacientes actualmente internados y sus exámenes de laboratorio pendientes.\n     Responde con criterio objetivo si según su condición (ej. observación general, pruebas rutinarias de orina o lípidos) su cuadro clínico actual requiere o no el consumo urgente de los ítems en déficit. NUNCA te laves las manos diciendo que no tienes diagnósticos si tienes los motivos de ingreso y exámenes visibles en tus datos operativos.\n\n4. CERTEZA DE DATOS Y CONTEOS (PRESETS Y MÉTRICAS GLOBALES):\n   - Utiliza SIEMPRE las cifras exactas provistas en la RADIOGRAFÍA OPERATIVA o en el reporte algebraico.\n   - Para ocupación de camas, ambulancia, inventario crítico, órdenes de laboratorio, colaboradores activos y pacientes registrados:\n     Reporta los números exactos de inmediato sin titubeos ni evasivas (NUNCA digas que no tienes acceso a nómina o a registros de usuarios si los totales están indicados en los datos provistos).\n\n5. CERTEZA MATEMÁTICA Y TURNOS:\n   - Si se trata de horas, turnos, cálculos o rankings, utiliza los datos exactos del reporte matemático provisto. NUNCA inventes números. Si el usuario pide un Top superior a los médicos existentes, aclara cuántos hay con certeza.\n\n6. FORMATO Y ESTILO:\n   - Inicia OBLIGATORIAMENTE con una etiqueta entre corchetes: [INFO], [ADVERTENCIA], [CRITICO] u [OPTIMO].\n   - Máximo 1-2 párrafos o viñetas claras. Respuestas ejecutivas, directas y sin introducciones pomposas.\n   - Lenguaje formal hospitalario institucional. Cero mención a servidores, IA o hardware.`;\n\nconst messages = [\n  { role: \"system\", content: `${systemPrompt}\\n\\n${contextBlock}` },\n  ...cleanHistory,\n  { role: \"user\", content: pregunta }\n];\n\nconst resp = await this.helpers.httpRequest({\n  url: 'http://192.168.110.200:11434/api/chat',\n  method: 'POST',\n  body: {\n    model: 'qwen3.5:9b',\n    stream: false,\n    think: false,\n    keep_alive: '2h',\n    messages: messages,\n    options: { temperature: 0.1 }\n  },\n  json: true,\n  timeout: 90000\n});\n\nconst finalContent = resp.message?.content || 'Operación completada.';\nreturn { json: { respuesta: finalContent } };"
+      }
+    },
+    {
+      "id": "node-respond-admin",
+      "name": "Responder al Admin",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1980,
+        200
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"ok\": true,\n  \"respuesta\": {{ JSON.stringify($json.respuesta) }}\n}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook Entrada": {
+      "main": [
+        [
+          {
+            "node": "Validar con Laravel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar con Laravel": {
+      "main": [
+        [
+          {
+            "node": "¿Es Administrador?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es Administrador?": {
+      "main": [
+        [
+          {
+            "node": "Obtener Métricas Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "403 Acceso Denegado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Métricas Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Obtener Detalle Inventario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Detalle Inventario": {
+      "main": [
+        [
+          {
+            "node": "Obtener Hospitalizados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Hospitalizados": {
+      "main": [
+        [
+          {
+            "node": "Obtener Órdenes Lab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Órdenes Lab": {
+      "main": [
+        [
+          {
+            "node": "Generar Inteligencia Cruzada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar Inteligencia Cruzada": {
+      "main": [
+        [
+          {
+            "node": "Responder al Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}
