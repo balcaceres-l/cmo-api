@@ -18,9 +18,12 @@ class ListarOrdenesLaboratorioUseCase(private val repository: LaboratorioRecepci
 
 /** Avanza la orden un paso: Pendiente → En Proceso → Completado. */
 class AvanzarOrdenLaboratorioUseCase(private val repository: LaboratorioRecepcionRepository) {
-    suspend operator fun invoke(orden: OrdenLaboratorioItem): Result<OrdenLaboratorioItem> = when (orden.estado) {
+    suspend operator fun invoke(
+        orden: OrdenLaboratorioItem,
+        observaciones: String? = null
+    ): Result<OrdenLaboratorioItem> = when (orden.estado) {
         OrdenLaboratorioItem.PENDIENTE -> repository.iniciar(orden.id)
-        OrdenLaboratorioItem.EN_PROCESO -> repository.completar(orden.id)
+        OrdenLaboratorioItem.EN_PROCESO -> repository.completar(orden.id, observaciones)
         else -> Result.failure(IllegalStateException("La orden ya está ${orden.estado}; no tiene un siguiente paso."))
     }
 

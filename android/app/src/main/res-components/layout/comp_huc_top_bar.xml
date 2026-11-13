@@ -4,37 +4,38 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/topBarRoot"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/huc_topbar_height"
-    android:background="@color/huc_primary_container"
+    android:layout_height="64dp"
+    android:background="@color/cmo_header_bg"
     android:elevation="4dp"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingHorizontal="@dimen/huc_space_md">
+    android:paddingHorizontal="16dp">
 
-    <!-- Marca Institucional HUC + CMO -->
+    <!-- Logo Oficial Hospital CMO sobre tarjeta blanca -->
     <FrameLayout
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:background="@drawable/bg_circle_primary">
+        android:layout_width="38dp"
+        android:layout_height="38dp"
+        android:background="@drawable/bg_logo_card_24"
+        android:padding="4dp">
 
         <ImageView
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_gravity="center"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:contentDescription="@string/app_name"
-            android:src="@drawable/ic_local_hospital"
-            app:tint="@color/huc_primary_fixed" />
+            android:scaleType="fitCenter"
+            android:src="@drawable/logo_cmo_icon" />
     </FrameLayout>
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/huc_space_sm"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="6dp"
         android:layout_weight="1"
         android:orientation="vertical">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
@@ -43,11 +44,14 @@
                 android:id="@+id/tvBrandHuc"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/manrope_bold"
-                android:text="@string/huc_brand_title"
-                android:textColor="@color/huc_on_primary"
-                android:textSize="20sp"
-                android:textStyle="bold" />
+                android:ellipsize="end"
+                android:fontFamily="@font/plus_jakarta_sans_extrabold"
+                android:letterSpacing="0.01"
+                android:maxLines="1"
+                android:singleLine="true"
+                android:text="HOSPITAL CMO"
+                android:textColor="@color/cmo_white"
+                android:textSize="14sp" />
 
             <TextView
                 android:id="@+id/tvBrandCmo"
@@ -55,72 +59,74 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
                 android:background="@drawable/bg_pill_primary"
+                android:backgroundTint="@color/cmo_header_surface"
+                android:ellipsize="end"
+                android:fontFamily="@font/plus_jakarta_sans_bold"
+                android:maxLines="1"
                 android:paddingHorizontal="7dp"
                 android:paddingVertical="2dp"
-                android:text="@string/huc_brand_badge"
-                android:textColor="@color/huc_primary_fixed"
-                android:textSize="11sp"
-                android:textStyle="bold" />
+                android:singleLine="true"
+                android:textColor="@color/cmo_teal_accent"
+                android:textSize="9sp"
+                tools:text="MÉDICO" />
         </LinearLayout>
 
         <TextView
             android:id="@+id/tvModuleSubtitle"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:letterSpacing="0.06"
+            android:fontFamily="@font/plus_jakarta_sans_semibold"
+            android:letterSpacing="0.05"
             android:maxLines="1"
+            android:singleLine="true"
             android:textAllCaps="true"
-            android:textColor="@color/huc_on_primary_container"
+            android:textColor="@color/cmo_header_text"
             android:textSize="11sp"
-            android:textStyle="bold"
-            tools:text="PACIENTES" />
+            tools:text="CITAS &amp; PACIENTES" />
     </LinearLayout>
 
-    <!-- Pill Guardia Activa -->
+    <!-- Pill Estado de Guardia -->
     <LinearLayout
         android:id="@+id/btnGuardiaPill"
         android:layout_width="wrap_content"
-        android:layout_height="36dp"
+        android:layout_height="30dp"
         android:background="@drawable/bg_pill_primary"
+        android:backgroundTint="@color/cmo_header_surface"
         android:clickable="true"
         android:focusable="true"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="10dp">
+        android:paddingHorizontal="8dp">
 
         <View
-            android:layout_width="8dp"
-            android:layout_height="8dp"
+            android:layout_width="7dp"
+            android:layout_height="7dp"
             android:background="@drawable/bg_dot_circle"
-            android:backgroundTint="@color/huc_primary_fixed" />
+            android:backgroundTint="@color/cmo_accent" />
 
         <TextView
             android:id="@+id/tvGuardiaLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
+            android:layout_marginStart="5dp"
+            android:ellipsize="end"
+            android:fontFamily="@font/plus_jakarta_sans_semibold"
+            android:maxLines="1"
+            android:singleLine="true"
             android:text="@string/huc_guardia_activa"
-            android:textColor="@color/huc_primary_fixed"
-            android:textSize="11sp"
-            android:textStyle="bold" />
-
-        <ImageView
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:layout_marginStart="2dp"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_expand_more"
-            app:tint="@color/huc_on_primary" />
+            android:textColor="@color/cmo_teal_accent"
+            android:textSize="10sp" />
     </LinearLayout>
 
-    <!-- Acción Secundaria Opcional (ej. Agendar Cita de Seguimiento en Doctor) -->
+    <!-- Acción Secundaria Opcional -->
     <FrameLayout
         android:id="@+id/btnSecondaryAction"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
         android:layout_marginStart="6dp"
         android:background="@drawable/bg_circle_primary"
+        android:backgroundTint="@color/cmo_header_surface"
         android:clickable="true"
         android:focusable="true"
         android:visibility="gone"
@@ -133,26 +139,29 @@
             android:layout_gravity="center"
             android:contentDescription="@null"
             android:src="@drawable/ic_event"
-            app:tint="@color/huc_primary_fixed" />
+            app:tint="@color/cmo_teal_accent" />
     </FrameLayout>
 
     <!-- Botón Perfil / Cierre de Sesión -->
     <FrameLayout
         android:id="@+id/btnProfileAction"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
         android:layout_marginStart="6dp"
         android:background="@drawable/bg_circle_primary"
+        android:backgroundTint="@color/cmo_primary"
         android:clickable="true"
         android:focusable="true">
 
-        <ImageView
-            android:layout_width="18dp"
-            android:layout_height="18dp"
+        <TextView
+            android:id="@+id/tvProfileInitial"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_person"
-            app:tint="@color/huc_on_primary" />
+            android:fontFamily="@font/plus_jakarta_sans_extrabold"
+            android:textColor="@color/cmo_white"
+            android:textSize="13sp"
+            tools:text="J" />
     </FrameLayout>
 
 </LinearLayout>

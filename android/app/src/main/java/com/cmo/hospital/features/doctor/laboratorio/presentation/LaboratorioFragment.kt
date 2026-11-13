@@ -11,8 +11,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cmo.hospital.CmoApplication
-import com.cmo.hospital.R
-import com.cmo.hospital.components.HucMicroBannerBinder
 import com.cmo.hospital.core.domain.model.OrdenLaboratorioItem
 import com.cmo.hospital.core.ui.simpleViewModelFactory
 import com.cmo.hospital.databinding.FragmentDoctorLaboratorioBinding
@@ -42,14 +40,6 @@ class LaboratorioFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        HucMicroBannerBinder.bind(
-            binding = binding.microBannerLab,
-            title = "Laboratorio Clínico",
-            subtitle = "Pendiente → En Proceso → Completado • Solo estados",
-            badgeText = "API",
-            iconRes = R.drawable.ic_science
-        )
 
         val adapter = OrdenesLabAdapter(showPatientLine = true) { orden ->
             viewModel.cancelarOrden(orden)

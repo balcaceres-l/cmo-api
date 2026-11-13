@@ -30,4 +30,14 @@ class AdmisionRepositoryImpl(
         motivoIngreso = motivoIngreso,
         esEmergenciaDirecta = esEmergenciaDirecta
     )
+
+    override suspend fun refrescarCamas() {
+        dataSource.refrescarCamasEIngresos()
+    }
+
+    override suspend fun trasladarCama(origenCodigo: String, destinoCodigo: String): Result<String> =
+        dataSource.trasladarCama(origenCodigo, destinoCodigo)
+
+    override suspend fun darAltaCama(camaCodigo: String): Result<String> =
+        dataSource.darAltaCama(camaCodigo)
 }

@@ -11,7 +11,8 @@ import com.cmo.hospital.core.domain.model.Cama
 import com.cmo.hospital.databinding.ItemCamaVipBinding
 
 class VipBedsAdapter(
-    private val onSelectBed: (Cama) -> Unit
+    private val onSelectBed: (Cama) -> Unit,
+    private val onOccupiedBedClick: (Cama) -> Unit = {}
 ) : RecyclerView.Adapter<VipBedsAdapter.VipBedViewHolder>() {
 
     private var items: List<Cama> = emptyList()
@@ -57,8 +58,8 @@ class VipBedsAdapter(
                     binding.tvVipBedState.text = "Ocupada"
                     binding.tvVipBedState.setTextColor(ContextCompat.getColor(ctx, R.color.huc_error))
                     binding.ivVipBedCheck.visibility = View.GONE
-                    binding.vipBedCardRoot.isClickable = false
-                    binding.vipBedCardRoot.setOnClickListener(null)
+                    binding.vipBedCardRoot.isClickable = true
+                    binding.vipBedCardRoot.setOnClickListener { onOccupiedBedClick(cama) }
                 }
                 isSelected -> {
                     binding.vipBedCardRoot.setBackgroundResource(R.drawable.bg_bed_vip_selected)

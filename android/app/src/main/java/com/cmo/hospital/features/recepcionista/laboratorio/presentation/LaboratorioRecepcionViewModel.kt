@@ -51,14 +51,18 @@ class LaboratorioRecepcionViewModel(
         }
     }
 
-    fun avanzar(orden: OrdenLaboratorioItem) {
+    fun avanzar(orden: OrdenLaboratorioItem, observaciones: String? = null) {
         if (orden.id in _state.value.procesando) return
         _state.value = _state.value.copy(procesando = _state.value.procesando + orden.id)
         viewModelScope.launch {
-            avanzarOrdenLaboratorioUseCase(orden).fold(
+            avanzarOrdenLaboratorioUseCase(orden, observaciones).fold(
                 onSuccess = { actualizada ->
                     // La API devuelve la orden sin paciente ni examen: se conservan los de la lista.
-                    val nueva = orden.copy(estado = actualizada.estado, fechaResultado = actualizada.fechaResultado)
+                    val nueva = orden.copy(
+                        estado = actualizada.estado,
+                        fechaResultado = actualizada.fechaResultado,
+                        observaciones = actualizada.observaciones ?: observaciones ?: orden.observaciones
+                    )
                     val filtro = _state.value.filtro
                     val siguePorFiltro = filtro.estadoApi == null || nueva.estado == orden.estado
                     _state.value = _state.value.copy(

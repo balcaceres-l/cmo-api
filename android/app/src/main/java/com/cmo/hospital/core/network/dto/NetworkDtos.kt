@@ -85,3 +85,53 @@ data class IngresoPacienteRequest(
     val motivo: String,
     @SerializedName("signos_vitales") val signosVitales: SignosVitales? = null
 )
+
+data class RecursoDto(
+    @SerializedName("id_recurso") val id: String,
+    val nombre: String,
+    val categoria: String,
+    val unidad: String,
+    val cantidad: Int,
+    @SerializedName("stock_minimo") val stockMinimo: Int,
+    val ubicacion: String? = null
+)
+
+data class MedicoDto(
+    val id: String,
+    @SerializedName("nombre_completo") val nombreCompleto: String,
+    val cargo: String? = null
+)
+
+data class ConsultorioDto(
+    @SerializedName("id_consultorio") val id: String,
+    val codigo: String,
+    val nombre: String,
+    val planta: Int? = null
+)
+
+data class HabitacionResumenDto(
+    @SerializedName("id_habitacion") val id: String? = null,
+    val codigo: String? = null,
+    val tipo: String? = null,
+    val planta: Int? = null
+)
+
+data class CamaApiDto(
+    @SerializedName("id_cama") val id: String,
+    val codigo: String,
+    val estado: String? = null,
+    val habitacion: HabitacionResumenDto? = null
+)
+
+data class IngresoDto(
+    @SerializedName("id_ingreso") val id: String,
+    @SerializedName("id_paciente") val idPaciente: String?,
+    @SerializedName("id_cama") val idCama: String?,
+    @SerializedName("id_medico") val idMedico: String?,
+    @SerializedName("fecha_ingreso") val fechaIngreso: String?,
+    @SerializedName("fecha_alta") val fechaAlta: String?,
+    val motivo: String?,
+    val paciente: PacienteInfo? = null,
+    val cama: CamaApiDto? = null,
+    val medico: MedicoDto? = null
+)

@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cmo.hospital.core.domain.model.Cita
 import com.cmo.hospital.core.domain.model.SignosVitales
+import com.cmo.hospital.core.network.dto.ConsultorioDto
+import com.cmo.hospital.core.network.dto.MedicoDto
+import com.cmo.hospital.features.recepcionista.citas.domain.repository.CitaRepository
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,7 +27,8 @@ class CitasViewModel(
     private val marcarLlegadaCitaUseCase: MarcarLlegadaCitaUseCase,
     private val cancelarCitaUseCase: CancelarCitaUseCase,
     private val registrarTriajeYPasarConsultaUseCase: RegistrarTriajeYPasarConsultaUseCase,
-    private val controlarLlamadorSalaUseCase: ControlarLlamadorSalaUseCase
+    private val controlarLlamadorSalaUseCase: ControlarLlamadorSalaUseCase,
+    private val repository: CitaRepository? = null
 ) : ViewModel() {
 
     val citas: StateFlow<List<Cita>> = getCitasFlowUseCase()
@@ -155,5 +159,41 @@ class CitasViewModel(
 
     fun consumeEvent() {
         _uiEvent.value = null
+    }
+
+    suspend fun cargarMedicosYConsultorios(): Pair<List<MedicoDto>, List<ConsultorioDto>> =
+        repository?.obtenerMedicosYConsultorios() ?: (emptyList<MedicoDto>() to emptyList())
+
+    fun confirmarCita(
+        citaId: String,
+        idMedico: String?,
+        idConsultorio: String?,
+        medicoNombre: String?,
+        consultorioCodigo: String?
+    ) {
+        val repo = repository ?: return
+        viewModelScope.launch {
+            repo.confirmarCitaSolicitada(
+                citaId = citaId,
+                idMedico = idMedico,
+                idConsultorio = idConsultorio,
+                medicoNombre = medicoNombre,
+                consultorioCodigo = consultorioCodigo
+            ).fold(
+                onSuccess = { msg ->
+                    _uiEvent.value = CitasUiEvent(
+                        title = "Cita Confirmada",
+                        message = msg
+                    )
+                },
+                onFailure = { err ->
+                    _uiEvent.value = CitasUiEvent(
+                        title = "Error al Confirmar",
+                        message = err.message ?: "No se pudo confirmar la solicitud.",
+                        isError = true
+                    )
+                }
+            )
+        }
     }
 }

@@ -11,13 +11,14 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cmo.hospital.CmoApplication
-import com.cmo.hospital.R
-import com.cmo.hospital.components.HucMicroBannerBinder
+import com.cmo.hospital.core.domain.model.OrdenLaboratorioItem
 import com.cmo.hospital.core.ui.simpleViewModelFactory
 import com.cmo.hospital.databinding.FragmentRecepLaboratorioBinding
 import com.cmo.hospital.features.recepcionista.laboratorio.domain.usecase.FiltroLaboratorio
 import com.cmo.hospital.features.recepcionista.shell.presentation.RecepcionistaToastHost
 import com.google.android.material.chip.Chip
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
 
 /** Recepción / laboratorio: avanza las órdenes que piden los médicos (solo estados). */
@@ -39,15 +40,13 @@ class LaboratorioRecepcionFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        HucMicroBannerBinder.bind(
-            binding = binding.microBannerLabRecep,
-            title = "Laboratorio Clínico",
-            subtitle = "Pendiente → En Proceso → Completado • Solo estados",
-            badgeText = "API",
-            iconRes = R.drawable.ic_science
-        )
-
-        val adapter = OrdenesRecepcionAdapter { viewModel.avanzar(it) }
+        val adapter = OrdenesRecepcionAdapter { orden ->
+            if (orden.estado == OrdenLaboratorioItem.EN_PROCESO) {
+                mostrarDialogoCompletarConObservaciones(orden)
+            } else {
+                viewModel.avanzar(orden)
+            }
+        }
         binding.rvOrdenesLabRecep.layoutManager = LinearLayoutManager(requireContext())
         binding.rvOrdenesLabRecep.adapter = adapter
 
@@ -88,6 +87,22 @@ class LaboratorioRecepcionFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun mostrarDialogoCompletarConObservaciones(orden: OrdenLaboratorioItem) {
+        val input = TextInputEditText(requireContext()).apply {
+            hint = "Ej. Parámetros dentro de rango normal"
+            setPadding(48, 32, 48, 16)
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Completar ${orden.examenNombre}")
+            .setMessage("Opcionalmente registra una observación breve para el médico tratante:")
+            .setView(input)
+            .setNegativeButton("Cancelar", null)
+            .setPositiveButton("Completar orden") { _, _ ->
+                viewModel.avanzar(orden, input.text?.toString())
+            }
+            .show()
     }
 
     /** Al volver a la pestaña se vuelve a leer el estado: los médicos pudieron pedir órdenes nuevas. */

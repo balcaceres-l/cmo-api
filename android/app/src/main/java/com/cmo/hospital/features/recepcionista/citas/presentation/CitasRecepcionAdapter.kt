@@ -13,6 +13,7 @@ import com.cmo.hospital.databinding.ItemCitaRecepcionBinding
 
 class CitasRecepcionAdapter(
     private val onRegistrarLlegada: (Cita) -> Unit,
+    private val onConfirmarSolicitada: (Cita) -> Unit = {},
     private val onAbrirTriaje: (Cita) -> Unit,
     private val onPasarDirectoAConsulta: (Cita) -> Unit,
     private val onCancelarCita: (Cita) -> Unit
@@ -97,14 +98,19 @@ class CitasRecepcionAdapter(
             }
 
             // Acciones dinámicas por estado
+            val esSolicitada = cita.estado == "SOLICITADA"
             binding.actionsCitaAgendada.visibility =
-                if (cita.estado == "AGENDADA") View.VISIBLE else View.GONE
+                if (cita.estado == "AGENDADA" || esSolicitada) View.VISIBLE else View.GONE
             binding.actionsCitaEnEspera.visibility =
                 if (cita.estado == "EN_ESPERA") View.VISIBLE else View.GONE
             binding.bannerCitaEnAtencion.visibility =
                 if (cita.estado == "EN_ATENCION") View.VISIBLE else View.GONE
 
-            binding.btnCitaRegistrarLlegada.setOnClickListener { onRegistrarLlegada(cita) }
+            binding.btnCitaRegistrarLlegada.text =
+                if (esSolicitada) "Confirmar Cita" else "Registrar Llegada"
+            binding.btnCitaRegistrarLlegada.setOnClickListener {
+                if (esSolicitada) onConfirmarSolicitada(cita) else onRegistrarLlegada(cita)
+            }
             binding.btnCitaCancelarAgendada.setOnClickListener { onCancelarCita(cita) }
             binding.btnCitaTriajeSignos.setOnClickListener { onAbrirTriaje(cita) }
             binding.btnCitaPasarConsulta.setOnClickListener { onPasarDirectoAConsulta(cita) }

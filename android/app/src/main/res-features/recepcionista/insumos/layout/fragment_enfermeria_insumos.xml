@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/cmo_bg"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Cabecera compacta + Botón Recargar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Insumos y Botiquín"
+                android:textAppearance="@style/TextAppearance.Cmo.Subtitulo"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/tvInsumosResumen"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Descargo de medicamentos e insumos en piso"
+                android:textAppearance="@style/TextAppearance.Cmo.Etiqueta" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRecargarInsumos"
+            style="@style/Widget.Huc.Button.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:minHeight="38dp"
+            android:paddingHorizontal="12dp"
+            android:text="Actualizar"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Buscador -->
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.Huc.TextInputLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        app:hintEnabled="false"
+        app:startIconDrawable="@drawable/ic_search"
+        app:startIconTint="@color/cmo_text_soft">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etBuscarInsumo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/plus_jakarta_sans"
+            android:hint="Buscar medicamento, insumo o ubicación..."
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:maxLines="1"
+            android:textColor="@color/cmo_text"
+            android:textSize="14sp" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Chips de categoría -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:scrollbars="none">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupInsumosFiltro"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:selectionRequired="true"
+            app:singleSelection="true" />
+    </HorizontalScrollView>
+
+    <ProgressBar
+        android:id="@+id/progressInsumos"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp"
+        android:indeterminateTint="@color/cmo_primary"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tvInsumosError"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_error_container_16"
+        android:padding="12dp"
+        android:textColor="@color/triage_critico_text"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:text="Error de conexión" />
+
+    <TextView
+        android:id="@+id/tvInsumosVacio"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:gravity="center"
+        android:text="No se encontraron insumos con ese filtro."
+        android:textAppearance="@style/TextAppearance.Cmo.Cuerpo"
+        android:textColor="@color/cmo_text_muted"
+        android:visibility="gone" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvInsumos"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingBottom="16dp" />
+
+</LinearLayout>
+

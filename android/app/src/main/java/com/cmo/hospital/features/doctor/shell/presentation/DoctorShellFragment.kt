@@ -10,6 +10,7 @@ import com.cmo.hospital.CmoApplication
 import com.cmo.hospital.R
 import com.cmo.hospital.components.HucToastManager
 import com.cmo.hospital.components.HucTopBarBinder
+import com.cmo.hospital.core.domain.model.CargoAccessPolicy
 import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.databinding.FragmentDoctorShellBinding
 import com.cmo.hospital.features.auth.presentation.AuthNavigationHost
@@ -51,11 +52,12 @@ class DoctorShellFragment : Fragment(), DoctorShellHost {
         val currentUser = appContainer.getActiveUserUseCase()
         toastManager = HucToastManager(binding.toastOverlayDoctor)
 
+        val esEmergencia = CargoAccessPolicy.esMedicoEmergencia(currentUser)
         HucTopBarBinder.bind(
             binding = binding.topBarDoctor,
             moduleSubtitle = "CITAS & PACIENTES",
             currentUser = currentUser,
-            guardiaLabel = "En Turno • Box 03",
+            guardiaLabel = if (esEmergencia) "Urgencias" else "En Turno",
             secondaryIconRes = R.drawable.ic_event,
             onSecondaryClick = {
                 openAgendarSeguimientoDialog(

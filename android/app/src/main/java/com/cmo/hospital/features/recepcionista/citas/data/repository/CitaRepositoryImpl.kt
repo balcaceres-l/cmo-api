@@ -68,6 +68,23 @@ class CitaRepositoryImpl(
         dataSource.marcarLlegada(citaId)
     }
 
+    override suspend fun obtenerMedicosYConsultorios() =
+        dataSource.obtenerMedicosYConsultorios()
+
+    override suspend fun confirmarCitaSolicitada(
+        citaId: String,
+        idMedico: String?,
+        idConsultorio: String?,
+        medicoNombre: String?,
+        consultorioCodigo: String?
+    ): Result<String> = dataSource.confirmarCitaSolicitada(
+        citaId = citaId,
+        idMedico = idMedico,
+        idConsultorio = idConsultorio,
+        medicoNombre = medicoNombre,
+        consultorioCodigo = consultorioCodigo
+    )
+
     override suspend fun cancelarCita(citaId: String, motivo: String) {
         dataSource.cancelarCita(citaId, motivo)
     }

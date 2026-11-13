@@ -16,12 +16,14 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cmo.hospital.CmoApplication
 import com.cmo.hospital.R
-import com.cmo.hospital.components.HucMicroBannerBinder
+import com.cmo.hospital.core.domain.model.Cama
+import com.cmo.hospital.core.domain.model.CargoAccessPolicy
 import com.cmo.hospital.core.domain.model.NivelTriageManchester
 import com.cmo.hospital.core.domain.model.SignosVitales
 import com.cmo.hospital.core.ui.simpleViewModelFactory
 import com.cmo.hospital.databinding.FragmentRecepAdmisionBinding
 import com.cmo.hospital.features.recepcionista.shell.presentation.RecepcionistaToastHost
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 
 class AdmisionFragment : Fragment() {
@@ -50,14 +52,6 @@ class AdmisionFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Micro-banner idéntico al prototipo HTML
-        HucMicroBannerBinder.bind(
-            binding = binding.microBannerAdmision,
-            title = "Hospital Universitario Central - Admisión",
-            subtitle = "Puesto de Admisión Activo • Turno Matutino",
-            badgeText = "Online"
-        )
-
         // Encabezados reutilizables de los 3 pasos
         binding.stepHeader1.ivStepIcon.setImageResource(R.drawable.ic_badge)
         binding.stepHeader1.tvStepTitle.text = "Datos de Filiación"
@@ -71,23 +65,88 @@ class AdmisionFragment : Fragment() {
         binding.stepHeader3.tvStepTitle.text = "Asignación de Cama"
         binding.stepHeader3.tvStepBadge.text = "Paso 3 de 3"
 
+        val appContainer = (requireActivity().application as CmoApplication).appContainer
+        if (CargoAccessPolicy.esEnfermeria(appContainer.getActiveUserUseCase())) {
+            binding.cardHeaderAdmision.visibility = View.GONE
+            binding.cardPaso1Filiacion.visibility = View.GONE
+            binding.cardPaso2Triage.visibility = View.GONE
+            binding.cardTrazaQrAdmision.visibility = View.GONE
+            binding.btnConfirmarIngreso.visibility = View.GONE
+            binding.btnGenerarBrazaleteQr.visibility = View.GONE
+            binding.stepHeader3.tvStepTitle.text = "Censo de Piso y Traslados"
+            binding.stepHeader3.tvStepBadge.text = "17 Camas"
+        }
+
         setupCamasRecyclerViews()
         setupInteractions()
         observeState()
+        viewModel.refrescarCamas()
     }
 
     private fun setupCamasRecyclerViews() {
-        vipBedsAdapter = VipBedsAdapter { cama ->
-            viewModel.seleccionarCama(cama.codigo)
-        }
+        vipBedsAdapter = VipBedsAdapter(
+            onSelectBed = { cama -> viewModel.seleccionarCama(cama.codigo) },
+            onOccupiedBedClick = { cama -> mostrarOpcionesCamaOcupada(cama) }
+        )
         binding.rvCamasVip.layoutManager = GridLayoutManager(requireContext(), 3)
         binding.rvCamasVip.adapter = vipBedsAdapter
 
-        semiRoomsAdapter = SemiPrivateRoomsAdapter { cama ->
-            viewModel.seleccionarCama(cama.codigo)
-        }
+        semiRoomsAdapter = SemiPrivateRoomsAdapter(
+            onSelectBed = { cama -> viewModel.seleccionarCama(cama.codigo) },
+            onOccupiedBedClick = { cama -> mostrarOpcionesCamaOcupada(cama) }
+        )
         binding.rvSalasSemiprivadas.layoutManager = LinearLayoutManager(requireContext())
         binding.rvSalasSemiprivadas.adapter = semiRoomsAdapter
+    }
+
+    private fun mostrarOpcionesCamaOcupada(cama: Cama) {
+        val pacienteNombre = cama.paciente?.nombreCompleto ?: "Paciente hospitalizado"
+        val opciones = arrayOf("Trasladar a otra cama", "Registrar Alta Hospitalaria")
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Cama ${cama.codigo} • Ocupada")
+            .setItems(opciones) { _, which ->
+                when (which) {
+                    0 -> mostrarDialogoTraslado(cama, pacienteNombre)
+                    1 -> {
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle("Confirmar Alta")
+                            .setMessage("¿Dar de alta a $pacienteNombre y liberar la cama ${cama.codigo}?")
+                            .setNegativeButton("Cancelar", null)
+                            .setPositiveButton("Dar de Alta") { _, _ ->
+                                viewModel.darAltaCama(cama.codigo)
+                            }
+                            .show()
+                    }
+                }
+            }
+            .setNegativeButton("Cerrar", null)
+            .show()
+    }
+
+    private fun mostrarDialogoTraslado(camaOrigen: Cama, pacienteNombre: String) {
+        val cap = viewModel.capacidad.value
+        val disponibles = (cap.vipCamas + cap.salasSemiprivadas.flatMap { listOf(it.camaA, it.camaB) })
+            .filter { it.estaDisponible }
+        if (disponibles.isEmpty()) {
+            (parentFragment as? RecepcionistaToastHost)?.showToastError(
+                "Sin camas disponibles",
+                "Todas las camas del hospital están ocupadas en este momento."
+            )
+            return
+        }
+        val etiquetas = disponibles.map {
+            val tipo = if (it.esVip) "VIP" else "Semiprivada"
+            "${it.codigo} ($tipo)"
+        }.toTypedArray()
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Trasladar $pacienteNombre")
+            .setItems(etiquetas) { _, index ->
+                val destino = disponibles[index]
+                viewModel.trasladarCama(camaOrigen.codigo, destino.codigo)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
     private fun setupInteractions() {
@@ -162,7 +221,7 @@ class AdmisionFragment : Fragment() {
                 apellidos = binding.etAdmisionApellidos.text?.toString().orEmpty(),
                 edadTexto = binding.etAdmisionEdad.text?.toString().orEmpty(),
                 prevision = binding.spinnerAdmisionPrevision.selectedItem?.toString()
-                    ?: "Fonasa Tramo D",
+                    ?: "Particular / Privado",
                 contactoEmergencia = binding.etAdmisionContacto.text?.toString().orEmpty(),
                 motivoIngreso = binding.etAdmisionMotivo.text?.toString().orEmpty(),
                 signosVitales = signos,

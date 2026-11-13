@@ -59,6 +59,7 @@ import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.GetAmbu
 import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.GetPersonalGuardiaFiltradoUseCase
 import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.SolicitarDespachoAmbulanciaUseCase
 import com.cmo.hospital.features.recepcionista.ambulancia.presentation.AmbulanciaGuardiaViewModel
+import com.cmo.hospital.features.recepcionista.insumos.presentation.InsumosEnfermeriaViewModel
 import com.cmo.hospital.features.recepcionista.citas.data.repository.CitaRepositoryImpl
 import com.cmo.hospital.features.recepcionista.citas.domain.repository.CitaRepository
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.AgendarCitaCascadaUseCase
@@ -127,7 +128,8 @@ class AppContainer(context: Context) {
             marcarLlegadaCitaUseCase = MarcarLlegadaCitaUseCase(citaRepository),
             cancelarCitaUseCase = CancelarCitaUseCase(citaRepository),
             registrarTriajeYPasarConsultaUseCase = RegistrarTriajeYPasarConsultaUseCase(citaRepository),
-            controlarLlamadorSalaUseCase = ControlarLlamadorSalaUseCase(citaRepository)
+            controlarLlamadorSalaUseCase = ControlarLlamadorSalaUseCase(citaRepository),
+            repository = citaRepository
         )
 
     fun createPacientesViewModel(): PacientesViewModel =
@@ -148,7 +150,8 @@ class AppContainer(context: Context) {
             observeCapacidadCamasUseCase = ObserveCapacidadCamasUseCase(admisionRepository),
             simularEscanerDocumentoUseCase = SimularEscanerDocumentoUseCase(),
             registrarIngresoPacienteUseCase = RegistrarIngresoPacienteUseCase(admisionRepository),
-            generarBrazaleteQrUseCase = GenerarBrazaleteQrUseCase()
+            generarBrazaleteQrUseCase = GenerarBrazaleteQrUseCase(),
+            repository = admisionRepository
         )
 
     fun createAmbulanciaGuardiaViewModel(): AmbulanciaGuardiaViewModel =
@@ -158,6 +161,9 @@ class AppContainer(context: Context) {
             solicitarDespachoAmbulanciaUseCase = SolicitarDespachoAmbulanciaUseCase(ambulanciaRepository),
             getPersonalGuardiaFiltradoUseCase = GetPersonalGuardiaFiltradoUseCase(ambulanciaRepository)
         )
+
+    fun createInsumosEnfermeriaViewModel(): InsumosEnfermeriaViewModel =
+        InsumosEnfermeriaViewModel(apiService = apiService)
 
     fun createInicioDoctorViewModel(): InicioDoctorViewModel =
         InicioDoctorViewModel(

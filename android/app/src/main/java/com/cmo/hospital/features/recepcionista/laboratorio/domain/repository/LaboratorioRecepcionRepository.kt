@@ -7,5 +7,5 @@ interface LaboratorioRecepcionRepository {
     /** [estado] en formato de la API (PENDIENTE, EN_PROCESO…) o null para todas. */
     suspend fun listar(estado: String?): Result<List<OrdenLaboratorioItem>>
     suspend fun iniciar(ordenId: String): Result<OrdenLaboratorioItem>
-    suspend fun completar(ordenId: String): Result<OrdenLaboratorioItem>
+    suspend fun completar(ordenId: String, observaciones: String? = null): Result<OrdenLaboratorioItem>
 }

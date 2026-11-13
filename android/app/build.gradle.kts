@@ -206,6 +206,7 @@ android {
                     "src/main/res-features/recepcionista/laboratorio",
                     "src/main/res-features/recepcionista/admision",
                     "src/main/res-features/recepcionista/ambulancia",
+                    "src/main/res-features/recepcionista/insumos",
                     "src/main/res-features/doctor/shell",
                     "src/main/res-features/doctor/inicio",
                     "src/main/res-features/doctor/consulta",

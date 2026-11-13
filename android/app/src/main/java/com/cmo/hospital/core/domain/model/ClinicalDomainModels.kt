@@ -547,10 +547,9 @@ object CatalogoClinico {
     )
 
     val OPCIONES_PREVISION: List<String> = listOf(
-        "Fonasa Tramo D",
-        "Isapre Colmena",
-        "Isapre Banmédica",
         "Particular / Privado",
-        "Convenio Mutual"
+        "ISSS",
+        "Seguro Privado",
+        "Convenio Institucional"
     )
 }

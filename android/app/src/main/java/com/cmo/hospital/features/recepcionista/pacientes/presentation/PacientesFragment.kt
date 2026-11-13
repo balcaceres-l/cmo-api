@@ -12,8 +12,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cmo.hospital.CmoApplication
-import com.cmo.hospital.R
-import com.cmo.hospital.components.HucMicroBannerBinder
 import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.core.ui.simpleViewModelFactory
 import com.cmo.hospital.databinding.FragmentRecepPacientesBinding
@@ -44,14 +42,6 @@ class PacientesFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        HucMicroBannerBinder.bind(
-            binding = binding.microBannerPacientes,
-            title = "Registro de Pacientes",
-            subtitle = "Expedientes del hospital • Datos de filiación",
-            badgeText = "API",
-            iconRes = R.drawable.ic_person
-        )
 
         pacientesAdapter = PacientesRecepcionAdapter(
             onEditar = { abrirFormulario(it) },

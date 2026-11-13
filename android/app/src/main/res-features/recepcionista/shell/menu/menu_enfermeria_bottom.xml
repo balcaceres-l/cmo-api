@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_recep_admision"
+        android:icon="@drawable/ic_hotel"
+        android:title="Piso / Camas" />
+    <item
+        android:id="@+id/nav_enf_insumos"
+        android:icon="@drawable/ic_medical_services"
+        android:title="Insumos" />
+    <item
+        android:id="@+id/nav_recep_laboratorio"
+        android:icon="@drawable/ic_science"
+        android:title="Laboratorio" />
+    <item
+        android:id="@+id/nav_recep_ambulancia"
+        android:icon="@drawable/ic_ambulance"
+        android:title="Ambulancia" />
+</menu>
+
