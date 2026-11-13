@@ -64,6 +64,7 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
         Route::patch('citas/{cita}/llegada', [CitaController::class, 'registrarLlegada']);
         Route::patch('citas/{cita}/confirmar', [CitaController::class, 'confirmar']);
     });
+    Route::put('citas/{cita}/signos-vitales', [CitaController::class, 'signosVitales'])->middleware('role:ADMINISTRADOR,MEDICO,RECEPCIONISTA');
     Route::post('solicitudes-atencion', [CitaController::class, 'solicitar'])->middleware('role:PACIENTE');
     Route::get('mi/citas', [CitaController::class, 'mias'])->middleware('role:PACIENTE');
 

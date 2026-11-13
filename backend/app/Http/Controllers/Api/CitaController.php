@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Exceptions\ConflictoException;
 use App\Models\Cita;
 use App\Models\Paciente;
+use App\Models\SignoVital;
 use App\Services\AgendaService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ class CitaController extends ApiController
     public function index(Request $r)
     {
         // La consulta (solo su id y si está cerrada) permite a la app retomar una consulta abierta.
-        $q = Cita::with(['paciente', 'medico', 'consultorio', 'consulta:id_consulta,id_cita,fecha_hora_fin'])->orderByDesc('fecha')->orderBy('hora_inicio');
+        $q = Cita::with(['paciente', 'medico', 'consultorio', 'consulta:id_consulta,id_cita,fecha_hora_fin', 'signosVitales'])->orderByDesc('fecha')->orderBy('hora_inicio');
         if ($r->user()->rol === 'MEDICO') {
             $q->where('id_medico', $r->user()->id);
         }
@@ -89,6 +90,40 @@ class CitaController extends ApiController
         $cita->update(['estado' => 'EN_ESPERA', 'hora_llegada' => now()]);
 
         return $this->success($cita->refresh());
+    }
+
+    /**
+     * Signos vitales del día de la cita: los toma recepción (triaje) o el médico
+     * de la cita. Volver a enviarlos reemplaza los anteriores.
+     */
+    public function signosVitales(Request $r, Cita $cita)
+    {
+        $u = $r->user();
+        abort_if($u->rol === 'MEDICO' && $cita->id_medico !== $u->id, 403, 'Solo el médico de la cita puede registrar sus signos vitales.');
+        $cita->exigirEstado(['AGENDADA', 'EN_ESPERA', 'EN_ATENCION'], 'registrar signos vitales de');
+        if (! $cita->fecha?->isToday()) {
+            throw new ConflictoException('Los signos vitales solo se registran el día de la cita.');
+        }
+        $d = $r->validate([
+            'presion_sistolica' => 'nullable|integer|between:50,260',
+            'presion_diastolica' => 'nullable|integer|between:30,160',
+            'frecuencia_cardiaca' => 'nullable|integer|between:20,250',
+            'frecuencia_respiratoria' => 'nullable|integer|between:5,80',
+            'temperatura_c' => 'nullable|numeric|between:30,45',
+            'saturacion_oxigeno' => 'nullable|integer|between:50,100',
+            'peso_kg' => 'nullable|numeric|between:0.5,400',
+            'talla_cm' => 'nullable|numeric|between:30,250',
+            'observaciones' => 'nullable|string|max:1000',
+        ]);
+        if (collect($d)->filter(fn ($v) => $v !== null && $v !== '')->isEmpty()) {
+            throw ValidationException::withMessages(['presion_sistolica' => 'Ingrese al menos un signo vital.']);
+        }
+        if (isset($d['presion_sistolica'], $d['presion_diastolica']) && $d['presion_diastolica'] >= $d['presion_sistolica']) {
+            throw ValidationException::withMessages(['presion_diastolica' => 'La presión diastólica debe ser menor que la sistólica.']);
+        }
+        $signos = SignoVital::updateOrCreate(['id_cita' => $cita->getKey()], $d + ['id_registrado_por' => $u->id]);
+
+        return $this->success($signos->refresh(), 'Signos vitales registrados.');
     }
 
     public function solicitar(Request $r)
