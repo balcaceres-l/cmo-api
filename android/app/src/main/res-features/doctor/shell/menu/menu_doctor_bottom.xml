@@ -2,18 +2,18 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/nav_doc_inicio"
-        android:icon="@drawable/ic_local_hospital"
+        android:icon="@drawable/ic_nav_dashboard"
         android:title="Principal" />
     <item
         android:id="@+id/nav_doc_consulta"
-        android:icon="@drawable/ic_medical_services"
+        android:icon="@drawable/ic_nav_stethoscope"
         android:title="Consulta" />
     <item
         android:id="@+id/nav_doc_expedientes"
-        android:icon="@drawable/ic_folder_shared"
+        android:icon="@drawable/ic_nav_expediente"
         android:title="Expedientes" />
     <item
         android:id="@+id/nav_doc_laboratorio"
-        android:icon="@drawable/ic_science"
+        android:icon="@drawable/ic_nav_flask"
         android:title="Laboratorio" />
 </menu>

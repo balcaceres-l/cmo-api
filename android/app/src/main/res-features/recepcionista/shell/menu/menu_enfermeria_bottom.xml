@@ -2,19 +2,19 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/nav_recep_admision"
-        android:icon="@drawable/ic_hotel"
+        android:icon="@drawable/ic_nav_bed"
         android:title="Piso / Camas" />
     <item
         android:id="@+id/nav_enf_insumos"
-        android:icon="@drawable/ic_medical_services"
+        android:icon="@drawable/ic_nav_package"
         android:title="Insumos" />
     <item
         android:id="@+id/nav_recep_laboratorio"
-        android:icon="@drawable/ic_science"
+        android:icon="@drawable/ic_nav_flask"
         android:title="Laboratorio" />
     <item
         android:id="@+id/nav_recep_ambulancia"
-        android:icon="@drawable/ic_ambulance"
+        android:icon="@drawable/ic_nav_ambulance"
         android:title="Ambulancia" />
 </menu>
 
