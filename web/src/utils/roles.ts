@@ -1,5 +1,10 @@
 import { User } from '../types/auth';
 
+export const CARGOS_POR_ROL: Record<'ADMINISTRADOR' | 'RECEPCIONISTA', readonly string[]> = {
+  ADMINISTRADOR: ['Administración', 'Jefe de Operaciones'],
+  RECEPCIONISTA: ['Recepcionista', 'Enfermera'],
+};
+
 export const isJefeOperaciones = (user?: User | null): boolean => {
   if (!user) return false;
   const cargo = (user.cargo || '').toLowerCase();

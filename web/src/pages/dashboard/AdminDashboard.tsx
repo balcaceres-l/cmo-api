@@ -64,7 +64,7 @@ export const AdminDashboard: React.FC = () => {
     }
 
     try {
-      const resUsers: any = await apiClient.get('/usuarios');
+      const resUsers: any = await apiClient.get('/usuarios?per_page=100');
       const listUsers = Array.isArray(resUsers) ? resUsers : resUsers?.data || [];
       const med = listUsers.filter((u: any) => u.rol === 'MEDICO').length;
       const adm = listUsers.filter((u: any) => u.rol === 'ADMINISTRADOR').length;

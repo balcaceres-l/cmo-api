@@ -112,7 +112,7 @@ export const PublicPortalPage: React.FC = () => {
                 ...updated,
                 medicosTurno: meds.map((m: any) => ({
                   nombre: m.nombre || m.nombre_completo || 'Médico de Turno',
-                  especialidad: m.cargo || m.especialidad || 'Medicina General',
+                  especialidad: m.especialidad || m.cargo || 'Medicina General',
                   consultorio: m.area || 'Consulta Externa',
                 })),
               };
