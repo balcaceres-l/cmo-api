@@ -231,6 +231,17 @@ struct SolicitudAtencionView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
+                    CampoFormulario(titulo: "Fechas de disponibilidad (opcional)") {
+                        TextField("Ejemplo: Del 18 al 22 de noviembre por las mañanas", text: $viewModel.rangoFechas)
+                            .padding(.vertical, 10)
+                            .accessibilityIdentifier("solicitud.rangoFechas")
+                    }
+                    Text("Indica fechas u horarios en los que prefieres pasar consulta.")
+                        .font(.caption)
+                        .foregroundStyle(Color.cmoTintaSuave)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
                     CampoFormulario(titulo: "Motivo de la consulta") {
                         TextField("Ejemplo: dolor de cabeza desde hace tres días", text: $viewModel.motivo, axis: .vertical)
                             .lineLimit(4...8)

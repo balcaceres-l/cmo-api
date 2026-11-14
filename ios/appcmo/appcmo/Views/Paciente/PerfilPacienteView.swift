@@ -10,6 +10,7 @@ struct PerfilPacienteView: View {
     @Environment(SessionStore.self) private var store
     @Environment(PacienteDatos.self) private var datos
     @State private var confirmando = false
+    @State private var mostrarVinculacion = false
 
     var body: some View {
         NavigationStack {
@@ -39,6 +40,31 @@ struct PerfilPacienteView: View {
                             FilaDato("Expediente", datos.expediente.valor?.numeroExpediente)
                         }
                         .tarjeta(relleno: 0)
+                    }
+
+                    if store.sesion?.idPaciente == nil && store.sesion?.usuario.email != nil {
+                        Button {
+                            mostrarVinculacion = true
+                        } label: {
+                            HStack(spacing: 12) {
+                                IconoCirculo(sistema: "folder.badge.person.crop", tono: .info, tamano: 40)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Vincular expediente con correo")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Color.cmoTinta)
+                                    Text("Recibe un código OTP en tu email para enlazar tu historial")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.cmoTintaSuave)
+                                }
+                                Spacer(minLength: 8)
+                                Image(systemName: "chevron.right")
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(Color.cmoTintaSuave)
+                            }
+                            .tarjeta(relleno: 12)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("perfil.vincularExpediente")
                     }
 
                     NavigationLink {
@@ -85,6 +111,9 @@ struct PerfilPacienteView: View {
                     Task { await store.cerrarSesion() }
                 }
                 Button("Cancelar", role: .cancel) {}
+            }
+            .sheet(isPresented: $mostrarVinculacion) {
+                VincularExpedienteView(store: store)
             }
         }
     }

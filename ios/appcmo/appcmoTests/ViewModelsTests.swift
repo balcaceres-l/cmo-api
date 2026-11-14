@@ -168,20 +168,55 @@ final class SolicitudAtencionViewModelTests: PruebaConAPIFalsa {
         vm = SolicitudAtencionViewModel(repositorio: CitasRepository(cliente: cliente))
     }
 
-    func testSinMotivoNoSePuedeEnviar() {
+    func testSinMotivoNoSePuedeEnviarPeroFechasEsOpcional() {
         vm.motivo = "  \n "
-        XCTAssertFalse(vm.puedeEnviar)
+        vm.rangoFechas = "Mañana a las 10"
+        XCTAssertFalse(vm.puedeEnviar, "sin motivo válido no se puede enviar")
+
+        vm.motivo = "Fiebre y dolor"
+        vm.rangoFechas = ""
+        XCTAssertTrue(vm.puedeEnviar, "el rango de fechas es opcional, con solo motivo debe poderse enviar")
     }
 
-    func testElMotivoSeRecortaAlLimite() {
+    func testElMotivoYFechasSeRecortanAlLimite() {
         vm.motivo = String(repeating: "a", count: SolicitudAtencionViewModel.limite + 50)
         XCTAssertEqual(vm.motivo.count, SolicitudAtencionViewModel.limite)
+
+        vm.rangoFechas = String(repeating: "b", count: SolicitudAtencionViewModel.limiteFechas + 20)
+        XCTAssertEqual(vm.rangoFechas.count, SolicitudAtencionViewModel.limiteFechas)
     }
 
-    func testSolicitudEnviadaQuedaPendiente() async {
+    func testTextoConcatenadoFormateaDisponibilidadYMotivo() {
+        vm.motivo = "Dolor de espalda"
+        vm.rangoFechas = ""
+        XCTAssertEqual(vm.textoConcatenado, "Dolor de espalda")
+
+        vm.rangoFechas = "Del 18 al 22 de noviembre"
+        XCTAssertEqual(vm.textoConcatenado, "[Disponibilidad: Del 18 al 22 de noviembre] Dolor de espalda")
+    }
+
+    func testSolicitudEnviadaConDisponibilidadQuedaPendiente() async {
+        APIFalsa.responder("POST solicitudes-atencion", 201, """
+        {"success":true,"message":"Solicitud creada.","data":{"id_cita":"c-1","id_paciente":"p-1","motivo":"[Disponibilidad: Tardes] Dolor de muelas","estado":"SOLICITADA"}}
+        """)
+        vm.rangoFechas = "  Tardes  "
+        vm.motivo = "  Dolor de muelas  "
+
+        let enviada = await vm.enviar()
+
+        XCTAssertTrue(enviada)
+        XCTAssertEqual(APIFalsa.peticion("POST solicitudes-atencion")?.cuerpo["motivo"] as? String, "[Disponibilidad: Tardes] Dolor de muelas")
+        XCTAssertEqual(vm.motivo, "")
+        XCTAssertEqual(vm.rangoFechas, "")
+        if case .exito = vm.aviso {} else { XCTFail("se esperaba un aviso de éxito") }
+        XCTAssertFalse(vm.enviando)
+    }
+
+    func testSolicitudEnviadaSinFechasEnviaSoloMotivo() async {
         APIFalsa.responder("POST solicitudes-atencion", 201, """
         {"success":true,"message":"Solicitud creada.","data":{"id_cita":"c-1","id_paciente":"p-1","motivo":"Dolor de garganta","estado":"SOLICITADA"}}
         """)
+        vm.rangoFechas = ""
         vm.motivo = "  Dolor de garganta  "
 
         let enviada = await vm.enviar()
@@ -189,12 +224,13 @@ final class SolicitudAtencionViewModelTests: PruebaConAPIFalsa {
         XCTAssertTrue(enviada)
         XCTAssertEqual(APIFalsa.peticion("POST solicitudes-atencion")?.cuerpo["motivo"] as? String, "Dolor de garganta")
         XCTAssertEqual(vm.motivo, "")
-        if case .exito = vm.aviso {} else { XCTFail("se esperaba un aviso de éxito") }
+        XCTAssertEqual(vm.rangoFechas, "")
         XCTAssertFalse(vm.enviando)
     }
 
-    func testErrorDeLaAPISeMuestraYConservaElMotivo() async {
+    func testErrorDeLaAPISeMuestraYConservaCampos() async {
         APIFalsa.responder("POST solicitudes-atencion", 422, JSONPrueba.validacion("El motivo es obligatorio.", campos: ["motivo": "El motivo es obligatorio."]))
+        vm.rangoFechas = "Próxima semana"
         vm.motivo = "Fiebre"
 
         let enviada = await vm.enviar()
@@ -202,5 +238,85 @@ final class SolicitudAtencionViewModelTests: PruebaConAPIFalsa {
         XCTAssertFalse(enviada)
         XCTAssertEqual(vm.aviso, .error("El motivo es obligatorio."))
         XCTAssertEqual(vm.motivo, "Fiebre")
+        XCTAssertEqual(vm.rangoFechas, "Próxima semana")
+    }
+}
+
+final class VincularExpedienteViewModelTests: PruebaConAPIFalsa {
+    private var vm: VincularExpedienteViewModel!
+
+    override func setUp() async throws {
+        try await super.setUp()
+        try? keychain.guardarToken("token-test")
+        APIFalsa.responder("GET auth/me", 200, """
+        {"success":true,"data":{"usuario":{"id":"u-1","nombre_completo":"Paciente Prueba","usuario":"paciente.prueba","email":"paciente@correo.com","rol":"PACIENTE","cargo":null,"estado":"ACTIVO"},"id_paciente":null}}
+        """)
+        await store.restaurarSesion()
+        let repo = PacientesRepository(cliente: cliente)
+        vm = VincularExpedienteViewModel(repositorio: repo, store: store)
+    }
+
+    func testSinDuiNoSePuedeSolicitarOtp() async {
+        vm.dui = "   "
+        XCTAssertFalse(vm.puedeSolicitarOtp)
+        let ok = await vm.solicitarOtp()
+        XCTAssertFalse(ok)
+        XCTAssertNotNil(vm.errorCampo)
+    }
+
+    func testSolicitarOtpExitosoAvanzaAVerificarOtp() async {
+        APIFalsa.responder("POST mi/expediente/solicitar-otp", 200, """
+        {"success":true,"message":"Código de verificación enviado.","data":{"email_enmascarado":"p***a@correo.com","vence_en_minutos":15}}
+        """)
+        vm.dui = "01234567-8"
+        XCTAssertTrue(vm.puedeSolicitarOtp)
+
+        let ok = await vm.solicitarOtp()
+
+        XCTAssertTrue(ok)
+        if case .verificarOtp = vm.paso {
+            XCTAssertEqual(vm.emailEnmascarado, "p***a@correo.com")
+        } else {
+            XCTFail("Se esperaba avanzar al paso de verificar OTP")
+        }
+    }
+
+    func testConfirmarOtpValidaSeisDigitos() async {
+        vm.otp = "123"
+        XCTAssertFalse(vm.puedeConfirmarOtp)
+        let ok = await vm.confirmarOtp()
+        XCTAssertFalse(ok)
+        XCTAssertNotNil(vm.errorCampo)
+    }
+
+    func testConfirmarOtpExitosoActualizaIdPacienteYMarcaExito() async {
+        APIFalsa.responder("POST mi/expediente/confirmar-otp", 200, """
+        {"success":true,"message":"Expediente vinculado exitosamente.","data":{"id_paciente":"p-100","numero_expediente":"EXP-2026-000501","nombre_completo":"Paciente Prueba"}}
+        """)
+        vm.dui = "01234567-8"
+        vm.otp = "123456"
+        XCTAssertTrue(vm.puedeConfirmarOtp)
+
+        let ok = await vm.confirmarOtp()
+
+        XCTAssertTrue(ok)
+        XCTAssertEqual(store.sesion?.idPaciente, "p-100")
+        if case .exito(let numero) = vm.paso {
+            XCTAssertEqual(numero, "EXP-2026-000501")
+        } else {
+            XCTFail("Se esperaba estado de éxito")
+        }
+    }
+
+    func testOtpInvalidoMuestraMensajeDeError() async {
+        APIFalsa.responder("POST mi/expediente/confirmar-otp", 422, JSONPrueba.validacion("El código es incorrecto.", campos: ["otp": "El código es incorrecto."]))
+        vm.dui = "01234567-8"
+        vm.otp = "999999"
+
+        let ok = await vm.confirmarOtp()
+
+        XCTAssertFalse(ok)
+        XCTAssertEqual(vm.errorCampo, "El código es incorrecto.")
+        XCTAssertNil(store.sesion?.idPaciente)
     }
 }

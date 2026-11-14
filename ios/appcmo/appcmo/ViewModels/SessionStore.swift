@@ -95,6 +95,12 @@ final class SessionStore {
         if case .autenticado(let sesion) = estado { sesion } else { nil }
     }
 
+    /// Actualiza el idPaciente de la sesión activa tras vincular exitosamente un expediente.
+    func actualizarIdPaciente(_ nuevoId: String) {
+        guard case .autenticado(let actual) = estado else { return }
+        estado = .autenticado(Sesion(usuario: actual.usuario, idPaciente: nuevoId))
+    }
+
     func cerrarSesion() async {
         // Aunque la API no responda, la sesión local se cierra.
         try? await auth.logout()

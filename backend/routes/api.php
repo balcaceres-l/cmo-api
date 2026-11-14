@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\PacienteController;
 use App\Http\Controllers\Api\PublicoController;
 use App\Http\Controllers\Api\TurnoController;
 use App\Http\Controllers\Api\UsuarioController;
+use App\Http\Controllers\Api\VinculacionExpedienteController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('publico')->group(function () {
@@ -51,6 +52,8 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
     });
     Route::put('pacientes/{paciente}/historial', [PacienteController::class, 'historial'])->middleware('role:ADMINISTRADOR,MEDICO');
     Route::get('mi/expediente', [PacienteController::class, 'miExpediente'])->middleware('role:PACIENTE');
+    Route::post('mi/expediente/solicitar-otp', [VinculacionExpedienteController::class, 'solicitarOtp'])->middleware('role:PACIENTE');
+    Route::post('mi/expediente/confirmar-otp', [VinculacionExpedienteController::class, 'confirmarOtp'])->middleware('role:PACIENTE');
 
     Route::middleware('role:ADMINISTRADOR,MEDICO,RECEPCIONISTA')->group(function () {
         Route::get('citas', [CitaController::class, 'index']);
