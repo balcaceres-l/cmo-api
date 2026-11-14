@@ -34,4 +34,23 @@ nonisolated struct PacientesRepository: Sendable {
     func miExpediente() async throws -> Expediente {
         try await cliente.request(.get, "mi/expediente")
     }
+
+    private struct SolicitudOtpCuerpo: Encodable, Sendable {
+        let dui: String
+    }
+
+    private struct ConfirmarOtpCuerpo: Encodable, Sendable {
+        let dui: String
+        let otp: String
+    }
+
+    /// Solicita un código OTP al correo del usuario para vincular un expediente existente.
+    func solicitarOtpVinculacion(dui: String) async throws -> SolicitudOtpRespuesta {
+        try await cliente.request(.post, "mi/expediente/solicitar-otp", cuerpo: SolicitudOtpCuerpo(dui: dui))
+    }
+
+    /// Valida el OTP y vincula el expediente con la cuenta actual.
+    func confirmarOtpVinculacion(dui: String, otp: String) async throws -> ConfirmarOtpRespuesta {
+        try await cliente.request(.post, "mi/expediente/confirmar-otp", cuerpo: ConfirmarOtpCuerpo(dui: dui, otp: otp))
+    }
 }

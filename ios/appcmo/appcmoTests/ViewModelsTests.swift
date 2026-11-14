@@ -204,3 +204,82 @@ final class SolicitudAtencionViewModelTests: PruebaConAPIFalsa {
         XCTAssertEqual(vm.motivo, "Fiebre")
     }
 }
+
+final class VincularExpedienteViewModelTests: PruebaConAPIFalsa {
+    private var vm: VincularExpedienteViewModel!
+
+    override func setUp() async throws {
+        try await super.setUp()
+        try? keychain.guardarToken("token-test")
+        APIFalsa.responder("GET auth/me", 200, """
+        {"success":true,"data":{"usuario":{"id":"u-1","nombre_completo":"Paciente Prueba","usuario":"paciente.prueba","email":"paciente@correo.com","rol":"PACIENTE","cargo":null,"estado":"ACTIVO"},"id_paciente":null}}
+        """)
+        await store.restaurarSesion()
+        let repo = PacientesRepository(cliente: cliente)
+        vm = VincularExpedienteViewModel(repositorio: repo, store: store)
+    }
+
+    func testSinDuiNoSePuedeSolicitarOtp() async {
+        vm.dui = "   "
+        XCTAssertFalse(vm.puedeSolicitarOtp)
+        let ok = await vm.solicitarOtp()
+        XCTAssertFalse(ok)
+        XCTAssertNotNil(vm.errorCampo)
+    }
+
+    func testSolicitarOtpExitosoAvanzaAVerificarOtp() async {
+        APIFalsa.responder("POST mi/expediente/solicitar-otp", 200, """
+        {"success":true,"message":"Código de verificación enviado.","data":{"email_enmascarado":"p***a@correo.com","vence_en_minutos":15}}
+        """)
+        vm.dui = "01234567-8"
+        XCTAssertTrue(vm.puedeSolicitarOtp)
+
+        let ok = await vm.solicitarOtp()
+
+        XCTAssertTrue(ok)
+        if case .verificarOtp = vm.paso {
+            XCTAssertEqual(vm.emailEnmascarado, "p***a@correo.com")
+        } else {
+            XCTFail("Se esperaba avanzar al paso de verificar OTP")
+        }
+    }
+
+    func testConfirmarOtpValidaSeisDigitos() async {
+        vm.otp = "123"
+        XCTAssertFalse(vm.puedeConfirmarOtp)
+        let ok = await vm.confirmarOtp()
+        XCTAssertFalse(ok)
+        XCTAssertNotNil(vm.errorCampo)
+    }
+
+    func testConfirmarOtpExitosoActualizaIdPacienteYMarcaExito() async {
+        APIFalsa.responder("POST mi/expediente/confirmar-otp", 200, """
+        {"success":true,"message":"Expediente vinculado exitosamente.","data":{"id_paciente":"p-100","numero_expediente":"EXP-2026-000501","nombre_completo":"Paciente Prueba"}}
+        """)
+        vm.dui = "01234567-8"
+        vm.otp = "123456"
+        XCTAssertTrue(vm.puedeConfirmarOtp)
+
+        let ok = await vm.confirmarOtp()
+
+        XCTAssertTrue(ok)
+        XCTAssertEqual(store.sesion?.idPaciente, "p-100")
+        if case .exito(let numero) = vm.paso {
+            XCTAssertEqual(numero, "EXP-2026-000501")
+        } else {
+            XCTFail("Se esperaba estado de éxito")
+        }
+    }
+
+    func testOtpInvalidoMuestraMensajeDeError() async {
+        APIFalsa.responder("POST mi/expediente/confirmar-otp", 422, JSONPrueba.validacion("El código es incorrecto.", campos: ["otp": "El código es incorrecto."]))
+        vm.dui = "01234567-8"
+        vm.otp = "999999"
+
+        let ok = await vm.confirmarOtp()
+
+        XCTAssertFalse(ok)
+        XCTAssertEqual(vm.errorCampo, "El código es incorrecto.")
+        XCTAssertNil(store.sesion?.idPaciente)
+    }
+}

@@ -14,6 +14,7 @@ struct PacienteInicioView: View {
     @Environment(SessionStore.self) private var store
     @Environment(PacienteDatos.self) private var datos
     @State private var ruta: [Destino] = []
+    @State private var mostrarVinculacion = false
 
     let irA: (PacienteTabView.Pestana) -> Void
 
@@ -25,6 +26,9 @@ struct PacienteInicioView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         encabezado
+                        if store.sesion?.idPaciente == nil && store.sesion?.usuario.email != nil {
+                            tarjetaVincularExpediente
+                        }
                         proxima
                         examenes
                         habitacion
@@ -47,10 +51,38 @@ struct PacienteInicioView: View {
                 case .hospital: InfoPublicaView(mostrarAvisos: false)
                 }
             }
+            .sheet(isPresented: $mostrarVinculacion) {
+                VincularExpedienteView(store: store)
+            }
         }
     }
 
     // MARK: - Secciones
+
+    private var tarjetaVincularExpediente: some View {
+        Button {
+            mostrarVinculacion = true
+        } label: {
+            HStack(spacing: 14) {
+                IconoCirculo(sistema: "folder.badge.person.crop", tono: .info, tamano: 42)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Vincular expediente con correo")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(Color.cmoTinta)
+                    Text("Recibe un código OTP en tu email para enlazar tu historial")
+                        .font(.caption)
+                        .foregroundStyle(Color.cmoTintaSuave)
+                }
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.cmoTintaSuave)
+            }
+            .tarjeta(relleno: 14)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("inicio.vincularExpediente")
+    }
 
     private var encabezado: some View {
         EncabezadoPantalla("Hola, \(usuario?.nombreCompleto ?? "")", subtitulo: datos.expediente.valor.map { "Expediente \($0.numeroExpediente)" }) {
