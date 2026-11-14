@@ -97,7 +97,8 @@ class AgendarCitaSeguimientoDoctorUseCase(
 ) {
     suspend operator fun invoke(
         idPaciente: String?,
-        idMedico: String?,
+        idMedico: String? = null,
+        idEspecialidad: String? = null,
         fecha: String,
         horaInicio: String?,
         motivo: String
@@ -105,7 +106,14 @@ class AgendarCitaSeguimientoDoctorUseCase(
         if (idPaciente.isNullOrBlank()) {
             return Result.failure(ApiValidationException("id_paciente", "Seleccione el paciente."))
         }
-        val programacion = ProgramacionCita(idMedico.orEmpty(), fecha.trim(), horaInicio.orEmpty())
+        val esp = idEspecialidad?.takeIf { it.isNotBlank() }
+        val med = if (esp != null) null else idMedico?.takeIf { it.isNotBlank() }
+        val programacion = ProgramacionCita(
+            idMedico = med,
+            fecha = fecha.trim(),
+            horaInicio = horaInicio.orEmpty(),
+            idEspecialidad = esp
+        )
         validador.validar(programacion)?.let { return Result.failure(it) }
         if (motivo.isBlank()) {
             return Result.failure(ApiValidationException("motivo", "El motivo del control es obligatorio."))

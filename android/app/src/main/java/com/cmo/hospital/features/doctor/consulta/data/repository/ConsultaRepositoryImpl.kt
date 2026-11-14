@@ -3,9 +3,10 @@ package com.cmo.hospital.features.doctor.consulta.data.repository
 import com.cmo.hospital.core.data.datasource.HospitalClinicalDataSource
 import com.cmo.hospital.core.domain.model.BloqueAgenda
 import com.cmo.hospital.core.domain.model.Cita
+import com.cmo.hospital.core.domain.model.ConsultaActiva
+import com.cmo.hospital.core.domain.model.EspecialidadCatalogo
 import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.core.domain.model.ProgramacionCita
-import com.cmo.hospital.core.domain.model.ConsultaActiva
 import com.cmo.hospital.core.domain.model.RecetaItem
 import com.cmo.hospital.core.domain.model.SignosVitales
 import com.cmo.hospital.features.doctor.consulta.domain.repository.ConsultaRepository
@@ -59,8 +60,15 @@ class ConsultaRepositoryImpl(
 
     override suspend fun pacientesTratados(): Result<List<Paciente>> = clinicalDataSource.buscarPacientes("")
 
-    override suspend fun disponibilidad(idMedico: String, fecha: String): Result<List<BloqueAgenda>> =
-        clinicalDataSource.getDisponibilidad(idMedico, fecha)
+    override suspend fun especialidades(): Result<List<EspecialidadCatalogo>> =
+        clinicalDataSource.getEspecialidades()
+
+    override suspend fun disponibilidad(
+        idMedico: String?,
+        fecha: String,
+        idEspecialidad: String?
+    ): Result<List<BloqueAgenda>> =
+        clinicalDataSource.getDisponibilidad(idMedico = idMedico, fecha = fecha, idEspecialidad = idEspecialidad)
 
     override suspend fun agendarSeguimiento(
         idPaciente: String,

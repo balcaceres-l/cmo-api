@@ -39,15 +39,21 @@ class CitaController extends ApiController
     {
         $d = $this->datos($r);
         if ($r->user()->rol === 'MEDICO') {
-            $d['id_medico'] = $r->user()->id;
-            $d['id_especialidad'] ??= $r->user()->id_especialidad;
-            // El médico solo agenda seguimientos: si pudiera agendar a cualquier
-            // paciente, la cita lo haría tratante y le abriría el expediente.
+            // El médico solo agenda seguimientos/referencias de sus pacientes;
+            // la primera cita la agenda recepción.
             abort_unless(
                 Paciente::whereKey($d['id_paciente'])->tratadoPor($r->user()->id)->exists(),
                 403,
                 'Solo puedes agendar seguimientos de tus pacientes; la primera cita la agenda recepción.',
             );
+            if (! empty($d['id_especialidad'])) {
+                // Si elige especialidad (p. ej. Medicina General -> Cardiología),
+                // la cita queda abierta por especialidad igual que en recepción.
+                $d['id_medico'] = null;
+            } else {
+                $d['id_medico'] = $r->user()->id;
+                $d['id_especialidad'] ??= $r->user()->id_especialidad;
+            }
         }
 
         return DB::transaction(function () use ($d, $r) {

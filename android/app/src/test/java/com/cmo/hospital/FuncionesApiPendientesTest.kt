@@ -83,12 +83,12 @@ class FuncionesApiPendientesTest {
 
         val agendar = AgendarCitaSeguimientoDoctorUseCase(repo)
         fun campo(r: Result<*>) = (r.exceptionOrNull() as ApiValidationException).campo
-        assertEquals("id_paciente", campo(agendar(null, "u-med", enSieteDias, "10:00", "x")))
-        assertEquals("hora_inicio", campo(agendar("u-p1", "u-med", enSieteDias, null, "x")))
-        assertEquals("motivo", campo(agendar("u-p1", "u-med", enSieteDias, "10:00", " ")))
+        assertEquals("id_paciente", campo(agendar(idPaciente = null, idMedico = "u-med", fecha = enSieteDias, horaInicio = "10:00", motivo = "x")))
+        assertEquals("hora_inicio", campo(agendar(idPaciente = "u-p1", idMedico = "u-med", fecha = enSieteDias, horaInicio = null, motivo = "x")))
+        assertEquals("motivo", campo(agendar(idPaciente = "u-p1", idMedico = "u-med", fecha = enSieteDias, horaInicio = "10:00", motivo = " ")))
         assertFalse("POST citas" in llamadas)
 
-        assertTrue(agendar("u-p1", "u-med", enSieteDias, "10:00", " Revisar exámenes ").isSuccess)
+        assertTrue(agendar(idPaciente = "u-p1", idMedico = "u-med", fecha = enSieteDias, horaInicio = "10:00", motivo = " Revisar exámenes ").isSuccess)
         assertEquals(
             mapOf("id_medico" to "u-med", "fecha" to enSieteDias, "hora_inicio" to "10:00", "id_paciente" to "u-p1", "motivo" to "Control: Revisar exámenes"),
             cuerpos["POST citas"]

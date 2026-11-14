@@ -9,6 +9,7 @@ import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import com.cmo.hospital.CmoApplication
 import com.cmo.hospital.core.domain.model.Cita
+import com.cmo.hospital.core.domain.model.EspecialidadCatalogo
 import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.databinding.DialogAgendarSeguimientoBinding
@@ -32,6 +33,7 @@ class AgendarSeguimientoDialogFragment : DialogFragment() {
     var onCitaAgendada: ((Cita) -> Unit)? = null
 
     private var pacienteSeleccionado: Paciente? = null
+    private var especialidadSeleccionada: EspecialidadCatalogo? = null
     private var horaSeleccionada: String? = null
     private var bloquesJob: Job? = null
 
@@ -47,7 +49,7 @@ class AgendarSeguimientoDialogFragment : DialogFragment() {
         }
 
         binding.tvSegMedicoInfo.text = listOf(medicoNombre, especialidad)
-            .filter { it.isNotBlank() }.joinToString(" • ") + " • horarios libres de su turno"
+            .filter { it.isNotBlank() }.joinToString(" • ") + " • agenda por especialidad"
         binding.etSegFecha.setText(DateUtils.toUiDate(LocalDate.now().plusDays(7).toString()))
         binding.etSegFecha.setOnClickListener {
             DateUtils.showDatePicker(this, binding.etSegFecha.text?.toString()) { seleccionada ->
@@ -75,16 +77,15 @@ class AgendarSeguimientoDialogFragment : DialogFragment() {
 
         fun cargarBloques() {
             val fecha = DateUtils.toIsoDate(binding.etSegFecha.text?.toString())
-            val medico = idMedico
+            val espId = especialidadSeleccionada?.id
             horaSeleccionada = null
             binding.chipGroupSegBloques.removeAllViews()
             bloquesJob?.cancel()
-            if (medico.isNullOrBlank()) {
-                mostrarError("No se identificó al médico de la sesión. Vuelva a iniciar sesión.")
+            if (espId.isNullOrBlank()) {
                 return
             }
             bloquesJob = lifecycleScope.launch {
-                repo.disponibilidad(medico, fecha).fold(
+                repo.disponibilidad(idMedico = null, fecha = fecha, idEspecialidad = espId).fold(
                     onSuccess = { bloques ->
                         fun pintar() {
                             binding.chipGroupSegBloques.removeAllViews()
@@ -101,11 +102,34 @@ class AgendarSeguimientoDialogFragment : DialogFragment() {
                         }
                         horaSeleccionada = bloques.firstOrNull()?.horaInicio
                         pintar()
-                        mostrarError(if (bloques.isEmpty()) "Sin horarios libres ese día: no tiene turno o su agenda está llena." else null)
+                        mostrarError(if (bloques.isEmpty()) "Sin horarios libres ese día para la especialidad seleccionada." else null)
                     },
                     onFailure = { mostrarError(it.message) }
                 )
             }
+        }
+
+        fun pintarEspecialidades(lista: List<EspecialidadCatalogo>) {
+            binding.chipGroupSegEspecialidades.removeAllViews()
+            if (lista.none { it.id == especialidadSeleccionada?.id }) {
+                especialidadSeleccionada = lista.firstOrNull {
+                    !especialidad.isNullOrBlank() && it.nombre.equals(especialidad, ignoreCase = true)
+                } ?: lista.firstOrNull {
+                    it.nombre.contains("general", ignoreCase = true)
+                } ?: lista.firstOrNull()
+            }
+            lista.forEach { esp ->
+                binding.chipGroupSegEspecialidades.addView(
+                    chipAgenda(ctx, esp.nombre, esp.id == especialidadSeleccionada?.id).apply {
+                        setOnClickListener {
+                            especialidadSeleccionada = esp
+                            pintarEspecialidades(lista)
+                            cargarBloques()
+                        }
+                    }
+                )
+            }
+            if (lista.isEmpty()) mostrarError("No hay especialidades activas disponibles.")
         }
 
         lifecycleScope.launch {
@@ -114,7 +138,15 @@ class AgendarSeguimientoDialogFragment : DialogFragment() {
                 onFailure = { mostrarError(it.message) }
             )
         }
-        cargarBloques()
+        lifecycleScope.launch {
+            repo.especialidades().fold(
+                onSuccess = {
+                    pintarEspecialidades(it)
+                    cargarBloques()
+                },
+                onFailure = { mostrarError(it.message) }
+            )
+        }
         binding.etSegFecha.doAfterTextChanged { cargarBloques() }
 
         binding.btnSegCancelar.setOnClickListener { dismiss() }
@@ -124,7 +156,8 @@ class AgendarSeguimientoDialogFragment : DialogFragment() {
             lifecycleScope.launch {
                 appContainer.agendarCitaSeguimientoDoctorUseCase(
                     idPaciente = pacienteSeleccionado?.id,
-                    idMedico = idMedico,
+                    idMedico = null,
+                    idEspecialidad = especialidadSeleccionada?.id,
                     fecha = DateUtils.toIsoDate(binding.etSegFecha.text?.toString()),
                     horaInicio = horaSeleccionada,
                     motivo = binding.etSegMotivo.text?.toString().orEmpty()

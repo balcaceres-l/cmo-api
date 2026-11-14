@@ -100,7 +100,7 @@ data class Paciente(
     val protegido: Boolean = false,
     @SerializedName("contacto_emergencia") val contactoEmergencia: String? = null,
     val prevision: String? = null,
-    val nivelTriage: NivelTriageManchester = NivelTriageManchester.NIVEL_III_AMARILLO,
+    val nivelTriage: NivelTriageManchester? = NivelTriageManchester.NIVEL_III_AMARILLO,
     @SerializedName("tipo_documento") val tipoDocumento: String? = "DUI",
     val responsableMenor: ResponsableMenor? = null
 ) {
