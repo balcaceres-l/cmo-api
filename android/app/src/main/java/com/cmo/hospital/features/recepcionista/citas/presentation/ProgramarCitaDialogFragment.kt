@@ -84,7 +84,7 @@ class ProgramarCitaDialogFragment : DialogFragment() {
                 launch {
                     viewModel.agenda.collect { estado ->
                         val b = _binding ?: return@collect
-                        selector.mostrarMedicos(estado.medicos)
+                        selector.mostrarEspecialidades(estado.especialidades)
                         if (estado.catalogosError != null) {
                             b.selectorAgenda.tvAgendaAviso.text = "No se pudo cargar la agenda: ${estado.catalogosError}"
                         } else {

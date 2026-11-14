@@ -324,6 +324,15 @@ class CitasFragment : Fragment() {
         }.distinctBy { it.nombre.lowercase() }.sortedBy { it.nombre }
     }
 
+    private fun catalogosEspecialidades(
+        especialidades: List<EspecialidadCatalogo>,
+        medicos: List<User>
+    ): List<EspecialidadCatalogo> {
+        if (especialidades.isNotEmpty()) return especialidades
+        return opcionesEspecialidad(especialidades, medicos)
+            .mapNotNull { op -> op.id?.takeIf { it.isNotBlank() }?.let { EspecialidadCatalogo(id = it, nombre = op.nombre) } }
+    }
+
     private fun pintarEspecialidades(especialidades: List<EspecialidadCatalogo>, medicos: List<User>) {
         val grupo = binding.chipGroupEspecialidades
         grupo.removeAllViews()
@@ -332,13 +341,12 @@ class CitasFragment : Fragment() {
             (especialidadSeleccionadaId != null && it.id == especialidadSeleccionadaId) ||
                 (especialidadSeleccionadaNombre != null && it.nombre.equals(especialidadSeleccionadaNombre, ignoreCase = true))
         }
-        if (!sigueActiva) {
-            especialidadSeleccionadaId = null
-            especialidadSeleccionadaNombre = null
+        if (!sigueActiva && opciones.isNotEmpty()) {
+            val defecto = opciones.firstOrNull { it.nombre.equals("Medicina general", ignoreCase = true) }
+                ?: opciones.first()
+            especialidadSeleccionadaId = defecto.id
+            especialidadSeleccionadaNombre = defecto.nombre
         }
-        grupo.addView(chipAgenda(requireContext(), "Todas", especialidadSeleccionadaNombre == null).apply {
-            setOnClickListener { cambiarEspecialidad(null, especialidades, medicos) }
-        })
         opciones.forEach { op ->
             val marcada = (especialidadSeleccionadaId != null && op.id == especialidadSeleccionadaId) ||
                 (especialidadSeleccionadaNombre != null && op.nombre.equals(especialidadSeleccionadaNombre, ignoreCase = true))
@@ -358,19 +366,8 @@ class CitasFragment : Fragment() {
         pintarEspecialidades(especialidades, medicos)
         selector.establecerEspecialidad(
             idEspecialidad = especialidadSeleccionadaId,
-            nombreEspecialidad = especialidadSeleccionadaNombre,
-            listaFiltrada = medicosFiltrados(medicos)
+            nombreEspecialidad = especialidadSeleccionadaNombre
         )
-    }
-
-    private fun medicosFiltrados(medicos: List<User>): List<User> {
-        val selId = especialidadSeleccionadaId
-        val selNombre = especialidadSeleccionadaNombre
-        if (selId == null && selNombre == null) return medicos
-        return medicos.filter { m ->
-            (selId != null && m.idEspecialidad == selId) ||
-                (selNombre != null && m.especialidadVisible.equals(selNombre, ignoreCase = true))
-        }
     }
 
     private fun pedirMotivoCancelacion(cita: Cita) {
@@ -489,10 +486,10 @@ class CitasFragment : Fragment() {
                         if (actuales != catalogosPintados) {
                             catalogosPintados = actuales
                             pintarEspecialidades(estado.especialidades, estado.medicos)
+                            selector.mostrarEspecialidades(catalogosEspecialidades(estado.especialidades, estado.medicos))
                             selector.establecerEspecialidad(
                                 idEspecialidad = especialidadSeleccionadaId,
-                                nombreEspecialidad = especialidadSeleccionadaNombre,
-                                listaFiltrada = medicosFiltrados(estado.medicos)
+                                nombreEspecialidad = especialidadSeleccionadaNombre
                             )
                             actualizarDropdownFiltroDoctores(viewModel.citas.value)
                         }

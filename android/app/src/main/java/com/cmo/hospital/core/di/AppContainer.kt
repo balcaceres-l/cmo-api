@@ -132,7 +132,10 @@ class AppContainer(context: Context) {
     // ─── Factories MVVM por Feature ──────────────────────────────────────────
 
     fun createLoginViewModel(): LoginViewModel =
-        LoginViewModel(loginUseCase = loginUseCase)
+        LoginViewModel(
+            loginUseCase = loginUseCase,
+            authRepository = authRepository
+        )
 
     fun createCitasViewModel(): CitasViewModel =
         CitasViewModel(

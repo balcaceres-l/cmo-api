@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('publico')->group(function () {
     Route::get('ocupacion', [PublicoController::class, 'ocupacion']);
     Route::get('medicos-de-turno', [PublicoController::class, 'medicos']);
+    Route::get('personal-demo', [PublicoController::class, 'personalDemo']);
     Route::get('avisos', [PublicoController::class, 'avisos']);
     Route::get('ambulancia', [PublicoController::class, 'ambulancia']);
 });

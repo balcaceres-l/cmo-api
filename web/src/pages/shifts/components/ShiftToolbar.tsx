@@ -57,18 +57,11 @@ export const ShiftToolbar: React.FC<ShiftToolbarProps> = ({
       }}
     >
       {/* Top Row: View Switcher + Date Navigation + Group Toggle */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px',
-        }}
-      >
+      <div className="shift-toolbar-top">
         {/* Segmented View Switcher */}
         <div
           style={{
+            justifySelf: 'start',
             display: 'inline-flex',
             background: '#f0f4f2',
             padding: '4px',
@@ -103,9 +96,9 @@ export const ShiftToolbar: React.FC<ShiftToolbarProps> = ({
           })}
         </div>
 
-        {/* Date Navigation: fecha e "Ir a hoy" antes de ‹ › para que los botones queden fijos */}
-        {viewMode !== 'list' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        {/* Date Navigation: mantiene su posición central al cambiar entre Día, Semana y Mes */}
+        {viewMode !== 'list' ? (
+          <div style={{ justifySelf: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
             {anchorDate !== todayStr && (
               <button
                 type="button"
@@ -129,8 +122,8 @@ export const ShiftToolbar: React.FC<ShiftToolbarProps> = ({
                 fontSize: '0.96rem',
                 fontWeight: 800,
                 color: '#13221c',
-                minWidth: 'clamp(190px, 24vw, 260px)',
-                textAlign: 'right',
+                minWidth: 'clamp(190px, 22vw, 250px)',
+                textAlign: 'center',
               }}
             >
               {formatRangeTitle(viewMode, anchorDate)}
@@ -169,72 +162,79 @@ export const ShiftToolbar: React.FC<ShiftToolbarProps> = ({
               </button>
             </div>
           </div>
+        ) : (
+          <div aria-hidden="true" />
         )}
 
-        {/* Group By Toggle for Week View */}
-        {viewMode === 'week' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#526b60' }}>Agrupar:</span>
-            <div
+        {/* Group By Toggle for Week View (reserva espacio en desktop para no desplazar la barra) */}
+        <div
+          className={viewMode === 'week' ? undefined : 'shift-toolbar-group--hidden'}
+          aria-hidden={viewMode !== 'week'}
+          style={{ justifySelf: 'end', display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#526b60' }}>Agrupar:</span>
+          <div
+            style={{
+              display: 'inline-flex',
+              background: '#f8faf9',
+              border: '1px solid #cad8d1',
+              borderRadius: '8px',
+              padding: '2px',
+            }}
+          >
+            <button
+              type="button"
+              tabIndex={viewMode === 'week' ? 0 : -1}
+              onClick={() => onWeekGroupByChange('area')}
               style={{
-                display: 'inline-flex',
-                background: '#f8faf9',
-                border: '1px solid #cad8d1',
-                borderRadius: '8px',
-                padding: '2px',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: 'none',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: weekGroupBy === 'area' ? '#073f33' : 'transparent',
+                color: weekGroupBy === 'area' ? '#ffffff' : '#526b60',
               }}
             >
-              <button
-                type="button"
-                onClick={() => onWeekGroupByChange('area')}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  fontSize: '0.76rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: weekGroupBy === 'area' ? '#073f33' : 'transparent',
-                  color: weekGroupBy === 'area' ? '#ffffff' : '#526b60',
-                }}
-              >
-                Por Área
-              </button>
-              <button
-                type="button"
-                onClick={() => onWeekGroupByChange('especialidad')}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  fontSize: '0.76rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: weekGroupBy === 'especialidad' ? '#073f33' : 'transparent',
-                  color: weekGroupBy === 'especialidad' ? '#ffffff' : '#526b60',
-                }}
-              >
-                Por Especialidad
-              </button>
-              <button
-                type="button"
-                onClick={() => onWeekGroupByChange('franja')}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  fontSize: '0.76rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  background: weekGroupBy === 'franja' ? '#073f33' : 'transparent',
-                  color: weekGroupBy === 'franja' ? '#ffffff' : '#526b60',
-                }}
-              >
-                Por Franja (8h)
-              </button>
-            </div>
+              Por Área
+            </button>
+            <button
+              type="button"
+              tabIndex={viewMode === 'week' ? 0 : -1}
+              onClick={() => onWeekGroupByChange('especialidad')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: 'none',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: weekGroupBy === 'especialidad' ? '#073f33' : 'transparent',
+                color: weekGroupBy === 'especialidad' ? '#ffffff' : '#526b60',
+              }}
+            >
+              Por Especialidad
+            </button>
+            <button
+              type="button"
+              tabIndex={viewMode === 'week' ? 0 : -1}
+              onClick={() => onWeekGroupByChange('franja')}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: 'none',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: weekGroupBy === 'franja' ? '#073f33' : 'transparent',
+                color: weekGroupBy === 'franja' ? '#ffffff' : '#526b60',
+              }}
+            >
+              Por Franja (8h)
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Bottom Row: Role Filters + Search + Period Distribution Summary & Legend */}

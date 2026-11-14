@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CalendarCheckIcon } from '../../../components/Icons';
 import { PersonalOption, ShiftPrefill, TurnoRaw } from '../types';
 import {
   formatDayHeader,
@@ -178,7 +179,8 @@ export const SpecialtyCoverageMonitor: React.FC<SpecialtyCoverageMonitorProps> =
                 gap: '6px',
               }}
             >
-              ⚡ Sugerir Cobertura 24/7
+              <CalendarCheckIcon size={15} />
+              Sugerir Cobertura 24/7
             </button>
           )}
           <button

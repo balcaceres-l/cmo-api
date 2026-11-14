@@ -266,4 +266,7 @@ interface ApiService {
 
     @GET("publico/medicos-de-turno")
     suspend fun getMedicosDeTurno(): Response<ApiResponse<List<MedicoDeTurno>>>
+
+    @GET("publico/personal-demo")
+    suspend fun getPersonalDemo(): Response<ApiResponse<List<DemoPersonalItem>>>
 }

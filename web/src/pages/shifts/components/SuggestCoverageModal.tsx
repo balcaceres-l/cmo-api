@@ -1,7 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { CalendarCheckIcon } from '../../../components/Icons';
 import { PersonalOption, ShiftFranja, TurnoRaw } from '../types';
-import { formatDayHeader, getWeekDays } from '../shiftUtils';
-import { SuggestedShift, SuggesterOptions, suggestWeeklyCoverage } from '../shiftSuggester';
+import { addDays, formatDayHeader, getMonthRange, getWeekDays, isStaffActiveOnDate } from '../shiftUtils';
+import {
+  MAX_RANGE_DAYS,
+  SuggestedShift,
+  SuggesterOptions,
+  countRangeDays,
+  suggestCoverageForRange,
+} from '../shiftSuggester';
+
+type PeriodMode = 'week' | 'month' | 'custom';
 
 interface SuggestCoverageModalProps {
   isOpen: boolean;
@@ -37,11 +46,51 @@ export const SuggestCoverageModal: React.FC<SuggestCoverageModalProps> = ({
   });
 
   const weekDays = useMemo(() => getWeekDays(anchorDate), [anchorDate]);
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('week');
+  const [customStart, setCustomStart] = useState<string>(() => weekDays[0]);
+  const [customEnd, setCustomEnd] = useState<string>(() => addDays(weekDays[0], 29));
 
-  const computed = useMemo(
-    () => suggestWeeklyCoverage(weekDays, shifts, personal, options),
-    [weekDays, shifts, personal, options]
+  useEffect(() => {
+    if (isOpen) {
+      setCustomStart(weekDays[0]);
+      setCustomEnd(addDays(weekDays[0], 29));
+    }
+  }, [isOpen, weekDays]);
+
+  const effectiveRange = useMemo(() => {
+    if (periodMode === 'week') {
+      return { start: weekDays[0], end: weekDays[6] };
+    }
+    if (periodMode === 'month') {
+      return getMonthRange(anchorDate);
+    }
+    return { start: customStart, end: customEnd };
+  }, [periodMode, weekDays, anchorDate, customStart, customEnd]);
+
+  const rangeDays = useMemo(
+    () => countRangeDays(effectiveRange.start, effectiveRange.end),
+    [effectiveRange.start, effectiveRange.end]
   );
+
+  const rangeError = useMemo(() => {
+    if (!effectiveRange.start || !effectiveRange.end) {
+      return 'Selecciona ambas fechas del período.';
+    }
+    if (effectiveRange.start > effectiveRange.end) {
+      return 'La fecha de inicio no puede ser posterior a la fecha final.';
+    }
+    if (rangeDays > MAX_RANGE_DAYS) {
+      return `El rango máximo permitido es de ${MAX_RANGE_DAYS} días (seleccionaste ${rangeDays}).`;
+    }
+    return null;
+  }, [effectiveRange.start, effectiveRange.end, rangeDays]);
+
+  const computed = useMemo(() => {
+    if (rangeError) {
+      return { proposals: [], unfilledGaps: [] };
+    }
+    return suggestCoverageForRange(effectiveRange.start, effectiveRange.end, shifts, personal, options);
+  }, [rangeError, effectiveRange.start, effectiveRange.end, shifts, personal, options]);
 
   const [editableProposals, setEditableProposals] = useState<SuggestedShift[]>([]);
 
@@ -124,11 +173,12 @@ export const SuggestCoverageModal: React.FC<SuggestCoverageModalProps> = ({
             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0b5d4b', textTransform: 'uppercase' }}>
               Planificación Asistida 24/7 (3 Turnos de 8h · Descanso mín. 16h)
             </span>
-            <h3 style={{ margin: '4px 0 4px', fontSize: '1.22rem', fontWeight: 800, color: '#13221c' }}>
-              ⚡ Sugerir Cobertura Semanal ({weekDays[0]} al {weekDays[6]})
+            <h3 style={{ margin: '4px 0 4px', fontSize: '1.22rem', fontWeight: 800, color: '#13221c', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CalendarCheckIcon size={19} color="#0b5d4b" />
+              Sugerir Cobertura 24/7 ({effectiveRange.start} al {effectiveRange.end})
             </h3>
             <p style={{ margin: 0, fontSize: '0.8rem', color: '#526b60' }}>
-              Turnos de 8 horas (00–08, 08–16, 16–24) con mínimo 16h de descanso entre turnos, al menos 1 día libre semanal y cobertura de todas las especialidades en horario regular.
+              Turnos de 8 horas (00–08, 08–16, 16–24) con mínimo 16h de descanso entre turnos, al menos 1 día libre semanal, respeto a fechas de ingreso/salida y cobertura de especialidades en horario regular.
             </p>
           </div>
           <button
@@ -148,6 +198,117 @@ export const SuggestCoverageModal: React.FC<SuggestCoverageModalProps> = ({
             ✕
           </button>
         </div>
+
+        {/* Period Selector */}
+        <div
+          style={{
+            padding: '12px 24px',
+            background: '#ffffff',
+            borderBottom: '1px solid #e2ece7',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#13221c', marginRight: '4px' }}>
+              Período:
+            </span>
+            {(
+              [
+                { id: 'week', label: 'Semana actual' },
+                { id: 'month', label: 'Mes completo' },
+                { id: 'custom', label: 'Personalizado' },
+              ] as const
+            ).map((opt) => {
+              const active = periodMode === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setPeriodMode(opt.id)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: active ? '1px solid #0b5d4b' : '1px solid #cbd5e1',
+                    background: active ? '#0b5d4b' : '#ffffff',
+                    color: active ? '#ffffff' : '#13221c',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+
+            {periodMode === 'custom' && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginLeft: '6px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, color: '#526b60' }}>
+                  Desde:
+                  <input
+                    type="date"
+                    value={customStart}
+                    onChange={(e) => setCustomStart(e.target.value)}
+                    style={{
+                      padding: '5px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.78rem',
+                      color: '#13221c',
+                    }}
+                  />
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem', fontWeight: 700, color: '#526b60' }}>
+                  Hasta:
+                  <input
+                    type="date"
+                    value={customEnd}
+                    onChange={(e) => setCustomEnd(e.target.value)}
+                    style={{
+                      padding: '5px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '0.78rem',
+                      color: '#13221c',
+                    }}
+                  />
+                </label>
+              </div>
+            )}
+          </div>
+
+          <span
+            style={{
+              padding: '4px 10px',
+              borderRadius: '999px',
+              background: rangeError ? '#fef2f2' : '#eaf5f1',
+              color: rangeError ? '#991b1b' : '#0b5d4b',
+              fontSize: '0.74rem',
+              fontWeight: 800,
+            }}
+          >
+            {rangeError ? 'Rango inválido' : `${rangeDays} día(s) seleccionado(s)`}
+          </span>
+        </div>
+
+        {rangeError && (
+          <div
+            style={{
+              padding: '10px 24px',
+              background: '#fef2f2',
+              borderBottom: '1px solid #fecaca',
+              color: '#991b1b',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+            }}
+          >
+            ⚠ {rangeError}
+          </div>
+        )}
 
         {/* Rule Controls */}
         <div
@@ -249,7 +410,7 @@ export const SuggestCoverageModal: React.FC<SuggestCoverageModalProps> = ({
               <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#991b1b', marginBottom: '6px' }}>
                 ⚠ {computed.unfilledGaps.length} bloque(s) sin personal suficiente bajo las reglas laborales actuales:
               </div>
-              <div style={{ fontSize: '0.76rem', color: '#7f1d1d', display: 'grid', gap: '3px', maxHeight: '110px', overflowY: 'auto' }}>
+              <div style={{ fontSize: '0.76rem', color: '#7f1d1d', display: 'grid', gap: '3px', maxHeight: '150px', overflowY: 'auto' }}>
                 {computed.unfilledGaps.map((g, i) => (
                   <div key={`${g.fecha}-${g.block}-${g.area}-${i}`}>
                     • <strong>{g.roleNeeded}</strong> ({g.area}): {g.reason}
@@ -262,9 +423,11 @@ export const SuggestCoverageModal: React.FC<SuggestCoverageModalProps> = ({
           {/* Proposals Table */}
           {editableProposals.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '28px', color: '#526b60', fontSize: '0.88rem' }}>
-              {computed.unfilledGaps.length === 0
-                ? '✓ La semana ya cumple con toda la cobertura 24/7 y de especialidades.'
-                : 'No hay propuestas adicionales disponibles bajo las restricciones actuales.'}
+              {rangeError
+                ? 'Corrige el rango de fechas para calcular las sugerencias de cobertura.'
+                : computed.unfilledGaps.length === 0
+                  ? '✓ El período seleccionado ya cumple con toda la cobertura 24/7 y de especialidades.'
+                  : 'No hay propuestas adicionales disponibles bajo las restricciones actuales.'}
             </div>
           ) : (
             <div style={{ border: '1px solid #e2ece7', borderRadius: '12px', overflowX: 'auto' }}>
@@ -287,7 +450,9 @@ export const SuggestCoverageModal: React.FC<SuggestCoverageModalProps> = ({
                 <tbody>
                   {editableProposals.map((p) => {
                     const hdr = formatDayHeader(p.fecha);
-                    const sameRolePool = personal.filter((u) => u.rol === p.rol);
+                    const sameRolePool = personal.filter(
+                      (u) => u.rol === p.rol && (String(u.id) === p.id_usuario || isStaffActiveOnDate(u, p.fecha))
+                    );
                     const badge = BLOCK_BADGE[p.block];
 
                     return (

@@ -158,3 +158,18 @@ data class TurnoDto(
     @SerializedName("hora_fin") val horaFin: String,
     val area: String?
 )
+
+/** Personal disponible en acceso rápido demo (GET /publico/personal-demo). */
+data class DemoPersonalItem(
+    @SerializedName("id_usuario") val idUsuario: String? = null,
+    val usuario: String,
+    @SerializedName("nombre_completo") val nombreCompleto: String,
+    val rol: String,
+    val cargo: String? = null,
+    val especialidad: String? = null,
+    val categoria: String,
+    val subgrupo: String,
+    @SerializedName("en_turno") val enTurno: Boolean = false,
+    @SerializedName("area_turno") val areaTurno: String? = null,
+    @SerializedName("horario_turno") val horarioTurno: String? = null
+)

@@ -89,6 +89,16 @@ export function getWeekDays(anchorIso: string): string[] {
   return Array.from({ length: 7 }, (_, i) => addDays(mon, i));
 }
 
+export function getMonthRange(anchorIso: string): { start: string; end: string } {
+  const d = parseISODate(anchorIso);
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  return {
+    start: toISODate(new Date(year, month, 1)),
+    end: toISODate(new Date(year, month + 1, 0)),
+  };
+}
+
 /**
  * Verifica si el colaborador está activo y dentro de su periodo de rotación/contrato
  * en la fecha ISO (YYYY-MM-DD) indicada.

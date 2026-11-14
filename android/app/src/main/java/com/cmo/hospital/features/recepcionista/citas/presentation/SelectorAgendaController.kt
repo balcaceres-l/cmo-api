@@ -9,8 +9,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.FragmentManager
 import com.cmo.hospital.R
+import com.cmo.hospital.core.domain.model.EspecialidadCatalogo
 import com.cmo.hospital.core.domain.model.ProgramacionCita
-import com.cmo.hospital.core.domain.model.User
 import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.databinding.CompSelectorAgendaBinding
 import com.google.android.material.chip.Chip
@@ -22,17 +22,16 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 
 /**
- * Maneja el bloque médico → fecha → horario libre.
- * El selector de médico utiliza un menú desplegable con búsqueda integrada por nombre
- * o especialidad para escalar cuando existen múltiples médicos en el sistema.
+ * Maneja el bloque especialidad → fecha → horario libre.
+ * Las citas de recepción se agendan siempre por especialidad (`id_especialidad`),
+ * sin asignar un médico fijo (`id_medico = null`).
  */
 class SelectorAgendaController(
     private val binding: CompSelectorAgendaBinding,
     private val fragmentManager: FragmentManager,
     private val onPedirDisponibilidad: (idMedico: String?, fecha: String, idEspecialidad: String?) -> Unit
 ) {
-    var idMedico: String? = null
-        private set
+    val idMedico: String? = null
     var idEspecialidad: String? = null
         private set
     var fecha: String = LocalDate.now().toString()
@@ -40,14 +39,11 @@ class SelectorAgendaController(
     var horaInicio: String? = null
         private set
 
-    private data class OpcionMedicoUi(val medico: User?, val etiqueta: String)
-
     private var nombreEspecialidad: String? = null
-    private var conservarSinMedico = false
-    private var medicos: List<User> = emptyList()
-    private var opcionesFiltradas: List<OpcionMedicoUi> = emptyList()
+    private var especialidades: List<EspecialidadCatalogo> = emptyList()
+    private var opcionesFiltradas: List<EspecialidadCatalogo> = emptyList()
     private var ultimaDisponibilidad: DisponibilidadUi? = null
-    private var ultimaPedida: Triple<String?, String, String?>? = null
+    private var ultimaPedida: Pair<String, String?>? = null
     private var actualizandoTextoInterno = false
 
     private val ctx: Context get() = binding.root.context
@@ -56,44 +52,36 @@ class SelectorAgendaController(
         binding.etAgendaFecha.setText(DateUtils.toUiDate(fecha))
         binding.etAgendaFecha.setOnClickListener { abrirCalendario() }
         binding.tilAgendaFecha.setOnClickListener { abrirCalendario() }
-        binding.tvAgendaAviso.text = "Seleccione médico y fecha para ver los horarios."
+        binding.tvAgendaAviso.text = "Seleccione especialidad y fecha para ver los horarios."
 
         binding.actvAgendaMedico.setOnClickListener {
             binding.actvAgendaMedico.showDropDown()
         }
         binding.actvAgendaMedico.setOnItemClickListener { _, _, position, _ ->
-            val elegido = opcionesFiltradas.getOrNull(position) ?: return@setOnItemClickListener
-            if (elegido.medico == null) {
-                seleccionarPorEspecialidad()
-            } else {
-                seleccionarMedico(elegido.medico)
-            }
+            val elegida = opcionesFiltradas.getOrNull(position) ?: return@setOnItemClickListener
+            seleccionarEspecialidad(elegida)
         }
         binding.actvAgendaMedico.doAfterTextChanged { editable ->
             if (actualizandoTextoInterno) return@doAfterTextChanged
             val texto = editable?.toString()?.trim().orEmpty()
-            val actual = medicos.firstOrNull { it.id == idMedico }
-            if (actual != null && texto != etiquetaMedico(actual)) {
-                // El usuario está escribiendo para buscar otro médico
+            val actual = especialidades.firstOrNull { it.id == idEspecialidad }
+            if (actual != null && texto != actual.nombre) {
                 binding.tilAgendaMedico.error = null
             }
         }
     }
 
     /**
-     * Valores iniciales (p. ej. los de la cita que se confirma o reprograma). El consultorio
-     * no se elige en recepción: al reprogramar, la API conserva el que tenía.
+     * Valores iniciales (p. ej. al confirmar o reprogramar una cita).
      */
     fun precargar(
-        idMedico: String?,
+        idMedico: String? = null,
         fecha: String?,
         idEspecialidad: String? = null,
         nombreEspecialidad: String? = null
     ) {
-        this.idMedico = idMedico?.takeIf { it.isNotBlank() }
         this.idEspecialidad = idEspecialidad?.takeIf { it.isNotBlank() }
         this.nombreEspecialidad = nombreEspecialidad?.takeIf { it.isNotBlank() }
-        this.conservarSinMedico = this.idMedico == null && this.idEspecialidad != null
         val previa = fecha?.let { runCatching { LocalDate.parse(it.take(10)) }.getOrNull() }
         if (previa != null && !previa.isBefore(LocalDate.now())) this.fecha = previa.toString()
         binding.etAgendaFecha.setText(DateUtils.toUiDate(this.fecha))
@@ -101,49 +89,57 @@ class SelectorAgendaController(
 
     fun establecerEspecialidad(
         idEspecialidad: String?,
-        nombreEspecialidad: String?,
-        listaFiltrada: List<User>
+        nombreEspecialidad: String?
     ) {
         val nuevaEsp = idEspecialidad?.takeIf { it.isNotBlank() }
         val nuevoNombre = nombreEspecialidad?.takeIf { it.isNotBlank() }
         val cambio = nuevaEsp != this.idEspecialidad || nuevoNombre != this.nombreEspecialidad
         this.idEspecialidad = nuevaEsp
         this.nombreEspecialidad = nuevoNombre
+        binding.tilAgendaMedico.error = null
+        sincronizarEspecialidadSeleccionadaUi()
         if (cambio && nuevaEsp != null) {
-            this.idMedico = null
             this.horaInicio = null
+            pedirDisponibilidad()
         }
-        this.conservarSinMedico = nuevaEsp != null && this.idMedico == null
-        mostrarMedicos(listaFiltrada)
     }
 
-    fun mostrarMedicos(lista: List<User>) {
-        medicos = lista
-        if (!(conservarSinMedico && idEspecialidad != null) && lista.none { it.id == idMedico }) {
-            idMedico = if (idEspecialidad != null) null else lista.firstOrNull()?.id
+    fun mostrarEspecialidades(lista: List<EspecialidadCatalogo>) {
+        especialidades = lista
+        if (lista.none { it.id == idEspecialidad }) {
+            val porNombre = nombreEspecialidad?.let { nom ->
+                lista.firstOrNull { it.nombre.equals(nom, ignoreCase = true) }
+            }
+            val medicinaGeneral = lista.firstOrNull {
+                it.nombre.equals("Medicina general", ignoreCase = true)
+            }
+            val elegida = porNombre ?: medicinaGeneral ?: lista.firstOrNull()
+            idEspecialidad = elegida?.id
+            nombreEspecialidad = elegida?.nombre
             horaInicio = null
+        } else if (nombreEspecialidad.isNullOrBlank()) {
+            nombreEspecialidad = lista.firstOrNull { it.id == idEspecialidad }?.nombre
         }
-        configurarAdaptadorMedicos()
-        sincronizarMedicoSeleccionadoUi()
-        if (Triple(idMedico, fecha, idEspecialidad) != ultimaPedida) pedirDisponibilidad()
+        configurarAdaptadorEspecialidades()
+        sincronizarEspecialidadSeleccionadaUi()
+        if (idEspecialidad != null && (fecha to idEspecialidad) != ultimaPedida) {
+            pedirDisponibilidad()
+        }
     }
 
     fun mostrarDisponibilidad(d: DisponibilidadUi?) {
         // Ignora respuestas de una selección anterior.
-        if (d != null && (d.idMedico != idMedico || d.idEspecialidad != idEspecialidad || d.fecha != fecha)) return
+        if (d != null && (d.idEspecialidad != idEspecialidad || d.fecha != fecha)) return
         ultimaDisponibilidad = d
         val grupo = binding.chipGroupBloques
         grupo.removeAllViews()
         val aviso = when {
-            idMedico == null && idEspecialidad == null -> "No hay médicos activos disponibles."
-            d == null -> "Seleccione médico o especialidad y fecha para ver los horarios."
+            idEspecialidad == null -> "No hay especialidades activas disponibles."
+            d == null -> "Seleccione especialidad y fecha para ver los horarios."
             d.cargando -> "Consultando horarios libres…"
             d.error != null -> d.error
-            d.bloques.isEmpty() -> if (idMedico == null) {
-                "Sin horarios libres ese día para la especialidad seleccionada."
-            } else {
-                "Sin horarios libres ese día: el médico no tiene turno o su agenda está llena."
-            }
+            d.bloques.isEmpty() ->
+                "Sin horarios libres ese día para esta especialidad (no hay médicos de turno o su agenda está llena)."
             else -> null
         }
         val bloques = d?.takeIf { !it.cargando && it.error == null }?.bloques.orEmpty()
@@ -161,10 +157,10 @@ class SelectorAgendaController(
     }
 
     fun programacion(): ProgramacionCita = ProgramacionCita(
-        idMedico = idMedico?.takeIf { it.isNotBlank() },
+        idMedico = null,
         fecha = fecha,
         horaInicio = horaInicio.orEmpty(),
-        idEspecialidad = if (idMedico.isNullOrBlank()) idEspecialidad else null
+        idEspecialidad = idEspecialidad
     )
 
     fun marcarErrorMedico(mensaje: String?) {
@@ -176,47 +172,27 @@ class SelectorAgendaController(
         binding.tilAgendaFecha.error = mensaje
     }
 
-    private fun seleccionarPorEspecialidad() {
-        val cambio = idMedico != null || !conservarSinMedico
-        idMedico = null
-        conservarSinMedico = true
+    private fun seleccionarEspecialidad(esp: EspecialidadCatalogo) {
+        val cambio = idEspecialidad != esp.id
+        idEspecialidad = esp.id
+        nombreEspecialidad = esp.nombre
         binding.tilAgendaMedico.error = null
-        sincronizarMedicoSeleccionadoUi()
+        sincronizarEspecialidadSeleccionadaUi()
         if (cambio) {
             horaInicio = null
             pedirDisponibilidad()
         }
     }
 
-    private fun seleccionarMedico(medico: User) {
-        val cambio = idMedico != medico.id
-        idMedico = medico.id
-        conservarSinMedico = false
-        binding.tilAgendaMedico.error = null
-        sincronizarMedicoSeleccionadoUi()
-        if (cambio) {
-            horaInicio = null
-            pedirDisponibilidad()
-        }
-    }
-
-    private fun sincronizarMedicoSeleccionadoUi() {
-        val actual = medicos.firstOrNull { it.id == idMedico }
+    private fun sincronizarEspecialidadSeleccionadaUi() {
+        val actual = especialidades.firstOrNull { it.id == idEspecialidad }
+        val nombre = actual?.nombre ?: nombreEspecialidad
         actualizandoTextoInterno = true
-        if (actual != null) {
-            val etiqueta = etiquetaMedico(actual)
-            if (binding.actvAgendaMedico.text?.toString() != etiqueta) {
-                binding.actvAgendaMedico.setText(etiqueta, false)
+        if (!nombre.isNullOrBlank()) {
+            if (binding.actvAgendaMedico.text?.toString() != nombre) {
+                binding.actvAgendaMedico.setText(nombre, false)
             }
-            val esp = actual.especialidadVisible ?: "Consulta Externa"
-            binding.tvMedicoSeleccionadoInfo.text = "✓ Médico seleccionado: ${actual.nombreCompleto} • $esp"
-            binding.tvMedicoSeleccionadoInfo.visibility = View.VISIBLE
-        } else if (idEspecialidad != null) {
-            val etiqueta = etiquetaEspecialidadAbierta()
-            if (binding.actvAgendaMedico.text?.toString() != etiqueta) {
-                binding.actvAgendaMedico.setText(etiqueta, false)
-            }
-            binding.tvMedicoSeleccionadoInfo.text = "✓ Agenda abierta por especialidad: ${nombreEspecialidad ?: "Seleccionada"}"
+            binding.tvMedicoSeleccionadoInfo.text = "✓ Agenda por especialidad: $nombre"
             binding.tvMedicoSeleccionadoInfo.visibility = View.VISIBLE
         } else {
             binding.actvAgendaMedico.setText("", false)
@@ -225,35 +201,22 @@ class SelectorAgendaController(
         actualizandoTextoInterno = false
     }
 
-    private fun construirOpciones(): List<OpcionMedicoUi> = buildList {
-        if (idEspecialidad != null) {
-            add(OpcionMedicoUi(medico = null, etiqueta = etiquetaEspecialidadAbierta()))
-        }
-        medicos.forEach { add(OpcionMedicoUi(medico = it, etiqueta = etiquetaMedico(it))) }
-    }
-
-    private fun configurarAdaptadorMedicos() {
-        val todas = construirOpciones()
+    private fun configurarAdaptadorEspecialidades() {
+        val todas = especialidades
         opcionesFiltradas = todas
         val adapter = object : ArrayAdapter<String>(
             ctx,
             android.R.layout.simple_dropdown_item_1line,
-            todas.map { it.etiqueta }.toMutableList()
+            todas.map { it.nombre }.toMutableList()
         ) {
             private val customFilter = object : Filter() {
                 override fun performFiltering(constraint: CharSequence?): FilterResults {
                     val query = constraint?.toString()?.trim().orEmpty()
-                    val actual = medicos.firstOrNull { it.id == idMedico }
-                    val etiquetaActual = actual?.let { etiquetaMedico(it) }
-                        ?: if (idEspecialidad != null) etiquetaEspecialidadAbierta() else null
-                    // Si el texto coincide con lo ya elegido o está vacío, mostrar todas las opciones
-                    val coincidencias = if (query.isEmpty() || (etiquetaActual != null && query.equals(etiquetaActual, ignoreCase = true))) {
+                    val actualNombre = especialidades.firstOrNull { it.id == idEspecialidad }?.nombre
+                    val coincidencias = if (query.isEmpty() || (actualNombre != null && query.equals(actualNombre, ignoreCase = true))) {
                         todas
                     } else {
-                        todas.filter { op ->
-                            op.etiqueta.contains(query, ignoreCase = true) ||
-                                (op.medico?.especialidadVisible?.contains(query, ignoreCase = true) == true)
-                        }
+                        todas.filter { it.nombre.contains(query, ignoreCase = true) }
                     }
                     return FilterResults().apply {
                         values = coincidencias
@@ -263,9 +226,9 @@ class SelectorAgendaController(
 
                 @Suppress("UNCHECKED_CAST")
                 override fun publishResults(constraint: CharSequence?, results: FilterResults?) {
-                    opcionesFiltradas = (results?.values as? List<OpcionMedicoUi>) ?: todas
+                    opcionesFiltradas = (results?.values as? List<EspecialidadCatalogo>) ?: todas
                     clear()
-                    addAll(opcionesFiltradas.map { it.etiqueta })
+                    addAll(opcionesFiltradas.map { it.nombre })
                     notifyDataSetChanged()
                 }
             }
@@ -275,18 +238,10 @@ class SelectorAgendaController(
         binding.actvAgendaMedico.setAdapter(adapter)
     }
 
-    private fun etiquetaEspecialidadAbierta(): String =
-        "Cualquier médico disponible — ${nombreEspecialidad ?: "Por especialidad"}"
-
-    private fun etiquetaMedico(medico: User): String {
-        val especialidad = medico.especialidadVisible ?: "Medicina General"
-        return "${medico.nombreCompleto} — $especialidad"
-    }
-
     private fun pedirDisponibilidad() {
-        ultimaPedida = Triple(idMedico, fecha, idEspecialidad)
+        ultimaPedida = fecha to idEspecialidad
         binding.tilAgendaFecha.error = null
-        onPedirDisponibilidad(idMedico, fecha, idEspecialidad)
+        onPedirDisponibilidad(null, fecha, idEspecialidad)
     }
 
     private fun abrirCalendario() {

@@ -15,7 +15,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:hint="Médico y especialidad *"
+        android:hint="Especialidad *"
         app:endIconMode="dropdown_menu">
 
         <com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -95,5 +95,5 @@
         android:paddingVertical="8dp"
         android:textColor="@color/huc_on_surface_variant"
         android:textSize="12sp"
-        tools:text="Seleccione médico y fecha para ver los horarios." />
+        tools:text="Seleccione especialidad y fecha para ver los horarios." />
 </LinearLayout>
