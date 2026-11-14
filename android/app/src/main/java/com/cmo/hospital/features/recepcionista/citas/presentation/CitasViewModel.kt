@@ -2,16 +2,29 @@ package com.cmo.hospital.features.recepcionista.citas.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cmo.hospital.core.domain.model.BloqueAgenda
 import com.cmo.hospital.core.domain.model.Cita
+import com.cmo.hospital.core.domain.model.ConsultorioInfo
+import com.cmo.hospital.core.domain.model.EspecialidadCatalogo
+import com.cmo.hospital.core.domain.model.EstadoCita
+import com.cmo.hospital.core.domain.model.Paciente
+import com.cmo.hospital.core.domain.model.ProgramacionCita
 import com.cmo.hospital.core.domain.model.SignosVitales
-import com.cmo.hospital.core.network.dto.ConsultorioDto
-import com.cmo.hospital.core.network.dto.MedicoDto
-import com.cmo.hospital.features.recepcionista.citas.domain.repository.CitaRepository
+import com.cmo.hospital.core.domain.model.User
+import com.cmo.hospital.core.network.ApiValidationException
+import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 data class CitasUiEvent(
     val title: String,
@@ -19,89 +32,283 @@ data class CitasUiEvent(
     val isError: Boolean = false
 )
 
+/** Bloques libres de un médico o una especialidad en una fecha, tal como los devuelve la API. */
+data class DisponibilidadUi(
+    val idMedico: String? = null,
+    val fecha: String,
+    val idEspecialidad: String? = null,
+    val bloques: List<BloqueAgenda> = emptyList(),
+    val cargando: Boolean = true,
+    val error: String? = null
+)
+
+data class AgendaUiState(
+    val medicos: List<User> = emptyList(),
+    val consultorios: List<ConsultorioInfo> = emptyList(),
+    val especialidades: List<EspecialidadCatalogo> = emptyList(),
+    val catalogosCargando: Boolean = false,
+    val catalogosError: String? = null,
+    val disponibilidad: DisponibilidadUi? = null,
+    val pacientesEncontrados: List<Paciente> = emptyList(),
+    val buscandoPacientes: Boolean = false,
+    val enviando: Boolean = false
+)
+
+/** Dónde se muestra un error de validación: el formulario de la pantalla o el diálogo. */
+enum class OrigenProgramacion { FORMULARIO, DIALOGO }
+
+data class ErrorProgramacion(
+    val origen: OrigenProgramacion,
+    val campo: String?,
+    val mensaje: String
+)
+
 class CitasViewModel(
     getCitasFlowUseCase: GetCitasFlowUseCase,
     getTurnoEnBoxFlowUseCase: GetTurnoEnBoxFlowUseCase,
     private val refreshCitasUseCase: RefreshCitasUseCase,
-    private val agendarCitaCascadaUseCase: AgendarCitaCascadaUseCase,
+    private val cargarCatalogosAgendaUseCase: CargarCatalogosAgendaUseCase,
+    private val getDisponibilidadUseCase: GetDisponibilidadUseCase,
+    private val buscarPacientesParaCitaUseCase: BuscarPacientesParaCitaUseCase,
+    private val agendarCitaUseCase: AgendarCitaUseCase,
+    private val confirmarCitaUseCase: ConfirmarCitaUseCase,
+    private val reprogramarCitaUseCase: ReprogramarCitaUseCase,
     private val marcarLlegadaCitaUseCase: MarcarLlegadaCitaUseCase,
     private val cancelarCitaUseCase: CancelarCitaUseCase,
     private val registrarTriajeYPasarConsultaUseCase: RegistrarTriajeYPasarConsultaUseCase,
-    private val controlarLlamadorSalaUseCase: ControlarLlamadorSalaUseCase,
-    private val repository: CitaRepository? = null
+    private val controlarLlamadorSalaUseCase: ControlarLlamadorSalaUseCase
 ) : ViewModel() {
 
     val citas: StateFlow<List<Cita>> = getCitasFlowUseCase()
     val turnoEnBox: StateFlow<Cita?> = getTurnoEnBoxFlowUseCase()
 
+    private val _filtroEstado = MutableStateFlow(FILTRO_TODAS)
+    val filtroEstado: StateFlow<String> = _filtroEstado.asStateFlow()
+
+    private val _filtroDoctor = MutableStateFlow(TODOS_LOS_MEDICOS)
+    val filtroDoctor: StateFlow<String> = _filtroDoctor.asStateFlow()
+
+    private val _filtroFecha = MutableStateFlow("")
+    val filtroFecha: StateFlow<String> = _filtroFecha.asStateFlow()
+
+    /** Lista del mostrador con filtros por estado, médico y fecha aplicados. */
+    val citasFiltradas: StateFlow<List<Cita>> = combine(
+        citas,
+        _filtroEstado,
+        _filtroDoctor,
+        _filtroFecha
+    ) { lista, estado, doctor, fecha ->
+        filtrarCitas(lista, estado, doctor, fecha)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // ─── Estado del Módulo de Calendario de Citas ──────────────────────────
+    private val _calendarioDoctor = MutableStateFlow(TODOS_LOS_MEDICOS)
+    val calendarioDoctor: StateFlow<String> = _calendarioDoctor.asStateFlow()
+
+    private val _calendarioFecha = MutableStateFlow(LocalDate.now().toString())
+    val calendarioFecha: StateFlow<String> = _calendarioFecha.asStateFlow()
+
+    /** Citas agendadas y activas para la vista de Calendario, filtradas por doctor y fecha. */
+    val citasCalendarioFiltradas: StateFlow<List<Cita>> = combine(
+        citas,
+        _calendarioDoctor,
+        _calendarioFecha
+    ) { lista, doctor, fecha ->
+        filtrarCitasCalendario(lista, doctor, fecha)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun setFiltroEstado(estado: String) {
+        _filtroEstado.value = estado
+    }
+
+    fun setFiltroDoctor(doctor: String) {
+        _filtroDoctor.value = doctor.ifBlank { TODOS_LOS_MEDICOS }
+    }
+
+    fun setFiltroFecha(fecha: String) {
+        _filtroFecha.value = fecha.trim()
+    }
+
+    fun limpiarFiltroFecha() {
+        _filtroFecha.value = ""
+    }
+
+    fun setCalendarioDoctor(doctor: String) {
+        _calendarioDoctor.value = doctor.ifBlank { TODOS_LOS_MEDICOS }
+    }
+
+    fun setCalendarioFecha(fecha: String) {
+        _calendarioFecha.value = fecha.trim()
+    }
+
+    private val _agenda = MutableStateFlow(AgendaUiState())
+    val agenda: StateFlow<AgendaUiState> = _agenda.asStateFlow()
+
+    private val _errorProgramacion = MutableStateFlow<ErrorProgramacion?>(null)
+    val errorProgramacion: StateFlow<ErrorProgramacion?> = _errorProgramacion.asStateFlow()
+
     private val _uiEvent = MutableStateFlow<CitasUiEvent?>(null)
     val uiEvent: StateFlow<CitasUiEvent?> = _uiEvent.asStateFlow()
 
+    private var disponibilidadJob: Job? = null
+    private var busquedaJob: Job? = null
+
     init {
-        viewModelScope.launch {
-            refreshCitasUseCase()
-        }
+        viewModelScope.launch { refreshCitasUseCase() }
+        cargarCatalogos()
     }
 
-    fun agendarCita(
-        especialidad: String,
-        medicoNombre: String,
-        pacienteNombre: String,
-        dui: String,
-        fechaNacimiento: String?,
-        fecha: String,
-        horaInicio: String,
-        motivo: String,
-        box: String,
-        onSuccess: () -> Unit
-    ) {
+    fun refrescar() {
+        viewModelScope.launch { refreshCitasUseCase() }
+    }
+
+    fun cargarCatalogos() {
         viewModelScope.launch {
-            val res = agendarCitaCascadaUseCase(
-                especialidad = especialidad,
-                medicoNombre = medicoNombre,
-                pacienteNombre = pacienteNombre,
-                dui = dui,
-                fechaNacimiento = fechaNacimiento,
-                fecha = fecha,
-                horaInicio = horaInicio,
-                motivo = motivo,
-                box = box
-            )
-            res.fold(
-                onSuccess = { cita ->
-                    _uiEvent.value = CitasUiEvent(
-                        title = "Cita Agendada (30 min)",
-                        message = "${cita.paciente?.nombreCompleto} con ${cita.medicoNombre} (${cita.horaInicio} - ${cita.horaFin})."
-                    )
-                    onSuccess()
+            _agenda.update { it.copy(catalogosCargando = true, catalogosError = null) }
+            cargarCatalogosAgendaUseCase().fold(
+                onSuccess = { catalogos ->
+                    _agenda.update {
+                        it.copy(
+                            medicos = catalogos.medicos,
+                            consultorios = catalogos.consultorios,
+                            especialidades = catalogos.especialidades,
+                            catalogosCargando = false
+                        )
+                    }
                 },
                 onFailure = { err ->
-                    _uiEvent.value = CitasUiEvent(
-                        title = "No se pudo agendar",
-                        message = err.message ?: "Verifique los campos obligatorios.",
-                        isError = true
-                    )
+                    _agenda.update {
+                        it.copy(catalogosCargando = false, catalogosError = err.message ?: "No se pudo cargar la agenda.")
+                    }
                 }
             )
         }
     }
 
+    /** Pide los bloques libres; una petición nueva reemplaza a la anterior. */
+    fun cargarDisponibilidad(
+        idMedico: String? = null,
+        fecha: String,
+        idEspecialidad: String? = null
+    ) {
+        disponibilidadJob?.cancel()
+        val med = idMedico?.takeIf { it.isNotBlank() }
+        val esp = idEspecialidad?.takeIf { it.isNotBlank() }
+        if ((med == null && esp == null) || !FECHA_ISO.matches(fecha.trim())) {
+            _agenda.update { it.copy(disponibilidad = null) }
+            return
+        }
+        val consulta = DisponibilidadUi(idMedico = med, fecha = fecha.trim(), idEspecialidad = esp)
+        _agenda.update { it.copy(disponibilidad = consulta) }
+        disponibilidadJob = viewModelScope.launch {
+            val res = getDisponibilidadUseCase(idMedico = med, fecha = fecha.trim(), idEspecialidad = esp)
+            _agenda.update {
+                it.copy(
+                    disponibilidad = consulta.copy(
+                        bloques = res.getOrDefault(emptyList()),
+                        cargando = false,
+                        error = res.exceptionOrNull()?.message
+                    )
+                )
+            }
+        }
+    }
+
+    /** Busca pacientes registrados por nombre, DUI o expediente (con pausa al escribir). */
+    fun buscarPacientes(texto: String) {
+        busquedaJob?.cancel()
+        busquedaJob = viewModelScope.launch {
+            delay(350)
+            _agenda.update { it.copy(buscandoPacientes = true) }
+            val res = buscarPacientesParaCitaUseCase(texto)
+            _agenda.update {
+                it.copy(pacientesEncontrados = res.getOrDefault(emptyList()), buscandoPacientes = false)
+            }
+            res.exceptionOrNull()?.let { mostrarError("No se pudo buscar", it) }
+        }
+    }
+
+    fun limpiarBusquedaPacientes() {
+        busquedaJob?.cancel()
+        _agenda.update { it.copy(pacientesEncontrados = emptyList(), buscandoPacientes = false) }
+    }
+
+    fun limpiarError(origen: OrigenProgramacion) {
+        if (_errorProgramacion.value?.origen == origen) _errorProgramacion.value = null
+    }
+
+    fun agendarCita(
+        idPaciente: String?,
+        programacion: ProgramacionCita,
+        motivo: String,
+        onSuccess: () -> Unit
+    ) = enviar(OrigenProgramacion.FORMULARIO, onSuccess, "Cita agendada") {
+        agendarCitaUseCase(idPaciente, programacion, motivo)
+    }
+
+    fun confirmarSolicitud(citaId: String, programacion: ProgramacionCita, onSuccess: () -> Unit) =
+        enviar(OrigenProgramacion.DIALOGO, onSuccess, "Cita agendada") {
+            confirmarCitaUseCase(citaId, programacion)
+        }
+
+    fun reprogramarCita(citaId: String, programacion: ProgramacionCita, onSuccess: () -> Unit) =
+        enviar(OrigenProgramacion.DIALOGO, onSuccess, "Cita reprogramada") {
+            reprogramarCitaUseCase(citaId, programacion)
+        }
+
+    private fun enviar(
+        origen: OrigenProgramacion,
+        onSuccess: () -> Unit,
+        titulo: String,
+        accion: suspend () -> Result<Cita>
+    ) {
+        if (_agenda.value.enviando) return
+        viewModelScope.launch {
+            _agenda.update { it.copy(enviando = true) }
+            _errorProgramacion.value = null
+            accion().fold(
+                onSuccess = { cita ->
+                    _uiEvent.value = CitasUiEvent(title = titulo, message = resumen(cita))
+                    onSuccess()
+                },
+                onFailure = { err ->
+                    _errorProgramacion.value = ErrorProgramacion(
+                        origen = origen,
+                        campo = (err as? ApiValidationException)?.campo,
+                        mensaje = err.message ?: "Revise los datos de la cita."
+                    )
+                    // La API pudo rechazar el bloque porque otro lo tomó: refrescar disponibilidad.
+                    _agenda.value.disponibilidad?.let { cargarDisponibilidad(it.idMedico, it.fecha, it.idEspecialidad) }
+                }
+            )
+            _agenda.update { it.copy(enviando = false) }
+        }
+    }
+
     fun registrarLlegada(citaId: String) {
         viewModelScope.launch {
-            marcarLlegadaCitaUseCase(citaId)
-            _uiEvent.value = CitasUiEvent(
-                title = "Llegada Confirmada",
-                message = "El paciente pasó a Sala de Espera para triaje opcional o pase a Box."
+            marcarLlegadaCitaUseCase(citaId).fold(
+                onSuccess = {
+                    _uiEvent.value = CitasUiEvent(
+                        title = "Llegada registrada",
+                        message = "${it.paciente?.nombreCompleto ?: "El paciente"} pasó a sala de espera."
+                    )
+                },
+                onFailure = { mostrarError("No se registró la llegada", it) }
             )
         }
     }
 
-    fun cancelarCita(citaId: String) {
+    fun cancelarCita(citaId: String, motivo: String) {
         viewModelScope.launch {
-            cancelarCitaUseCase(citaId)
-            _uiEvent.value = CitasUiEvent(
-                title = "Cita Cancelada",
-                message = "El bloque de 30 minutos quedó liberado en la agenda médica."
+            cancelarCitaUseCase(citaId, motivo).fold(
+                onSuccess = {
+                    _uiEvent.value = CitasUiEvent(
+                        title = "Cita cancelada",
+                        message = "El horario quedó libre en la agenda del médico."
+                    )
+                },
+                onFailure = { mostrarError("No se canceló la cita", it) }
             )
         }
     }
@@ -112,21 +319,14 @@ class CitasViewModel(
         pasarAConsulta: Boolean
     ) {
         viewModelScope.launch {
-            val res = registrarTriajeYPasarConsultaUseCase(citaId, signosVitales, pasarAConsulta)
-            res.fold(
+            registrarTriajeYPasarConsultaUseCase(citaId, signosVitales, pasarAConsulta).fold(
                 onSuccess = { msg ->
                     _uiEvent.value = CitasUiEvent(
-                        title = if (pasarAConsulta) "Pase a Consulta Activa" else "Triaje Registrado",
+                        title = if (pasarAConsulta) "Pase a consulta" else "Triaje registrado",
                         message = msg
                     )
                 },
-                onFailure = { err ->
-                    _uiEvent.value = CitasUiEvent(
-                        title = "Error en Triaje",
-                        message = err.message ?: "Error al procesar triaje.",
-                        isError = true
-                    )
-                }
+                onFailure = { mostrarError("Error en triaje", it) }
             )
         }
     }
@@ -135,22 +335,22 @@ class CitasViewModel(
         val actual = controlarLlamadorSalaUseCase.reLlamar()
         if (actual != null) {
             _uiEvent.value = CitasUiEvent(
-                title = "Llamador de Sala",
-                message = "Re-emitiendo llamado sonoro y visual para ${actual.consultorio?.codigo ?: "Box 03"}."
+                title = "Llamador de sala",
+                message = "Llamando de nuevo a ${actual.consultorio?.codigo ?: "consultorio"}."
             )
         }
     }
 
     fun llamarSiguienteEnSala() {
         val sig = controlarLlamadorSalaUseCase.llamarSiguiente()
-        if (sig != null) {
-            _uiEvent.value = CitasUiEvent(
-                title = "Siguiente Turno en Box",
-                message = "Paciente transferido a ${sig.consultorio?.codigo ?: "Box 03"} y cargado en Consulta Activa."
+        _uiEvent.value = if (sig != null) {
+            CitasUiEvent(
+                title = "Siguiente turno",
+                message = "${sig.paciente?.nombreCompleto ?: "Paciente"} pasa a ${sig.consultorio?.codigo ?: "consultorio"}."
             )
         } else {
-            _uiEvent.value = CitasUiEvent(
-                title = "Sin Pacientes en Espera",
+            CitasUiEvent(
+                title = "Sin pacientes en espera",
                 message = "No hay citas pendientes en sala de espera.",
                 isError = true
             )
@@ -161,39 +361,75 @@ class CitasViewModel(
         _uiEvent.value = null
     }
 
-    suspend fun cargarMedicosYConsultorios(): Pair<List<MedicoDto>, List<ConsultorioDto>> =
-        repository?.obtenerMedicosYConsultorios() ?: (emptyList<MedicoDto>() to emptyList())
+    private fun mostrarError(titulo: String, err: Throwable) {
+        _uiEvent.value = CitasUiEvent(titulo, err.message ?: "Intente de nuevo.", isError = true)
+    }
 
-    fun confirmarCita(
-        citaId: String,
-        idMedico: String?,
-        idConsultorio: String?,
-        medicoNombre: String?,
-        consultorioCodigo: String?
-    ) {
-        val repo = repository ?: return
-        viewModelScope.launch {
-            repo.confirmarCitaSolicitada(
-                citaId = citaId,
-                idMedico = idMedico,
-                idConsultorio = idConsultorio,
-                medicoNombre = medicoNombre,
-                consultorioCodigo = consultorioCodigo
-            ).fold(
-                onSuccess = { msg ->
-                    _uiEvent.value = CitasUiEvent(
-                        title = "Cita Confirmada",
-                        message = msg
-                    )
-                },
-                onFailure = { err ->
-                    _uiEvent.value = CitasUiEvent(
-                        title = "Error al Confirmar",
-                        message = err.message ?: "No se pudo confirmar la solicitud.",
-                        isError = true
-                    )
-                }
-            )
+    private fun resumen(cita: Cita): String =
+        "${cita.paciente?.nombreCompleto ?: "Paciente"} con ${cita.medicoNombre ?: "el médico"} " +
+            "el ${DateUtils.toUiDate(cita.fecha)} a las ${cita.horaInicio}."
+
+    companion object {
+        const val FILTRO_TODAS = "Todas"
+        const val TODOS_LOS_MEDICOS = "Todos los Médicos"
+        val FILTROS_ESTADO = listOf(
+            FILTRO_TODAS,
+            "Solicitadas",
+            "Agendadas",
+            "En Espera",
+            "En Atención",
+            "Atendidas",
+            "Canceladas"
+        )
+
+        fun coincideEstado(estadoCita: String, filtro: String): Boolean = when (filtro) {
+            "Solicitadas" -> estadoCita == EstadoCita.SOLICITADA
+            "Agendadas", "Pendientes" -> estadoCita == EstadoCita.AGENDADA
+            "En Espera" -> estadoCita == EstadoCita.EN_ESPERA
+            "En Atención" -> estadoCita == EstadoCita.EN_ATENCION
+            "Atendidas" -> estadoCita == EstadoCita.ATENDIDA
+            "Canceladas" -> estadoCita == EstadoCita.CANCELADA || estadoCita == EstadoCita.NO_ASISTIO
+            else -> true
         }
+
+        fun filtrarCitas(
+            lista: List<Cita>,
+            estado: String = FILTRO_TODAS,
+            doctor: String = TODOS_LOS_MEDICOS,
+            fecha: String = ""
+        ): List<Cita> {
+            val fechaIso = DateUtils.toIsoDate(fecha.trim())
+            return EstadoCita.ordenarParaMostrador(lista).filter { cita ->
+                val okEstado = coincideEstado(cita.estado, estado)
+                val okDoctor = doctor == TODOS_LOS_MEDICOS || doctor.isBlank() ||
+                    cita.medicoNombre?.contains(doctor, ignoreCase = true) == true
+                val okFecha = fechaIso.isBlank() || DateUtils.toIsoDate(cita.fecha) == fechaIso
+                okEstado && okDoctor && okFecha
+            }
+        }
+
+        fun filtrarCitasCalendario(
+            lista: List<Cita>,
+            doctor: String = TODOS_LOS_MEDICOS,
+            fecha: String = ""
+        ): List<Cita> {
+            val fechaIso = DateUtils.toIsoDate(fecha.trim())
+            return lista
+                .filter { cita ->
+                    val esAgendadaOActiva = cita.estado != EstadoCita.CANCELADA && cita.estado != EstadoCita.NO_ASISTIO
+                    val okDoctor = doctor == TODOS_LOS_MEDICOS || doctor.isBlank() ||
+                        cita.medicoNombre?.contains(doctor, ignoreCase = true) == true
+                    val okFecha = fechaIso.isBlank() || DateUtils.toIsoDate(cita.fecha) == fechaIso
+                    esAgendadaOActiva && okDoctor && okFecha
+                }
+                .sortedWith(
+                    compareBy<Cita>(
+                        { DateUtils.toIsoDate(it.fecha) },
+                        { it.horaInicio }
+                    )
+                )
+        }
+
+        private val FECHA_ISO = Regex("^\\d{4}-\\d{2}-\\d{2}$")
     }
 }

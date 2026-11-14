@@ -15,10 +15,66 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Buscador + Registrar -->
+        <!-- Tarjeta 1 Independiente: Registro de Nuevo Paciente -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_card_rounded_16"
+            android:elevation="1dp"
+            android:orientation="vertical"
+            android:padding="@dimen/huc_space_md">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_person"
+                    app:tint="@color/huc_primary_container" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Nuevo Ingreso al Padrón"
+                        android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Registre los datos de filiación para asignar N° de expediente"
+                        android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnNuevoPaciente"
+                style="@style/Widget.Huc.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="@dimen/huc_space_sm"
+                android:text="Registrar Paciente"
+                android:textAllCaps="false"
+                app:icon="@drawable/ic_add"
+                app:iconGravity="textStart" />
+        </LinearLayout>
+
+        <!-- Tarjeta 2 Independiente: Buscador del Directorio de Pacientes -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_12"
             android:background="@drawable/bg_card_rounded_16"
             android:elevation="1dp"
             android:orientation="vertical"
@@ -43,7 +99,7 @@
                     android:layout_marginStart="6dp"
                     android:layout_weight="1"
                     android:letterSpacing="0.06"
-                    android:text="PACIENTES REGISTRADOS"
+                    android:text="DIRECTORIO DE PACIENTES"
                     android:textAppearance="@style/TextAppearance.Huc.LabelSm"
                     android:textColor="@color/huc_secondary" />
 
@@ -60,11 +116,13 @@
             </LinearLayout>
 
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilBuscarPaciente"
                 style="@style/Widget.Huc.TextInputLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/huc_space_sm"
                 android:hint="Buscar por nombre, DUI o N° de expediente"
+                app:endIconMode="clear_text"
                 app:startIconDrawable="@drawable/ic_search"
                 app:startIconTint="@color/huc_primary_container">
 
@@ -78,16 +136,14 @@
                     android:textAppearance="@style/TextAppearance.Huc.BodyMd" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnNuevoPaciente"
-                style="@style/Widget.Huc.Button.Primary"
+            <TextView
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:layout_marginTop="@dimen/huc_space_sm"
-                android:text="Registrar Paciente"
-                android:textAllCaps="false"
-                app:icon="@drawable/ic_add"
-                app:iconGravity="textStart" />
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Toque un paciente de la lista para abrir su ficha ampliada y opciones."
+                android:textAppearance="@style/TextAppearance.Huc.BodySm"
+                android:textColor="@color/huc_on_surface_variant"
+                android:textSize="11sp" />
         </LinearLayout>
 
         <com.google.android.material.progressindicator.LinearProgressIndicator
@@ -148,7 +204,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/huc_space_12"
             android:nestedScrollingEnabled="false"
-            tools:itemCount="3"
+            tools:itemCount="5"
             tools:listitem="@layout/item_paciente_recepcion" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

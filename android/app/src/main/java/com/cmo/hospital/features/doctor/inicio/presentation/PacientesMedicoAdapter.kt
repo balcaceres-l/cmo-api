@@ -41,7 +41,7 @@ class PacientesMedicoAdapter(
             val dniTxt = pac.dui ?: "S/D"
             val sangreTxt = pac.tipoSangre ?: "O+"
             binding.tvPacDocDatosFiliacion.text =
-                "$edadTxt • DNI: $dniTxt • Sangre: $sangreTxt"
+                "$edadTxt • DUI: $dniTxt • Sangre: $sangreTxt"
 
             val estadoExtra = item.estadoUltimaCita?.let { " • Cita: $it" }.orEmpty()
             val motivoExtra = item.ultimoMotivo?.takeIf { it.isNotBlank() }?.let { "\nÚltimo motivo: $it" }.orEmpty()

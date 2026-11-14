@@ -17,7 +17,15 @@ data class PacienteForm(
     val telefono: String? = null,
     val direccion: String? = null,
     val tipoSangre: String? = null,
-    val alergias: String? = null
+    val alergias: String? = null,
+    val tipoDocumento: String = "DUI", // "DUI" o "PASAPORTE"
+    val responsableNombre: String? = null,
+    val responsableFechaNacimiento: String? = null,
+    val responsableTipoDocumento: String = "DUI", // "DUI" o "PASAPORTE"
+    val responsableDocumento: String? = null,
+    val responsableTelefono: String? = null,
+    val responsableParentesco: String? = null,
+    val exigirDatosCompletos: Boolean = false
 )
 
 /** Dato del paciente rechazado por la validación local o por la API (422). */

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../../api/client';
+import { useAuth } from '../../context/AuthContext';
+import { isJefeOperaciones } from '../../utils/roles';
 
 interface PacienteItem {
   id: number | string;
@@ -13,7 +15,89 @@ interface PacienteItem {
   tiene_cuenta_usuario?: boolean;
 }
 
+interface SignosVitalesItem {
+  presion_sistolica?: number | null;
+  presion_diastolica?: number | null;
+  frecuencia_cardiaca?: number | null;
+  frecuencia_respiratoria?: number | null;
+  temperatura_c?: number | null;
+  saturacion_oxigeno?: number | null;
+  peso_kg?: number | null;
+  talla_cm?: number | null;
+  observaciones?: string | null;
+}
+
+interface RecetaExpediente {
+  id_receta: string;
+  medicamento: string;
+  dosis: string;
+  frecuencia: string;
+  duracion: string;
+  indicaciones?: string | null;
+}
+
+interface CitaExpediente {
+  id_cita: string;
+  fecha: string;
+  hora_inicio?: string | null;
+  estado: string;
+  motivo?: string | null;
+  especialidad?: { nombre?: string | null } | null;
+  medico?: { nombre_completo?: string | null; especialidad?: { nombre?: string | null } | null } | null;
+  signos_vitales?: SignosVitalesItem | null;
+  consulta?: {
+    diagnostico?: string | null;
+    notas?: string | null;
+    recetas?: RecetaExpediente[];
+  } | null;
+}
+
+interface OrdenLabExpediente {
+  id_orden: string;
+  estado: string;
+  resultado?: string | null;
+  observaciones?: string | null;
+  fecha_solicitud?: string | null;
+  examen?: { nombre?: string | null } | null;
+}
+
+interface IngresoExpediente {
+  id_ingreso: string;
+  fecha_ingreso: string;
+  fecha_alta?: string | null;
+  motivo: string;
+  cama?: { codigo?: string | null; habitacion?: { codigo?: string | null; planta?: number | null } | null } | null;
+}
+
+interface ExpedienteDetalle {
+  tipo_sangre?: string | null;
+  alergias?: string | null;
+  historial?: {
+    antecedentes_personales?: string | null;
+    antecedentes_familiares?: string | null;
+  } | null;
+  citas?: CitaExpediente[];
+  ordenes_laboratorio?: OrdenLabExpediente[];
+  ingresos?: IngresoExpediente[];
+}
+
+function buildVitalItems(sv: SignosVitalesItem): { label: string; value: string }[] {
+  const items: { label: string; value: string }[] = [];
+  if (sv.presion_sistolica != null || sv.presion_diastolica != null) {
+    items.push({ label: 'Presión arterial', value: `${sv.presion_sistolica ?? '—'}/${sv.presion_diastolica ?? '—'} mmHg` });
+  }
+  if (sv.frecuencia_cardiaca != null) items.push({ label: 'Frec. cardíaca', value: `${sv.frecuencia_cardiaca} lpm` });
+  if (sv.frecuencia_respiratoria != null) items.push({ label: 'Frec. respiratoria', value: `${sv.frecuencia_respiratoria} rpm` });
+  if (sv.temperatura_c != null) items.push({ label: 'Temperatura', value: `${sv.temperatura_c} °C` });
+  if (sv.saturacion_oxigeno != null) items.push({ label: 'SpO₂', value: `${sv.saturacion_oxigeno}%` });
+  if (sv.peso_kg != null) items.push({ label: 'Peso', value: `${sv.peso_kg} kg` });
+  if (sv.talla_cm != null) items.push({ label: 'Talla', value: `${sv.talla_cm} cm` });
+  return items;
+}
+
 export const PatientsPage: React.FC = () => {
+  const { user } = useAuth();
+  const isOps = isJefeOperaciones(user);
   const [pacientes, setPacientes] = useState<PacienteItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState<boolean>(true);
@@ -27,6 +111,31 @@ export const PatientsPage: React.FC = () => {
 
   // Modal de Consulta de Expediente (Lectura HU-44)
   const [viewingPaciente, setViewingPaciente] = useState<PacienteItem | null>(null);
+  const [expediente, setExpediente] = useState<ExpedienteDetalle | null>(null);
+  const [loadingExpediente, setLoadingExpediente] = useState(false);
+  const [expedienteError, setExpedienteError] = useState<string | null>(null);
+
+  const openExpediente = async (paciente: PacienteItem) => {
+    if (isOps) return;
+    setViewingPaciente(paciente);
+    setExpediente(null);
+    setExpedienteError(null);
+    setLoadingExpediente(true);
+    try {
+      const res: any = await apiClient.get(`/pacientes/${paciente.id}/expediente`);
+      setExpediente((res?.data ?? res) as ExpedienteDetalle);
+    } catch (err: any) {
+      setExpedienteError(err?.message || 'No se pudo cargar el expediente clínico del paciente.');
+    } finally {
+      setLoadingExpediente(false);
+    }
+  };
+
+  const closeExpediente = () => {
+    setViewingPaciente(null);
+    setExpediente(null);
+    setExpedienteError(null);
+  };
 
   const fetchPacientes = async () => {
     setLoading(true);
@@ -197,7 +306,7 @@ export const PatientsPage: React.FC = () => {
               <th style={{ padding: '12px 18px', fontWeight: 700 }}>DUI</th>
               <th style={{ padding: '12px 18px', fontWeight: 700 }}>Teléfono / Contacto</th>
               <th style={{ padding: '12px 18px', fontWeight: 700 }}>Cuenta App Móvil</th>
-              <th style={{ padding: '12px 18px', fontWeight: 700, textAlign: 'right' }}>Auditoría</th>
+              <th style={{ padding: '12px 18px', fontWeight: 700, textAlign: 'right' }}>{isOps ? 'Soporte App' : 'Auditoría'}</th>
             </tr>
           </thead>
           <tbody>
@@ -231,21 +340,39 @@ export const PatientsPage: React.FC = () => {
                   )}
                 </td>
                 <td style={{ padding: '14px 18px', textAlign: 'right' }}>
-                  <button
-                    onClick={() => setViewingPaciente(p)}
-                    style={{
-                      background: '#f8faf9',
-                      color: '#073f33',
-                      border: '1px solid #d1dcd6',
-                      borderRadius: '6px',
-                      padding: '6px 14px',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Ver Expediente →
-                  </button>
+                  {isOps ? (
+                    <button
+                      onClick={() => handleGenerateActivationCode(p)}
+                      style={{
+                        background: '#0b5d4b',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '6px 14px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      🔑 Generar PIN
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => openExpediente(p)}
+                      style={{
+                        background: '#f8faf9',
+                        color: '#073f33',
+                        border: '1px solid #d1dcd6',
+                        borderRadius: '6px',
+                        padding: '6px 14px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Ver Expediente →
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -260,53 +387,182 @@ export const PatientsPage: React.FC = () => {
         </table>
       </div>
 
-      {/* Modal Consulta Expediente (HU-44) */}
-      {viewingPaciente && (
+      {/* Modal Consulta Expediente (HU-44) — Solo Administrador General */}
+      {!isOps && viewingPaciente && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '640px', padding: '28px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+          <div style={{ background: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '680px', padding: '28px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
               <div>
                 <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0b5d4b', textTransform: 'uppercase' }}>
-                  Expediente Clínico Digital · Modo Supervisión
+                  Expediente Clínico Digital · Solo Lectura (Auditoría)
                 </span>
                 <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: '2px 0 0', color: '#073f33' }}>
                   {viewingPaciente.nombre_completo}
                 </h2>
               </div>
-              <button onClick={() => setViewingPaciente(null)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#849a90' }}>✕</button>
+              <button onClick={closeExpediente} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#849a90' }}>✕</button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', background: '#f8faf9', padding: '16px', borderRadius: '12px', border: '1px solid #e8efeb', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#f8faf9', padding: '16px', borderRadius: '12px', border: '1px solid #e8efeb', marginBottom: '20px', fontSize: '0.88rem' }}>
               <div><b>DUI:</b> {viewingPaciente.dui}</div>
               <div><b>N° Expediente:</b> {viewingPaciente.numero_expediente}</div>
               <div><b>Fecha Nacimiento:</b> {viewingPaciente.fecha_nacimiento}</div>
               <div><b>Sexo:</b> {viewingPaciente.sexo}</div>
               <div><b>Teléfono:</b> {viewingPaciente.telefono || 'No registrado'}</div>
               <div><b>Dirección:</b> {viewingPaciente.direccion || 'No registrada'}</div>
+              {expediente?.tipo_sangre && <div><b>Tipo de sangre:</b> {expediente.tipo_sangre}</div>}
+              {expediente?.alergias && <div><b>Alergias:</b> {expediente.alergias}</div>}
             </div>
 
-            <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#073f33' }}>
-                Historial de Consultas & Recetas
-              </h3>
-              <div style={{ background: '#ffffff', border: '1px solid #d1dcd6', borderRadius: '8px', padding: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#526b60' }}>
-                  <span>Consulta General · Dr. Alejandro Benítez</span>
-                  <span>14 oct 2026</span>
-                </div>
-                <div style={{ fontWeight: 700, fontSize: '0.88rem', margin: '4px 0' }}>Diagnóstico: Faringitis Aguda Bacteriana</div>
-                <div style={{ fontSize: '0.8rem', color: '#33483f' }}>Receta: Amoxicilina 500mg cada 8 horas por 7 días. Paracetamol 500mg SOS.</div>
+            {loadingExpediente && (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#526b60', fontSize: '0.88rem', marginBottom: '16px' }}>
+                Cargando expediente clínico...
               </div>
+            )}
 
-              <div style={{ background: '#ffffff', border: '1px solid #d1dcd6', borderRadius: '8px', padding: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#526b60' }}>
-                  <span>Laboratorio Clínico</span>
-                  <span>14 oct 2026 · COMPLETADO</span>
-                </div>
-                <div style={{ fontWeight: 700, fontSize: '0.88rem', margin: '4px 0' }}>Examen: Hemograma Completo</div>
-                <div style={{ fontSize: '0.8rem', color: '#33483f' }}>Estado: Completado. Procesado por Laboratorio Central.</div>
+            {expedienteError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', borderRadius: '10px', padding: '12px 14px', fontSize: '0.84rem', marginBottom: '16px' }}>
+                {expedienteError}
               </div>
-            </div>
+            )}
+
+            {!loadingExpediente && !expedienteError && expediente && (
+              <div style={{ display: 'grid', gap: '16px', marginBottom: '20px' }}>
+                {(expediente.historial?.antecedentes_personales || expediente.historial?.antecedentes_familiares) && (
+                  <div style={{ background: '#f8faf9', border: '1px solid #d1dcd6', borderRadius: '10px', padding: '12px 14px', fontSize: '0.84rem', display: 'grid', gap: '6px' }}>
+                    <div style={{ fontWeight: 700, color: '#073f33' }}>Antecedentes Clínicos</div>
+                    {expediente.historial.antecedentes_personales && (
+                      <div><b>Personales:</b> {expediente.historial.antecedentes_personales}</div>
+                    )}
+                    {expediente.historial.antecedentes_familiares && (
+                      <div><b>Familiares:</b> {expediente.historial.antecedentes_familiares}</div>
+                    )}
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#073f33' }}>
+                    Historial de Citas, Signos Vitales & Consultas
+                  </h3>
+                  {(!expediente.citas || expediente.citas.length === 0) ? (
+                    <div style={{ background: '#f8faf9', border: '1px solid #e8efeb', borderRadius: '8px', padding: '12px', fontSize: '0.84rem', color: '#526b60' }}>
+                      Sin citas o atenciones registradas para este paciente.
+                    </div>
+                  ) : (
+                    [...expediente.citas]
+                      .sort((a, b) => `${b.fecha} ${b.hora_inicio || ''}`.localeCompare(`${a.fecha} ${a.hora_inicio || ''}`))
+                      .map((cita) => {
+                        const especialidad = cita.especialidad?.nombre || cita.medico?.especialidad?.nombre || 'Consulta General';
+                        const vitals = cita.signos_vitales ? buildVitalItems(cita.signos_vitales) : [];
+                        return (
+                          <div key={cita.id_cita} style={{ background: '#ffffff', border: '1px solid #d1dcd6', borderRadius: '10px', padding: '12px 14px', display: 'grid', gap: '8px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#526b60' }}>
+                              <span>
+                                <b>{especialidad}</b>
+                                {cita.medico?.nombre_completo ? ` · ${cita.medico.nombre_completo}` : ' · Sin médico asignado'}
+                              </span>
+                              <span>
+                                {cita.fecha}{cita.hora_inicio ? ` ${cita.hora_inicio.slice(0, 5)}` : ''} · <b>{cita.estado}</b>
+                              </span>
+                            </div>
+
+                            {cita.motivo && (
+                              <div style={{ fontSize: '0.82rem', color: '#33483f' }}>
+                                <b>Motivo:</b> {cita.motivo}
+                              </div>
+                            )}
+
+                            {cita.signos_vitales && (vitals.length > 0 || cita.signos_vitales.observaciones) && (
+                              <div style={{ background: '#f2f9f6', border: '1px solid #cce3da', borderRadius: '8px', padding: '10px 12px', display: 'grid', gap: '6px' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#0b5d4b', textTransform: 'uppercase' }}>
+                                  Signos Vitales (Solo lectura)
+                                </div>
+                                {vitals.length > 0 && (
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(145px, 1fr))', gap: '6px 12px', fontSize: '0.8rem', color: '#13221c' }}>
+                                    {vitals.map((item) => (
+                                      <div key={item.label}>
+                                        <span style={{ color: '#526b60' }}>{item.label}:</span> <b>{item.value}</b>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {cita.signos_vitales.observaciones && (
+                                  <div style={{ fontSize: '0.78rem', color: '#33483f' }}>
+                                    <b>Observaciones:</b> {cita.signos_vitales.observaciones}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {cita.consulta && (
+                              <div style={{ display: 'grid', gap: '4px', fontSize: '0.82rem', color: '#13221c' }}>
+                                {cita.consulta.diagnostico && (
+                                  <div><b>Diagnóstico:</b> {cita.consulta.diagnostico}</div>
+                                )}
+                                {cita.consulta.notas && (
+                                  <div style={{ color: '#33483f' }}><b>Notas:</b> {cita.consulta.notas}</div>
+                                )}
+                                {cita.consulta.recetas && cita.consulta.recetas.length > 0 && (
+                                  <div style={{ marginTop: '4px', paddingTop: '6px', borderTop: '1px dashed #e1ebe6', display: 'grid', gap: '3px' }}>
+                                    <span style={{ fontWeight: 700, fontSize: '0.78rem', color: '#073f33' }}>Recetas:</span>
+                                    {cita.consulta.recetas.map((r) => (
+                                      <div key={r.id_receta} style={{ fontSize: '0.8rem', color: '#33483f' }}>
+                                        • <b>{r.medicamento}</b> ({r.dosis} · {r.frecuencia} · {r.duracion})
+                                        {r.indicaciones ? ` — ${r.indicaciones}` : ''}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                  )}
+                </div>
+
+                {expediente.ordenes_laboratorio && expediente.ordenes_laboratorio.length > 0 && (
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    <h3 style={{ fontSize: '0.96rem', fontWeight: 700, margin: 0, color: '#073f33' }}>
+                      Órdenes de Laboratorio
+                    </h3>
+                    {expediente.ordenes_laboratorio.map((ord) => (
+                      <div key={ord.id_orden} style={{ background: '#ffffff', border: '1px solid #d1dcd6', borderRadius: '8px', padding: '10px 12px', fontSize: '0.82rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#526b60', fontSize: '0.78rem' }}>
+                          <span><b>{ord.examen?.nombre || 'Examen clínico'}</b></span>
+                          <span>{ord.fecha_solicitud ? ord.fecha_solicitud.slice(0, 10) : ''} · {ord.estado}</span>
+                        </div>
+                        {ord.resultado && <div style={{ marginTop: '4px', color: '#13221c' }}><b>Resultado:</b> {ord.resultado}</div>}
+                        {ord.observaciones && <div style={{ marginTop: '2px', color: '#33483f' }}><b>Observaciones:</b> {ord.observaciones}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {expediente.ingresos && expediente.ingresos.length > 0 && (
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    <h3 style={{ fontSize: '0.96rem', fontWeight: 700, margin: 0, color: '#073f33' }}>
+                      Historial de Hospitalización
+                    </h3>
+                    {expediente.ingresos.map((ing) => (
+                      <div key={ing.id_ingreso} style={{ background: '#ffffff', border: '1px solid #d1dcd6', borderRadius: '8px', padding: '10px 12px', fontSize: '0.82rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#526b60', fontSize: '0.78rem' }}>
+                          <span>
+                            {ing.cama?.habitacion?.codigo ? `Hab. ${ing.cama.habitacion.codigo} · ` : ''}
+                            {ing.cama?.codigo ? `Cama ${ing.cama.codigo}` : 'Ingreso hospitalario'}
+                          </span>
+                          <span>
+                            Ingreso: {ing.fecha_ingreso.slice(0, 10)}
+                            {ing.fecha_alta ? ` · Alta: ${ing.fecha_alta.slice(0, 10)}` : ' · Activo'}
+                          </span>
+                        </div>
+                        <div style={{ marginTop: '4px', color: '#13221c' }}><b>Motivo:</b> {ing.motivo}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Sección Discreta de Soporte para Vinculación Móvil */}
             <div
@@ -352,7 +608,7 @@ export const PatientsPage: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button onClick={() => setViewingPaciente(null)} style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #d1dcd6', background: '#f8faf9', color: '#13221c', fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={closeExpediente} style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #d1dcd6', background: '#f8faf9', color: '#13221c', fontWeight: 600, cursor: 'pointer' }}>
                 Cerrar Expediente
               </button>
             </div>

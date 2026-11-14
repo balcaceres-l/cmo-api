@@ -1,11 +1,14 @@
 package com.cmo.hospital.features.recepcionista.admision.domain.usecase
 
-import com.cmo.hospital.core.domain.model.*
+import com.cmo.hospital.core.domain.model.Cama
+import com.cmo.hospital.core.domain.model.CapacidadHospitalaria
+import com.cmo.hospital.core.domain.model.HabitacionDetalleUi
+import com.cmo.hospital.core.domain.model.Paciente
+import com.cmo.hospital.core.domain.model.User
+import com.cmo.hospital.core.network.ApiValidationException
 import com.cmo.hospital.features.recepcionista.admision.domain.repository.AdmisionRepository
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.util.UUID
 
 class ObserveCapacidadCamasUseCase(
     private val repository: AdmisionRepository
@@ -14,122 +17,74 @@ class ObserveCapacidadCamasUseCase(
         repository.camasFlow.map { repository.obtenerCapacidadActual() }
 }
 
-class SimularEscanerDocumentoUseCase {
-    suspend operator fun invoke(delayMs: Long = 650L): DatosDocumentoEscaneado {
-        if (delayMs > 0) delay(delayMs)
-        val edad = 34
-        return DatosDocumentoEscaneado(
-            dni = "17.489.201-3",
-            nombres = "Francisca Elena",
-            apellidos = "Navarro Silva",
-            edad = edad,
-            fechaNacimiento = Paciente.calcularFechaNacimientoDesdeEdad(edad),
-            contactoEmergencia = "Carlos Navarro (Hermano) +56 9 7654 3210"
-        )
-    }
-}
-
-class RegistrarIngresoPacienteUseCase(
+class ObserveHabitacionesDetalladasUseCase(
     private val repository: AdmisionRepository
 ) {
-    suspend operator fun invoke(
-        dni: String,
-        nombres: String,
-        apellidos: String,
-        edadTexto: String,
-        prevision: String,
-        contactoEmergencia: String,
-        protegidoLey19628: Boolean,
-        motivoIngreso: String,
-        nivelTriage: NivelTriageManchester,
-        esEmergenciaDirecta: Boolean,
-        codigoCamaSeleccionada: String?,
-        signosVitales: SignosVitales?
-    ): Result<Paciente> {
-        val nombreCompleto = listOf(nombres.trim(), apellidos.trim())
-            .filter { it.isNotBlank() }
-            .joinToString(" ")
+    operator fun invoke(): Flow<List<HabitacionDetalleUi>> =
+        repository.camasFlow.map { repository.obtenerHabitacionesDetalladas() }
+}
 
-        if (nombreCompleto.isBlank()) {
-            return Result.failure(
-                IllegalArgumentException("Complete los nombres y apellidos del paciente en Datos de Filiación.")
-            )
-        }
+class RefrescarCamasUseCase(private val repository: AdmisionRepository) {
+    suspend operator fun invoke(): Result<List<Cama>> = repository.refrescarCamas()
+}
 
-        if (!esEmergenciaDirecta && codigoCamaSeleccionada.isNullOrBlank()) {
-            val disp = repository.obtenerCapacidadActual().disponibles
-            return Result.failure(
-                IllegalStateException(
-                    "Debe seleccionar una de las $disp camas disponibles del sistema (o activar Pase de Emergencia Directa)."
-                )
-            )
-        }
+class CargarMedicosTratantesUseCase(private val repository: AdmisionRepository) {
+    suspend operator fun invoke(): Result<List<User>> = repository.medicos()
+}
 
-        val edadInt = edadTexto.trim().toIntOrNull()
-        val fechaNac = edadInt?.let { Paciente.calcularFechaNacimientoDesdeEdad(it) } ?: "1990-01-01"
-        val motivoFinal = motivoIngreso.trim().ifBlank {
-            "Ingreso clínico (${nivelTriage.titulo})"
-        }
-
-        val paciente = Paciente(
-            nombreCompleto = nombreCompleto,
-            fechaNacimiento = fechaNac,
-            dui = dni.trim().ifBlank { "S/D" },
-            protegido = protegidoLey19628,
-            contactoEmergencia = contactoEmergencia.trim().ifBlank { null },
-            prevision = prevision,
-            nivelTriage = nivelTriage
-        )
-
-        return repository.registrarEIngresarPaciente(
-            paciente = paciente,
-            signosVitales = signosVitales?.takeIf { it.hasAnyData },
-            codigoCama = if (esEmergenciaDirecta) null else codigoCamaSeleccionada,
-            motivoIngreso = motivoFinal,
-            esEmergenciaDirecta = esEmergenciaDirecta
-        )
+class BuscarPacientesIngresoUseCase(private val repository: AdmisionRepository) {
+    suspend operator fun invoke(texto: String): Result<List<Paciente>> {
+        val limpio = texto.trim()
+        return repository.buscarPacientes(limpio)
     }
 }
 
-class GenerarBrazaleteQrUseCase {
-    operator fun invoke(
-        dni: String,
-        nombres: String,
-        apellidos: String,
-        codigoCama: String?,
-        esEmergenciaDirecta: Boolean,
-        nivelTriage: NivelTriageManchester,
-        protegidoLey19628: Boolean
-    ): Result<BrazaleteQrPayload> {
-        val ubicacion = when {
-            !codigoCama.isNullOrBlank() -> codigoCama
-            esEmergenciaDirecta -> "BOX-03-URGENCIAS"
-            else -> return Result.failure(
-                IllegalStateException("Seleccione primero una cama para estampar la ubicación en el brazalete QR.")
-            )
+/**
+ * Ingreso hospitalario: paciente registrado + cama libre + médico tratante +
+ * motivo. El tipo (VIP / SEMIPRIVADA) sale de la cama elegida. La API vuelve a
+ * validar que la cama siga libre y que el paciente no tenga otro ingreso activo.
+ */
+class IngresarPacienteUseCase(private val repository: AdmisionRepository) {
+    suspend operator fun invoke(
+        idPaciente: String?,
+        cama: Cama?,
+        idMedico: String?,
+        motivo: String
+    ): Result<Unit> {
+        if (idPaciente.isNullOrBlank()) {
+            return Result.failure(ApiValidationException("id_paciente", "Busque y seleccione al paciente."))
         }
-        val nombreCompleto = listOf(nombres.trim(), apellidos.trim())
-            .filter { it.isNotBlank() }
-            .joinToString(" ")
-            .ifBlank { "Paciente En Admisión" }
+        if (idMedico.isNullOrBlank()) {
+            return Result.failure(ApiValidationException("id_medico", "Seleccione el médico tratante."))
+        }
+        if (motivo.isBlank()) {
+            return Result.failure(ApiValidationException("motivo", "Ingrese el motivo del ingreso."))
+        }
+        if (cama == null) {
+            return Result.failure(ApiValidationException("id_cama", "Seleccione una cama libre en el mapa."))
+        }
+        if (!cama.estaDisponible) {
+            return Result.failure(ApiValidationException("id_cama", "La cama ${cama.codigo} está ocupada."))
+        }
+        return repository.ingresar(idPaciente, cama, idMedico, motivo.trim())
+    }
+}
 
-        val uuid = UUID.randomUUID().toString().uppercase()
-        val exp = Paciente.generarNumeroExpediente(nombreCompleto, 2026, (10..99).random())
-        return Result.success(
-            BrazaleteQrPayload(
-                uuidBrazalete = uuid.take(18),
-                pacienteNombre = if (protegidoLey19628) {
-                    Paciente.anonimizarNombre(nombreCompleto)
-                } else {
-                    nombreCompleto
-                },
-                dni = dni.trim().ifBlank { "PENDIENTE" },
-                numeroExpediente = exp,
-                codigoCama = ubicacion,
-                nivelTriage = nivelTriage,
-                protegidoLey19628 = protegidoLey19628,
-                firmaCriptografica = "SHA256-HUC-${uuid.takeLast(10)}"
-            )
-        )
+class DarAltaUseCase(private val repository: AdmisionRepository) {
+    suspend operator fun invoke(cama: Cama): Result<Unit> {
+        val ingreso = cama.idIngreso
+            ?: return Result.failure(IllegalStateException("La cama ${cama.codigo} no tiene un ingreso activo."))
+        return repository.darAlta(ingreso)
+    }
+}
+
+class TrasladarPacienteUseCase(private val repository: AdmisionRepository) {
+    suspend operator fun invoke(origen: Cama, destino: Cama): Result<Unit> {
+        val ingreso = origen.idIngreso
+            ?: return Result.failure(IllegalStateException("La cama ${origen.codigo} no tiene un ingreso activo."))
+        if (!destino.estaDisponible || destino.id == origen.id) {
+            return Result.failure(IllegalStateException("Elija una cama libre distinta de ${origen.codigo}."))
+        }
+        return repository.trasladar(ingreso, destino.id)
     }
 }

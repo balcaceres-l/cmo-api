@@ -31,18 +31,23 @@ class HospitalizacionController extends ApiController
                     $i = $c->ingresoActivo;
                     $puede = $i && (in_array($r->user()->rol, ['ADMINISTRADOR', 'RECEPCIONISTA']) || ($r->user()->rol === 'MEDICO' && $i->id_medico === $r->user()->id));
 
+                    // id_cama e id_ingreso permiten a las apps pedir ingreso, alta o traslado de una cama concreta.
                     return [
-                        'id_cama' => $c->id_cama,
+                        'id_cama' => $c->getKey(),
                         'codigo' => $c->codigo,
                         'estado' => $c->estado,
+                        'id_ingreso' => $puede ? $i->getKey() : null,
                         'paciente' => $puede ? [
                             'id_paciente' => $i->paciente->getKey(),
                             'nombre_completo' => $i->paciente->nombre_completo,
                             'numero_expediente' => $i->paciente->numero_expediente,
                             'dui' => $i->paciente->dui,
+                            'sexo' => $i->paciente->sexo,
+                            'fecha_nacimiento' => optional($i->paciente->fecha_nacimiento)->format('Y-m-d'),
+                            'telefono' => $i->paciente->telefono,
                         ] : null,
                         'ingreso' => $puede ? [
-                            'id_ingreso' => $i->id_ingreso,
+                            'id_ingreso' => $i->getKey(),
                             'fecha_ingreso' => $i->fecha_ingreso?->toIso8601String(),
                             'motivo' => $i->motivo,
                             'medico' => $i->medico?->nombre_completo,

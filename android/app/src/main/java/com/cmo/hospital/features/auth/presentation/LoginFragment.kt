@@ -21,6 +21,8 @@ class LoginFragment : Fragment() {
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
 
+    private var activePickerSheet: DemoPersonalPickerSheet? = null
+
     private val viewModel: LoginViewModel by viewModels {
         val container = (requireActivity().application as CmoApplication).appContainer
         simpleViewModelFactory { container.createLoginViewModel() }
@@ -50,11 +52,9 @@ class LoginFragment : Fragment() {
 
         binding.btnLoginSubmit.setOnClickListener { submitLogin() }
 
-        // Accesos rápidos de demostración
-        binding.btnDemoMedicoGeneral.setOnClickListener { fillDemo("medico.general") }
-        binding.btnDemoMedicoUrgencias.setOnClickListener { fillDemo("medico.emergencia") }
-        binding.btnDemoRecepcion.setOnClickListener { fillDemo("recepcion") }
-        binding.btnDemoEnfermeria.setOnClickListener { fillDemo("enfermeria") }
+        // Accesos rápidos de demostración (Médicos y Personal de Apoyo con estado de turno en vivo)
+        binding.btnDemoMedicos.setOnClickListener { openDemoPicker("MEDICO") }
+        binding.btnDemoApoyo.setOnClickListener { openDemoPicker("APOYO") }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -63,6 +63,12 @@ class LoginFragment : Fragment() {
                     binding.btnLoginSubmit.text = if (state.isLoading) "" else "Iniciar Sesión"
                     binding.progressLogin.visibility =
                         if (state.isLoading) View.VISIBLE else View.GONE
+
+                    activePickerSheet?.takeIf { it.isShowing() }?.render(
+                        items = state.demoStaff,
+                        isLoading = state.isLoadingDemoStaff,
+                        errorMessage = state.demoStaffError
+                    )
 
                     if (!state.errorMessage.isNullOrBlank()) {
                         binding.bannerLoginError.visibility = View.VISIBLE
@@ -80,6 +86,21 @@ class LoginFragment : Fragment() {
         }
     }
 
+    private fun openDemoPicker(categoria: String) {
+        val sheet = DemoPersonalPickerSheet(requireContext(), categoria) { selected ->
+            fillDemo(selected.usuario)
+        }
+        activePickerSheet = sheet
+        val snapshot = viewModel.uiState.value
+        sheet.show()
+        sheet.render(
+            items = snapshot.demoStaff,
+            isLoading = true,
+            errorMessage = snapshot.demoStaffError
+        )
+        viewModel.loadDemoStaff(forceRefresh = true)
+    }
+
     private fun fillDemo(username: String) {
         binding.etUsuario.setText(username)
         binding.etPassword.setText("Hospital2026!")
@@ -94,6 +115,7 @@ class LoginFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        activePickerSheet = null
         _binding = null
     }
 }

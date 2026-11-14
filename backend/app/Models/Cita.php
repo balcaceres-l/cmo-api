@@ -52,4 +52,9 @@ class Cita extends HospitalModel
     {
         return $this->hasOne(Consulta::class, 'id_cita');
     }
+
+    public function signosVitales(): HasOne
+    {
+        return $this->hasOne(SignoVital::class, 'id_cita');
+    }
 }

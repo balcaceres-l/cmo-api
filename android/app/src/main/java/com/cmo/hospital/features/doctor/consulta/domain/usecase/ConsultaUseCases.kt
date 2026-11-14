@@ -1,5 +1,8 @@
 package com.cmo.hospital.features.doctor.consulta.domain.usecase
 
+import com.cmo.hospital.features.recepcionista.citas.domain.usecase.ValidarProgramacionCita
+import com.cmo.hospital.core.network.ApiValidationException
+import com.cmo.hospital.core.domain.model.ProgramacionCita
 import com.cmo.hospital.core.domain.model.Cita
 import com.cmo.hospital.core.domain.model.ConsultaActiva
 import com.cmo.hospital.core.domain.model.ConsultorioInfo
@@ -21,9 +24,7 @@ class TickCronometroConsultaUseCase(private val repository: ConsultaRepository) 
 }
 
 class ActualizarSignosConsultaUseCase(private val repository: ConsultaRepository) {
-    operator fun invoke(signos: SignosVitales) {
-        repository.actualizarSignos(signos)
-    }
+    suspend operator fun invoke(signos: SignosVitales): Result<Unit> = repository.guardarSignos(signos)
 }
 
 class GestionarCie10ConsultaUseCase(private val repository: ConsultaRepository) {
@@ -86,62 +87,37 @@ class FinalizarConsultaUseCase(private val repository: ConsultaRepository) {
     suspend operator fun invoke(): Result<String> = repository.finalizarConsulta()
 }
 
-class AgendarCitaSeguimientoDoctorUseCase(private val repository: ConsultaRepository) {
+/**
+ * Control de seguimiento agendado por el médico. La API solo lo acepta para
+ * pacientes que ya atiende y dentro de su turno; aquí se valida lo básico.
+ */
+class AgendarCitaSeguimientoDoctorUseCase(
+    private val repository: ConsultaRepository,
+    private val validador: ValidarProgramacionCita = ValidarProgramacionCita()
+) {
     suspend operator fun invoke(
-        paciente: Paciente,
-        medicoNombre: String,
-        especialidad: String,
+        idPaciente: String?,
+        idMedico: String? = null,
+        idEspecialidad: String? = null,
         fecha: String,
-        horaInicio: String,
+        horaInicio: String?,
         motivo: String
     ): Result<Cita> {
-        if (fecha.isBlank()) {
-            return Result.failure(IllegalArgumentException("Indique la fecha del control médico."))
+        if (idPaciente.isNullOrBlank()) {
+            return Result.failure(ApiValidationException("id_paciente", "Seleccione el paciente."))
         }
-        if (horaInicio !in Cita.BLOQUES_30_MINUTOS) {
-            return Result.failure(
-                IllegalArgumentException("Seleccione un bloque reglamentario de 30 minutos.")
-            )
-        }
-        if (motivo.isBlank()) {
-            return Result.failure(
-                IllegalArgumentException("El motivo clínico de seguimiento es obligatorio.")
-            )
-        }
-
-        val existentes = repository.citasFlow.value
-        if (Cita.hayConflictoHorario(existentes, medicoNombre, fecha.trim(), horaInicio)) {
-            return Result.failure(
-                IllegalStateException(
-                    "Conflicto de agenda: $medicoNombre ya tiene un paciente asignado el $fecha a las $horaInicio."
-                )
-            )
-        }
-
-        val nueva = Cita(
-            id = "c-seg-" + System.currentTimeMillis().toString().takeLast(5),
+        val esp = idEspecialidad?.takeIf { it.isNotBlank() }
+        val med = if (esp != null) null else idMedico?.takeIf { it.isNotBlank() }
+        val programacion = ProgramacionCita(
+            idMedico = med,
             fecha = fecha.trim(),
-            horaInicio = horaInicio,
-            horaFin = Cita.calcularFin30Minutos(horaInicio),
-            estado = "AGENDADA",
-            motivo = "CONTROL MÉDICO: ${motivo.trim()}",
-            paciente = PacienteInfo(
-                id = paciente.id,
-                nombreCompleto = paciente.nombreCompleto,
-                numeroExpediente = paciente.numeroExpediente
-                    ?: Paciente.generarNumeroExpediente(paciente.nombreCompleto),
-                dui = paciente.dui,
-                sexo = paciente.sexo,
-                fechaNacimiento = paciente.fechaNacimiento,
-                alergias = paciente.alergias,
-                tipoSangre = paciente.tipoSangre,
-                protegido = paciente.protegido
-            ),
-            consultorio = ConsultorioInfo("cs-1", especialidad, "Box 03"),
-            medicoNombre = medicoNombre,
-            especialidad = especialidad
+            horaInicio = horaInicio.orEmpty(),
+            idEspecialidad = esp
         )
-        repository.agendarCitaSeguimiento(nueva)
-        return Result.success(nueva)
+        validador.validar(programacion)?.let { return Result.failure(it) }
+        if (motivo.isBlank()) {
+            return Result.failure(ApiValidationException("motivo", "El motivo del control es obligatorio."))
+        }
+        return repository.agendarSeguimiento(idPaciente, programacion, "Control: ${motivo.trim()}")
     }
 }

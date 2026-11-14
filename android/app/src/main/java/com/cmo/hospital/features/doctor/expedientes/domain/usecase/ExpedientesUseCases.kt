@@ -1,27 +1,23 @@
 package com.cmo.hospital.features.doctor.expedientes.domain.usecase
 
 import com.cmo.hospital.core.domain.model.ExpedienteDetalle
+import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.features.doctor.expedientes.domain.repository.ExpedientesRepository
-import kotlinx.coroutines.flow.StateFlow
 
-class GetExpedientesFlowUseCase(private val repository: ExpedientesRepository) {
-    operator fun invoke(): StateFlow<List<ExpedienteDetalle>> = repository.expedientesFlow
+/** Pacientes que atiende el médico; vacío = todos los suyos. */
+class BuscarPacientesTratadosUseCase(private val repository: ExpedientesRepository) {
+    suspend operator fun invoke(texto: String): Result<List<Paciente>> = repository.buscarPacientes(texto)
 }
 
-class FiltrarExpedientesUseCase {
-    operator fun invoke(
-        expedientes: List<ExpedienteDetalle>,
-        query: String
-    ): List<ExpedienteDetalle> {
-        val q = query.trim()
-        if (q.isBlank()) return expedientes
-        return expedientes.filter { exp ->
-            val nombre = exp.paciente.nombreCompleto.trim()
-            val coincideNombre = nombre.startsWith(q, ignoreCase = true) ||
-                nombre.split(" ").any { palabra -> palabra.startsWith(q, ignoreCase = true) }
-            val coincideExp = exp.paciente.numeroExpediente?.startsWith(q, ignoreCase = true) == true
-            val coincideDui = exp.paciente.dui?.startsWith(q, ignoreCase = true) == true
-            coincideNombre || coincideExp || coincideDui
-        }
-    }
+class CargarExpedienteUseCase(private val repository: ExpedientesRepository) {
+    suspend operator fun invoke(idPaciente: String): Result<ExpedienteDetalle> = repository.expediente(idPaciente)
+}
+
+class GuardarAntecedentesUseCase(private val repository: ExpedientesRepository) {
+    suspend operator fun invoke(idPaciente: String, personales: String, familiares: String): Result<Unit> =
+        repository.guardarAntecedentes(
+            idPaciente,
+            personales.trim().ifBlank { null },
+            familiares.trim().ifBlank { null }
+        )
 }

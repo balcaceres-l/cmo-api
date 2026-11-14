@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('publico')->group(function () {
     Route::get('ocupacion', [PublicoController::class, 'ocupacion']);
     Route::get('medicos-de-turno', [PublicoController::class, 'medicos']);
+    Route::get('personal-demo', [PublicoController::class, 'personalDemo']);
     Route::get('avisos', [PublicoController::class, 'avisos']);
     Route::get('ambulancia', [PublicoController::class, 'ambulancia']);
 });
@@ -70,6 +71,7 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
         Route::patch('citas/{cita}/llegada', [CitaController::class, 'registrarLlegada']);
         Route::patch('citas/{cita}/confirmar', [CitaController::class, 'confirmar']);
     });
+    Route::put('citas/{cita}/signos-vitales', [CitaController::class, 'signosVitales'])->middleware('role:ADMINISTRADOR,MEDICO,RECEPCIONISTA');
     Route::post('solicitudes-atencion', [CitaController::class, 'solicitar'])->middleware('role:PACIENTE');
     Route::get('mi/citas', [CitaController::class, 'mias'])->middleware('role:PACIENTE');
 

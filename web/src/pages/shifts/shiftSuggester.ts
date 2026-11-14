@@ -5,10 +5,13 @@ import {
   formatDayHeader,
   getMedicalSpecialties,
   getStaffCategory,
+  getWeekDays,
   isStaffActiveOnDate,
   normalizeAreaGroup,
   normalizeSpecialtyLabel,
+  parseISODate,
   shiftCoversBlock,
+  startOfWeekMonday,
   timeToMinutes,
   toISODate,
 } from './shiftUtils';
@@ -209,7 +212,8 @@ export function suggestWeeklyCoverage(
   weekDays: string[],
   existingShifts: TurnoRaw[],
   personal: PersonalOption[],
-  options: SuggesterOptions
+  options: SuggesterOptions,
+  allowedDays?: Set<string>
 ): SuggesterResult {
   const weekDaysSet = new Set(weekDays);
   const proposals: SuggestedShift[] = [];
@@ -330,9 +334,10 @@ export function suggestWeeklyCoverage(
   const now = new Date();
   const todayIso = toISODate(now);
 
-  // Solo planificar a partir de las 00:00 de mañana (hoy y días pasados no se auto-asignan)
-  const isPastBlock = (fecha: string, _block: ShiftFranja): boolean => {
-    return fecha <= todayIso;
+  // Solo planificar a partir de las 00:00 de mañana y dentro de allowedDays si aplica
+  const isAssignableDay = (fecha: string): boolean => {
+    if (fecha <= todayIso) return false;
+    return !allowedDays || allowedDays.has(fecha);
   };
 
   // =========================================================================
@@ -346,7 +351,7 @@ export function suggestWeeklyCoverage(
 
   for (const fecha of weekDays) {
     for (const block of blocks) {
-      if (isPastBlock(fecha, block.id)) continue;
+      if (!isAssignableDay(fecha)) continue;
       // 1A. Médico de Emergencias 24/7
       const hasEmergMed = isCovered(
         fecha,
@@ -441,7 +446,11 @@ export function suggestWeeklyCoverage(
     (spec) => spec !== 'Emergencias'
   );
 
+  const assignableDaysCount = weekDays.filter(isAssignableDay).length;
+  const weekSpanLabel = `${formatDayShortLabel(weekDays[0])}–${formatDayShortLabel(weekDays[weekDays.length - 1])}`;
+
   allMedSpecialties.forEach((specialty, specIndex) => {
+    if (assignableDaysCount === 0) return;
     const specDoctors = otherDocs.filter((d) => normalizeSpecialtyLabel(d.cargo) === specialty);
     if (specDoctors.length === 0) return;
 
@@ -453,13 +462,14 @@ export function suggestWeeklyCoverage(
       )
     ).length;
 
-    while (currentCount < options.minSpecialtyDays) {
+    const targetSpecDays = Math.min(options.minSpecialtyDays, assignableDaysCount);
+    while (currentCount < targetSpecDays) {
       let bestChoice: { doctor: PersonalOption; day: string; score: number } | null = null;
       const offset = (specIndex * 2 + currentCount) % weekDays.length;
       const rotatedDays = weekDays.slice(offset).concat(weekDays.slice(0, offset));
 
       for (const day of rotatedDays) {
-        if (isPastBlock(day, 'MANANA')) continue;
+        if (!isAssignableDay(day)) continue;
         const alreadyThatDay = isCovered(
           day,
           'MANANA',
@@ -494,11 +504,11 @@ export function suggestWeeklyCoverage(
 
       if (!bestChoice) {
         unfilledGaps.push({
-          fecha: weekDays[0],
+          fecha: weekDays.find(isAssignableDay) || weekDays[0],
           block: 'MANANA',
           area: 'Consulta Externa',
           roleNeeded: `Médico (${specialty})`,
-          reason: `No se pudo programar cobertura mínima para ${specialty} respetando descansos y ${options.maxWeeklyHours}h/sem.`,
+          reason: `Semana ${weekSpanLabel}: sin personal vigente/disponible de ${specialty} respetando descansos y ${options.maxWeeklyHours}h/sem.`,
         });
         break;
       }
@@ -538,7 +548,7 @@ export function suggestWeeklyCoverage(
 
         let bestDay: { day: string; score: number } | null = null;
         for (const day of rotatedDays) {
-          if (isPastBlock(day, 'MANANA')) continue;
+          if (!isAssignableDay(day)) continue;
           if (!canAssign(doc, day, 'MANANA', weekDays, weekDaysSet, allShifts, options)) continue;
 
           const dayConsultaLoad = allShifts.filter(
@@ -598,4 +608,84 @@ export function suggestWeeklyCoverage(
   });
 
   return { proposals, unfilledGaps };
+}
+
+export const MAX_RANGE_DAYS = 366;
+
+export function countRangeDays(startDate: string, endDate: string): number {
+  if (!startDate || !endDate || startDate > endDate) return 0;
+  const startMs = parseISODate(startDate).getTime();
+  const endMs = parseISODate(endDate).getTime();
+  return Math.round((endMs - startMs) / 86400000) + 1;
+}
+
+/**
+ * Planifica cobertura para cualquier rango de fechas (semana, mes o personalizado)
+ * iterando por semanas calendario para respetar topes semanales y descansos continuos
+ * entre el domingo y el lunes siguiente, filtrando vigencia exacta en cada fecha.
+ */
+export function suggestCoverageForRange(
+  startDate: string,
+  endDate: string,
+  existingShifts: TurnoRaw[],
+  personal: PersonalOption[],
+  options: SuggesterOptions
+): SuggesterResult {
+  const totalDays = countRangeDays(startDate, endDate);
+  if (totalDays <= 0 || totalDays > MAX_RANGE_DAYS) {
+    return { proposals: [], unfilledGaps: [] };
+  }
+
+  const allowedDays = new Set<string>();
+  let cursor = startDate;
+  while (cursor <= endDate) {
+    allowedDays.add(cursor);
+    cursor = addDays(cursor, 1);
+  }
+
+  const accumulatedShifts: TurnoRaw[] = [...existingShifts];
+  const allProposals: SuggestedShift[] = [];
+  const allGaps: UnfilledGap[] = [];
+
+  let weekMonday = startOfWeekMonday(startDate);
+  const lastWeekMonday = startOfWeekMonday(endDate);
+
+  while (weekMonday <= lastWeekMonday) {
+    const weekDays = getWeekDays(weekMonday);
+    const weekResult = suggestWeeklyCoverage(
+      weekDays,
+      accumulatedShifts,
+      personal,
+      options,
+      allowedDays
+    );
+
+    weekResult.proposals.forEach((p) => {
+      const idx = allProposals.length + 1;
+      allProposals.push({ ...p, tempId: `prop-${idx}-${p.id_usuario}-${p.fecha}-${p.block}` });
+      accumulatedShifts.push({
+        id: p.tempId,
+        id_usuario: p.id_usuario,
+        empleado: p.empleado,
+        cargo: p.cargo,
+        rol: p.rol as TurnoRaw['rol'],
+        area: p.area,
+        fecha: p.fecha,
+        hora_inicio: p.hora_inicio,
+        hora_fin: p.hora_fin,
+      });
+    });
+
+    allGaps.push(...weekResult.unfilledGaps);
+    weekMonday = addDays(weekMonday, 7);
+  }
+
+  const blockOrder: Record<ShiftFranja, number> = { MANANA: 0, TARDE: 1, NOCHE: 2 };
+  allProposals.sort((a, b) => {
+    if (a.fecha !== b.fecha) return a.fecha.localeCompare(b.fecha);
+    if (a.block !== b.block) return blockOrder[a.block] - blockOrder[b.block];
+    return a.area.localeCompare(b.area);
+  });
+
+  return { proposals: allProposals, unfilledGaps: allGaps };
 }

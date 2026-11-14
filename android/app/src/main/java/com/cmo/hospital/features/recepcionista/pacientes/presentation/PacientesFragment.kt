@@ -44,8 +44,7 @@ class PacientesFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         pacientesAdapter = PacientesRecepcionAdapter(
-            onEditar = { abrirFormulario(it) },
-            onCodigoActivacion = { confirmarCodigo(it) }
+            onPacienteClick = { paciente -> abrirVistaAmpliada(paciente) }
         )
         binding.rvPacientesRecepcion.layoutManager = LinearLayoutManager(requireContext())
         binding.rvPacientesRecepcion.adapter = pacientesAdapter
@@ -57,9 +56,33 @@ class PacientesFragment : Fragment() {
         observeState()
     }
 
-    private fun abrirFormulario(paciente: Paciente?) {
+    private fun abrirVistaAmpliada(paciente: Paciente) {
+        var detalleDialog: PacienteDetalleDialogFragment? = null
+        detalleDialog = PacienteDetalleDialogFragment(
+            pacienteInicial = paciente,
+            onEditar = { actual ->
+                abrirFormulario(actual) { actualizado ->
+                    detalleDialog?.actualizarPaciente(actualizado)
+                }
+            },
+            onCodigoActivacion = { actual ->
+                confirmarCodigo(actual)
+            }
+        )
+        detalleDialog.show(childFragmentManager, "dialog_detalle_paciente_${paciente.id ?: "item"}")
+    }
+
+    private fun abrirFormulario(
+        paciente: Paciente?,
+        onGuardadoExitoso: (Paciente) -> Unit = {}
+    ) {
         PacienteFormDialogFragment(paciente) { form, onTerminado ->
-            viewModel.guardar(paciente, form, onTerminado)
+            viewModel.guardar(
+                paciente = paciente,
+                form = form,
+                onGuardadoExitoso = onGuardadoExitoso,
+                onTerminado = onTerminado
+            )
         }.show(childFragmentManager, "dialog_paciente_${paciente?.id ?: "nuevo"}")
     }
 

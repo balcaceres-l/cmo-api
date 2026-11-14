@@ -1,13 +1,12 @@
 package com.cmo.hospital.core.data.datasource
 
 import com.cmo.hospital.core.data.mapper.aOrdenLaboratorio
+import com.cmo.hospital.core.data.mapper.agruparHabitaciones
+import com.cmo.hospital.core.data.mapper.parsearHabitacionesJson
 import com.cmo.hospital.core.domain.model.*
 import com.cmo.hospital.core.network.ApiService
 import com.cmo.hospital.core.network.dto.ConsultaDto
-import com.cmo.hospital.core.network.dto.ConsultorioDto
 import com.cmo.hospital.core.network.dto.ExamenDto
-import com.cmo.hospital.core.network.dto.IngresoDto
-import com.cmo.hospital.core.network.dto.MedicoDto
 import com.cmo.hospital.core.network.dto.OrdenLaboratorioDto
 import com.cmo.hospital.core.network.dto.RecetaDto
 import com.cmo.hospital.core.network.llamarApi
@@ -30,13 +29,11 @@ import java.time.format.DateTimeFormatter
 class HospitalClinicalDataSource(
     private val apiService: ApiService? = null
 ) {
-    private val _camasState = MutableStateFlow(seedInitialCamas())
+    // Sin camas de ejemplo: el mapa se carga desde GET /habitaciones.
+    private val _camasState = MutableStateFlow<List<Cama>>(emptyList())
     val camasState: StateFlow<List<Cama>> = _camasState.asStateFlow()
 
-    private val _ingresosActivos = MutableStateFlow<List<IngresoDto>>(emptyList())
-    val ingresosActivos: StateFlow<List<IngresoDto>> = _ingresosActivos.asStateFlow()
-
-    private val _citasState = MutableStateFlow(seedInitialCitas())
+    private val _citasState = MutableStateFlow<List<Cita>>(emptyList())
     val citasState: StateFlow<List<Cita>> = _citasState.asStateFlow()
 
     private val _turnoEnBox = MutableStateFlow(
@@ -44,32 +41,25 @@ class HospitalClinicalDataSource(
     )
     val turnoEnBox: StateFlow<Cita?> = _turnoEnBox.asStateFlow()
 
-    private val _ambulanciaState = MutableStateFlow(seedInitialAmbulancia())
-    val ambulanciaState: StateFlow<AmbulanciaRecurso> = _ambulanciaState.asStateFlow()
-
     // Sin consulta de ejemplo: la consulta real se abre o retoma desde una cita de la API.
     private val _consultaActiva = MutableStateFlow(ConsultaActiva.vacia())
     val consultaActiva: StateFlow<ConsultaActiva> = _consultaActiva.asStateFlow()
 
-    private val _ordenesLab = MutableStateFlow(seedInitialOrdenesLab())
+    private val _ordenesLab = MutableStateFlow<List<OrdenLaboratorioItem>>(emptyList())
     val ordenesLab: StateFlow<List<OrdenLaboratorioItem>> = _ordenesLab.asStateFlow()
 
     private val _examenesCatalogo = MutableStateFlow<List<ExamenDto>>(emptyList())
     val examenesCatalogo: StateFlow<List<ExamenDto>> = _examenesCatalogo.asStateFlow()
 
-    private val _expedientes = MutableStateFlow(seedInitialExpedientes())
+    private val _expedientes = MutableStateFlow<List<ExpedienteDetalle>>(emptyList())
     val expedientes: StateFlow<List<ExpedienteDetalle>> = _expedientes.asStateFlow()
 
     private val _expedienteSolicitado = MutableStateFlow<String?>(null)
     val expedienteSolicitado: StateFlow<String?> = _expedienteSolicitado.asStateFlow()
 
-    private val _personalGuardia = seedPersonalGuardia()
-
     init {
         _citasState.value.forEach { registrarPacienteDeCitaEnExpedientes(it) }
     }
-
-    fun getPersonalGuardia(): List<PersonalGuardia> = _personalGuardia
 
     private fun registrarPacienteDeCitaEnExpedientes(cita: Cita) {
         val pInfo = cita.paciente ?: return
@@ -92,6 +82,18 @@ class HospitalClinicalDataSource(
             motivoReciente = cita.motivo,
             signos = cita.signosVitales
         )
+    }
+
+    /** Borra todo lo cargado del usuario anterior (al cerrar sesión o si vence). */
+    fun limpiar() {
+        _camasState.value = emptyList()
+        _citasState.value = emptyList()
+        _turnoEnBox.value = null
+        _consultaActiva.value = ConsultaActiva.vacia()
+        _ordenesLab.value = emptyList()
+        _examenesCatalogo.value = emptyList()
+        _expedientes.value = emptyList()
+        _expedienteSolicitado.value = null
     }
 
     fun solicitarAperturaExpediente(numeroExpediente: String?) {
@@ -123,7 +125,7 @@ class HospitalClinicalDataSource(
         if (!yaExiste) {
             val nuevo = ExpedienteDetalle(
                 paciente = paciente,
-                cama = ubicacion ?: "Consulta Externa HUC",
+                cama = ubicacion ?: "Consulta Externa CMO",
                 signosVitales = signos ?: SignosVitales(),
                 alergiasCriticas = paciente.alergias?.takeIf { it.isNotBlank() }?.let { listOf(it) }
                     ?: emptyList(),
@@ -135,7 +137,7 @@ class HospitalClinicalDataSource(
                             hora = obtenerHoraActual(),
                             especialidad = "Consulta Externa",
                             diagnostico = motivoReciente,
-                            medico = "Cuerpo Médico HUC",
+                            medico = "Cuerpo Médico CMO",
                             notas = "Cita registrada en agenda hospitalaria."
                         )
                     )
@@ -154,12 +156,14 @@ class HospitalClinicalDataSource(
             val res = apiService?.getPacientes()
             if (res != null && res.isSuccessful && res.body()?.success == true) {
                 val remotos = res.body()?.data?.data.orEmpty()
-                remotos.forEach { pac ->
-                    val conExp = pac.copy(
-                        numeroExpediente = pac.numeroExpediente
-                            ?: Paciente.generarNumeroExpediente(pac.nombreCompleto)
+                // La lista se reemplaza: solo quedan los pacientes que devuelve la API.
+                val previos = _expedientes.value.associateBy { it.paciente.id }
+                _expedientes.value = remotos.map { pac ->
+                    previos[pac.id]?.copy(paciente = pac) ?: ExpedienteDetalle(
+                        paciente = pac,
+                        signosVitales = SignosVitales(),
+                        alergiasCriticas = listOfNotNull(pac.alergias?.trim()?.ifBlank { null })
                     )
-                    ensurePacienteEnExpedientes(conExp)
                 }
             }
         } catch (_: Exception) {
@@ -180,15 +184,24 @@ class HospitalClinicalDataSource(
                 run {
                     val normalized = remoteList.mapIndexed { idx, raw ->
                         val safeId: String = (raw.id as String?) ?: "c-rem-$idx"
-                        val hi = raw.horaInicio.take(5)
-                        val hf = raw.horaFin?.take(5) ?: Cita.calcularFin30Minutos(hi)
+                        val hi = (raw.horaInicio as String?)?.take(5).orEmpty()
+                        val hf = raw.horaFin?.take(5)
+                            ?: hi.takeIf { it.isNotEmpty() }?.let { Cita.calcularFin30Minutos(it) }
+                        val estadoRaw = (raw.estado as String?)?.uppercase()?.trim().orEmpty()
+                        // SOLICITADA se conserva: es la solicitud del paciente que recepción debe confirmar.
+                        val estadoNorm = estadoRaw.ifBlank { EstadoCita.AGENDADA }
                         val citaNorm = raw.copy(
                             id = safeId,
+                            fecha = (raw.fecha as String?)?.take(10).orEmpty(),
                             horaInicio = hi,
                             horaFin = hf,
-                            medicoNombre = raw.medico?.nombreCompleto ?: raw.medicoNombre ?: "Dr. Alejandro Restrepo",
-                            especialidad = raw.medico?.cargo ?: raw.especialidad ?: "Medicina General",
-                            consultorio = raw.consultorio ?: ConsultorioInfo("cs-1", "Consultorio General", "Box 03")
+                            estado = estadoNorm,
+                            idMedico = raw.idMedico ?: raw.medico?.id,
+                            medicoNombre = raw.medico?.nombreCompleto ?: "Médico por asignar",
+                            especialidad = raw.especialidad?.takeIf { it.isNotBlank() }
+                                ?: raw.medico?.especialidadVisible
+                                ?: "Consulta externa",
+                            consultorio = raw.consultorio
                         )
                         citaNorm.paciente?.let { pInfo ->
                             val pac = Paciente(
@@ -246,105 +259,171 @@ class HospitalClinicalDataSource(
     }
 
     fun prependCita(cita: Cita) {
-        registrarPacienteDeCitaEnExpedientes(cita)
-        _citasState.value = listOf(cita) + _citasState.value
+        val citaAgendada = if (cita.estado.isBlank() || cita.estado == EstadoCita.SOLICITADA) {
+            cita.copy(estado = EstadoCita.AGENDADA)
+        } else {
+            cita
+        }
+        registrarPacienteDeCitaEnExpedientes(citaAgendada)
+        _citasState.value = listOf(citaAgendada) + _citasState.value
     }
 
     suspend fun agendarCitaRemotaOLocal(nuevaCita: Cita) {
+        val citaAgendada = nuevaCita.copy(
+            estado = if (nuevaCita.estado.isBlank() || nuevaCita.estado == EstadoCita.SOLICITADA) {
+                EstadoCita.AGENDADA
+            } else {
+                nuevaCita.estado
+            }
+        )
         try {
             apiService?.agendarCita(
                 mapOf(
-                    "fecha" to nuevaCita.fecha,
-                    "hora_inicio" to nuevaCita.horaInicio,
-                    "hora_fin" to nuevaCita.horaFin,
-                    "motivo" to nuevaCita.motivo
+                    "fecha" to citaAgendada.fecha,
+                    "hora_inicio" to citaAgendada.horaInicio,
+                    "hora_fin" to citaAgendada.horaFin,
+                    "motivo" to citaAgendada.motivo,
+                    "estado" to EstadoCita.AGENDADA
                 )
             )
         } catch (_: Exception) {
         }
-        prependCita(nuevaCita)
+        prependCita(citaAgendada)
     }
 
-    suspend fun marcarLlegada(citaId: String) {
-        try {
-            apiService?.registrarLlegada(citaId)
-        } catch (_: Exception) {
-        }
-        _citasState.value = _citasState.value.map {
-            if (it.id == citaId) it.copy(estado = "EN_ESPERA") else it
+    // Agenda de recepción: todo pasa por la API. Si falla, la lista no cambia y
+    // el error llega a la pantalla; tras cada cambio se recarga la lista para
+    // traer paciente, médico y consultorio ya resueltos por el servidor.
+
+    private fun sinApi(): Result<Nothing> =
+        Result.failure(IllegalStateException("La API no está configurada en esta compilación."))
+
+    private suspend fun alCambiarCita(resultado: Result<Cita>): Result<Cita> {
+        val cita = resultado.getOrElse { return Result.failure(it) }
+        syncCitasFromRemote()
+        return Result.success(_citasState.value.firstOrNull { it.id == cita.id } ?: cita)
+    }
+
+    suspend fun getEspecialidades(): Result<List<EspecialidadCatalogo>> {
+        val api = apiService ?: return sinApi()
+        return llamarApi { api.getEspecialidades(activas = 1) }
+    }
+
+    suspend fun getMedicosAgenda(): Result<List<User>> {
+        val api = apiService ?: return sinApi()
+        return llamarApi { api.getMedicos() }.map { it.data }
+    }
+
+    suspend fun getConsultorios(): Result<List<ConsultorioInfo>> {
+        val api = apiService ?: return sinApi()
+        return llamarApi { api.getConsultorios() }
+    }
+
+    suspend fun getDisponibilidad(
+        idMedico: String? = null,
+        fecha: String,
+        idEspecialidad: String? = null
+    ): Result<List<BloqueAgenda>> {
+        val api = apiService ?: return sinApi()
+        return llamarApi {
+            api.getDisponibilidad(
+                idMedico = idMedico?.takeIf { it.isNotBlank() },
+                fecha = fecha,
+                idEspecialidad = idEspecialidad?.takeIf { it.isNotBlank() }
+            )
         }
     }
 
-    suspend fun obtenerMedicosYConsultorios(): Pair<List<MedicoDto>, List<ConsultorioDto>> {
-        val api = apiService ?: return emptyList<MedicoDto>() to emptyList()
-        val medicos = try {
-            api.getMedicos().body()?.data.orEmpty()
-        } catch (_: Exception) {
-            emptyList()
-        }
-        val consultorios = try {
-            api.getConsultorios().body()?.data.orEmpty()
-        } catch (_: Exception) {
-            emptyList()
-        }
-        return medicos to consultorios
+    suspend fun buscarPacientes(texto: String): Result<List<Paciente>> {
+        val api = apiService ?: return sinApi()
+        val limpio = texto.trim()
+        val perPage = if (limpio.isEmpty()) 50 else 8
+        return llamarApi { api.getPacientes(query = limpio.ifBlank { null }, perPage = perPage) }.map { it.data }
     }
 
-    suspend fun confirmarCitaSolicitada(
-        citaId: String,
-        idMedico: String?,
-        idConsultorio: String?,
-        medicoNombre: String?,
-        consultorioCodigo: String?
-    ): Result<String> {
+    suspend fun agendarCita(
+        idPaciente: String,
+        programacion: ProgramacionCita,
+        motivo: String
+    ): Result<Cita> {
         val api = apiService
-        if (api != null && !idMedico.isNullOrBlank() && !idConsultorio.isNullOrBlank()) {
-            val res = llamarApi {
-                api.confirmarCita(
-                    citaId,
-                    mapOf("id_medico" to idMedico, "id_consultorio" to idConsultorio)
-                )
-            }
-            if (res.isFailure) {
-                return Result.failure(res.exceptionOrNull() ?: IllegalStateException("No se pudo confirmar la cita."))
-            }
-            syncCitasFromRemote()
-            return Result.success("Cita confirmada con ${medicoNombre ?: "Médico"} en ${consultorioCodigo ?: "Consultorio"}.")
+        if (api == null) {
+            val pacExp = _expedientes.value.firstOrNull { it.paciente.id == idPaciente }?.paciente
+            val nuevaLocal = Cita(
+                id = "c-loc-${System.currentTimeMillis()}",
+                fecha = programacion.fecha,
+                horaInicio = programacion.horaInicio,
+                horaFin = Cita.calcularFin30Minutos(programacion.horaInicio),
+                estado = EstadoCita.AGENDADA,
+                motivo = motivo,
+                idMedico = programacion.idMedico,
+                idEspecialidad = programacion.idEspecialidad,
+                paciente = pacExp?.let {
+                    PacienteInfo(
+                        id = it.id,
+                        nombreCompleto = it.nombreCompleto,
+                        numeroExpediente = it.numeroExpediente,
+                        dui = it.dui,
+                        sexo = it.sexo,
+                        fechaNacimiento = it.fechaNacimiento,
+                        telefono = it.telefono
+                    )
+                }
+            )
+            prependCita(nuevaLocal)
+            return Result.success(nuevaLocal)
         }
-        _citasState.value = _citasState.value.map {
-            if (it.id == citaId) {
-                it.copy(
-                    estado = "AGENDADA",
-                    medicoNombre = medicoNombre ?: it.medicoNombre,
-                    consultorio = consultorioCodigo?.let { cod -> ConsultorioInfo("cs-conf", cod, cod) } ?: it.consultorio
-                )
-            } else it
-        }
-        return Result.success("Cita confirmada y asignada.")
+        val cuerpo = programacion.aMapa() + mapOf(
+            "id_paciente" to idPaciente,
+            "motivo" to motivo
+        )
+        return alCambiarCita(llamarApi { api.agendarCita(cuerpo) })
     }
 
-    suspend fun cancelarCita(citaId: String, motivo: String) {
-        try {
-            apiService?.cancelarCita(citaId, mapOf("motivo_cancelacion" to motivo))
-        } catch (_: Exception) {
-        }
-        _citasState.value = _citasState.value.map {
-            if (it.id == citaId) it.copy(estado = "CANCELADA") else it
-        }
+    suspend fun reprogramarCita(citaId: String, programacion: ProgramacionCita): Result<Cita> {
+        val api = apiService ?: return sinApi()
+        return alCambiarCita(llamarApi { api.reprogramarCita(citaId, programacion.aMapa()) })
+    }
+
+    suspend fun confirmarCita(citaId: String, programacion: ProgramacionCita): Result<Cita> {
+        val api = apiService ?: return sinApi()
+        return alCambiarCita(llamarApi { api.confirmarCita(citaId, programacion.aMapa()) })
+    }
+
+    suspend fun marcarLlegada(citaId: String): Result<Cita> {
+        val api = apiService ?: return sinApi()
+        return alCambiarCita(llamarApi { api.registrarLlegada(citaId) })
+    }
+
+    suspend fun cancelarCita(citaId: String, motivo: String): Result<Cita> {
+        val api = apiService ?: return sinApi()
+        return alCambiarCita(
+            llamarApi { api.cancelarCita(citaId, mapOf("motivo_cancelacion" to motivo)) }
+        )
     }
 
     fun actualizarTriajeOPasarAConsulta(
         citaId: String,
         signosVitales: SignosVitales?,
-        pasarAConsulta: Boolean
+        pasarAConsulta: Boolean,
+        hoyIso: String = LocalDate.now().toString()
     ): Cita? {
+        val objetivo = _citasState.value.firstOrNull { it.id == citaId } ?: return null
+        if (!objetivo.esDelDia(hoyIso)) {
+            return null
+        }
         var citaTransferida: Cita? = null
         _citasState.value = _citasState.value.map { cita ->
             if (cita.id == citaId) {
                 val nuevosSignos = if (signosVitales?.hasAnyData == true) signosVitales else cita.signosVitales
+                val nuevoEstado = when {
+                    pasarAConsulta -> EstadoCita.EN_ATENCION
+                    cita.estado == EstadoCita.AGENDADA && nuevosSignos?.hasAnyData == true -> EstadoCita.EN_ESPERA
+                    else -> cita.estado
+                }
                 val actualizada = cita.copy(
                     signosVitales = nuevosSignos,
-                    estado = if (pasarAConsulta) "EN_ATENCION" else cita.estado
+                    estado = nuevoEstado
                 )
                 if (pasarAConsulta) {
                     citaTransferida = actualizada
@@ -381,7 +460,7 @@ class HospitalClinicalDataSource(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Admisión, 17 Camas & Emergencia Directa
+    // Camas e ingresos hospitalarios (17 camas: 5 VIP en planta 3, 12 semiprivadas en planta 2)
     // ─────────────────────────────────────────────────────────────────────────
 
     fun construirCapacidadHospitalaria(): CapacidadHospitalaria {
@@ -410,246 +489,55 @@ class HospitalClinicalDataSource(
         )
     }
 
-    suspend fun refrescarCamasEIngresos() {
-        val api = apiService ?: return
-        try {
-            val ingRes = api.getIngresos(activos = 1, perPage = 50)
-            val ingresos = ingRes.body()?.data?.data.orEmpty()
-            _ingresosActivos.value = ingresos
-            val ingresoPorCamaId = ingresos.associateBy { it.idCama ?: it.cama?.id }
+    /** Camas agrupadas por habitación para la pestaña Habitaciones (VIP individual o semiprivada A/B). */
+    fun construirHabitacionesDetalladas(): List<HabitacionDetalleUi> =
+        agruparHabitaciones(_camasState.value)
 
-            val habRes = api.getHabitaciones()
-            val habitaciones = habRes.body()?.data?.get("habitaciones").orEmpty()
-            if (habitaciones.isNotEmpty()) {
-                val camasApi = mutableListOf<Cama>()
-                habitaciones.forEach { hab ->
-                    val rawCamas = hab["camas"] as? List<*> ?: emptyList<Any>()
-                    rawCamas.forEach { item ->
-                        val map = item as? Map<*, *> ?: return@forEach
-                        val id = map["id_cama"]?.toString().orEmpty()
-                        val codigo = map["codigo"]?.toString().orEmpty()
-                        val estado = map["estado"]?.toString() ?: "DISPONIBLE"
-                        if (codigo.isNotBlank()) {
-                            val ing = ingresoPorCamaId[id]
-                            camasApi += Cama(
-                                id = id,
-                                codigo = codigo,
-                                estado = estado,
-                                paciente = ing?.paciente
-                            )
-                        }
-                    }
-                }
-                if (camasApi.isNotEmpty()) {
-                    _camasState.value = camasApi.sortedBy { it.codigo }
-                }
-            }
-        } catch (_: Exception) {
+    /** Mapa de camas real: GET /habitaciones devuelve las habitaciones agrupadas por planta. */
+    suspend fun syncCamasFromRemote(): Result<List<Cama>> {
+        val api = apiService ?: return sinApi()
+        return llamarApi { api.getHabitaciones() }.map { elemento ->
+            val camas = parsearHabitacionesJson(elemento)
+                .flatMap { it.camas }
+                .sortedBy { it.codigo }
+            // Sin camas de ejemplo: si la API falla, la pantalla muestra el error. Unas camas
+            // inventadas (ids "seed-…") harían que la API rechace cualquier ingreso sobre ellas.
+            _camasState.value = camas
+            camas
         }
     }
 
-    suspend fun trasladarCama(camaOrigenCodigo: String, camaDestinoCodigo: String): Result<String> {
-        val origen = _camasState.value.find { it.codigo == camaOrigenCodigo }
-            ?: return Result.failure(IllegalArgumentException("Cama origen no encontrada."))
-        val destino = _camasState.value.find { it.codigo == camaDestinoCodigo }
-            ?: return Result.failure(IllegalArgumentException("Cama destino no encontrada."))
-        if (!destino.estaDisponible) {
-            return Result.failure(IllegalStateException("La cama destino $camaDestinoCodigo está ocupada."))
-        }
-
-        val ingresoActivo = _ingresosActivos.value.find {
-            it.cama?.codigo == camaOrigenCodigo || (origen.id.isNotBlank() && it.idCama == origen.id)
-        }
-        val api = apiService
-        if (api != null && ingresoActivo != null && destino.id.isNotBlank()) {
-            val res = llamarApi {
-                api.trasladarIngreso(ingresoActivo.id, mapOf("id_cama_destino" to destino.id))
-            }
-            if (res.isFailure) {
-                return Result.failure(res.exceptionOrNull() ?: IllegalStateException("No se pudo trasladar."))
-            }
-            refrescarCamasEIngresos()
-            return Result.success("Paciente trasladado de $camaOrigenCodigo a $camaDestinoCodigo")
-        }
-
-        val pacienteEnCama = origen.paciente
-        _camasState.value = _camasState.value.map { c ->
-            when (c.codigo) {
-                camaOrigenCodigo -> c.copy(estado = "DISPONIBLE", paciente = null)
-                camaDestinoCodigo -> c.copy(estado = "OCUPADA", paciente = pacienteEnCama)
-                else -> c
-            }
-        }
-        return Result.success("Paciente trasladado de $camaOrigenCodigo a $camaDestinoCodigo")
+    private suspend fun alCambiarCamas(resultado: Result<*>): Result<Unit> {
+        resultado.exceptionOrNull()?.let { return Result.failure(it) }
+        syncCamasFromRemote()
+        return Result.success(Unit)
     }
 
-    suspend fun darAltaCama(camaCodigo: String): Result<String> {
-        val cama = _camasState.value.find { it.codigo == camaCodigo }
-            ?: return Result.failure(IllegalArgumentException("Cama no encontrada."))
-        val ingresoActivo = _ingresosActivos.value.find {
-            it.cama?.codigo == camaCodigo || (cama.id.isNotBlank() && it.idCama == cama.id)
-        }
-        val api = apiService
-        if (api != null && ingresoActivo != null) {
-            val res = llamarApiSinDatos { api.altaPaciente(ingresoActivo.id) }
-            if (res.isFailure) {
-                return Result.failure(res.exceptionOrNull() ?: IllegalStateException("No se pudo registrar el alta."))
-            }
-            refrescarCamasEIngresos()
-            return Result.success("Alta hospitalaria registrada. Cama $camaCodigo liberada.")
-        }
-
-        _camasState.value = _camasState.value.map { c ->
-            if (c.codigo == camaCodigo) c.copy(estado = "DISPONIBLE", paciente = null) else c
-        }
-        return Result.success("Alta hospitalaria registrada. Cama $camaCodigo liberada.")
-    }
-
-    suspend fun registrarEIngresarPaciente(
-        paciente: Paciente,
-        signosVitales: SignosVitales?,
-        codigoCama: String?,
-        motivoIngreso: String,
-        esEmergenciaDirecta: Boolean
-    ): Result<Paciente> {
-        val expedienteGenerado = paciente.numeroExpediente
-            ?: Paciente.generarNumeroExpediente(paciente.nombreCompleto, 2026, (_expedientes.value.size + 5))
-        val pacienteConExp = paciente.copy(
-            id = paciente.id ?: ("p-" + System.currentTimeMillis().toString().takeLast(5)),
-            numeroExpediente = expedienteGenerado
+    suspend fun ingresarPaciente(
+        idPaciente: String,
+        cama: Cama,
+        idMedico: String,
+        motivo: String
+    ): Result<Unit> {
+        val api = apiService ?: return sinApi()
+        val cuerpo = mapOf(
+            "id_paciente" to idPaciente,
+            "tipo" to if (cama.esVip) "VIP" else "SEMIPRIVADA",
+            "id_cama" to cama.id,
+            "id_medico" to idMedico,
+            "motivo" to motivo
         )
-
-        if (!codigoCama.isNullOrBlank()) {
-            val cama = _camasState.value.find { it.codigo == codigoCama }
-            if (cama == null || !cama.estaDisponible) {
-                return Result.failure(
-                    IllegalStateException("Sobrecupo bloqueado: La cama $codigoCama no está disponible.")
-                )
-            }
-            _camasState.value = _camasState.value.map {
-                if (it.codigo == codigoCama) {
-                    it.copy(
-                        estado = "OCUPADA",
-                        paciente = PacienteInfo(
-                            id = pacienteConExp.id,
-                            nombreCompleto = pacienteConExp.nombreCompleto,
-                            numeroExpediente = pacienteConExp.numeroExpediente,
-                            dui = pacienteConExp.dui,
-                            sexo = pacienteConExp.sexo,
-                            fechaNacimiento = pacienteConExp.fechaNacimiento,
-                            protegido = pacienteConExp.protegido
-                        )
-                    )
-                } else it
-            }
-        }
-
-        // Registrar o actualizar ficha en Expedientes Clínicos
-        val nuevoExp = ExpedienteDetalle(
-            paciente = pacienteConExp,
-            cama = when {
-                esEmergenciaDirecta -> "Box 03 (Urgencia Directa • ${pacienteConExp.nivelTriage.titulo})"
-                !codigoCama.isNullOrBlank() -> "Cama $codigoCama (${if (codigoCama.startsWith("VIP")) "Planta 3 VIP" else "Planta 2 Semiprivada"})"
-                else -> "Admisión Ambulatoria"
-            },
-            signosVitales = signosVitales ?: SignosVitales(),
-            alergiasCriticas = pacienteConExp.alergias?.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList(),
-            comorbilidades = listOf("Triage: ${pacienteConExp.nivelTriage.titulo}"),
-            atencionesPrevias = listOf(
-                AtencionHistorica(
-                    fecha = "Hoy",
-                    hora = obtenerHoraActual(),
-                    especialidad = if (esEmergenciaDirecta) "Urgencias Adultos" else "Admisión Hospitalaria",
-                    diagnostico = motivoIngreso,
-                    medico = "Dr. Alejandro Restrepo",
-                    notas = "Previsión: ${pacienteConExp.prevision ?: "Particular / Privado"}"
-                )
-            )
-        )
-        _expedientes.value = listOf(nuevoExp) + _expedientes.value
-
-        if (esEmergenciaDirecta) {
-            val citaEmergencia = Cita(
-                id = "c-eme-" + System.currentTimeMillis().toString().takeLast(4),
-                fecha = LocalDate.now().toString(),
-                horaInicio = "Ahora",
-                horaFin = null,
-                estado = "EN_ATENCION",
-                motivo = "EMERGENCIA (${pacienteConExp.nivelTriage.titulo}): $motivoIngreso",
-                paciente = PacienteInfo(
-                    id = pacienteConExp.id,
-                    nombreCompleto = pacienteConExp.nombreCompleto,
-                    numeroExpediente = pacienteConExp.numeroExpediente,
-                    dui = pacienteConExp.dui,
-                    sexo = pacienteConExp.sexo,
-                    fechaNacimiento = pacienteConExp.fechaNacimiento,
-                    protegido = pacienteConExp.protegido
-                ),
-                consultorio = ConsultorioInfo("cs-box3", "Box Urgencias 03", "Box 03"),
-                signosVitales = signosVitales
-            )
-            _citasState.value = listOf(citaEmergencia) + _citasState.value
-            _turnoEnBox.value = citaEmergencia
-            iniciarConsultaDesdeCita(citaEmergencia, pacienteConExp)
-        }
-
-        try {
-            apiService?.registrarPaciente(
-                mapOf(
-                    "nombre_completo" to pacienteConExp.nombreCompleto,
-                    "dui" to pacienteConExp.dui,
-                    "fecha_nacimiento" to pacienteConExp.fechaNacimiento,
-                    "sexo" to pacienteConExp.sexo,
-                    "telefono" to pacienteConExp.telefono,
-                    "direccion" to pacienteConExp.direccion
-                )
-            )
-        } catch (_: Exception) {
-        }
-
-        return Result.success(pacienteConExp)
+        return alCambiarCamas(llamarApi { api.ingresarPaciente(cuerpo) })
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Ambulancia Alfa-1
-    // ─────────────────────────────────────────────────────────────────────────
-
-    fun cambiarEstadoAmbulancia(nuevoEstado: String) {
-        _ambulanciaState.value = _ambulanciaState.value.copy(estado = nuevoEstado)
+    suspend fun darAlta(idIngreso: String): Result<Unit> {
+        val api = apiService ?: return sinApi()
+        return alCambiarCamas(llamarApi { api.altaPaciente(idIngreso) })
     }
 
-    suspend fun despacharAmbulancia(
-        direccion: String,
-        paciente: String,
-        descripcion: String,
-        prioridad: String
-    ) {
-        val servicio = ServicioAmbulanciaDetalle(
-            id = "serv-" + System.currentTimeMillis().toString().takeLast(4),
-            pacienteNombre = paciente.ifBlank { "Emergencia Prehospitalaria" },
-            direccion = direccion,
-            descripcion = descripcion.ifBlank { "Despacho Código Rojo" },
-            prioridad = prioridad,
-            horaSalida = obtenerHoraActual(),
-            estado = "EN_CURSO",
-            destino = "Hosp. Universitario - Urgencias",
-            minutosLlegada = 15
-        )
-        try {
-            apiService?.despacharAmbulancia(
-                mapOf(
-                    "direccion" to direccion,
-                    "paciente_nombre" to servicio.pacienteNombre,
-                    "descripcion" to servicio.descripcion,
-                    "prioridad" to prioridad
-                )
-            )
-        } catch (_: Exception) {
-        }
-        _ambulanciaState.value = _ambulanciaState.value.copy(
-            estado = "EN_SERVICIO",
-            servicioActivo = servicio
-        )
+    suspend fun trasladarPaciente(idIngreso: String, idCamaDestino: String): Result<Unit> {
+        val api = apiService ?: return sinApi()
+        return alCambiarCamas(llamarApi { api.trasladarPaciente(idIngreso, mapOf("id_cama" to idCamaDestino)) })
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -802,6 +690,21 @@ class HospitalClinicalDataSource(
             segundosTranscurridos = segundos,
             estadoSemaforo = EstadoSemaforo.calcularPorSegundos(segundos)
         )
+    }
+
+    /**
+     * PUT /citas/{id}/signos-vitales. Al guardarse, la cita (y la consulta abierta
+     * de esa cita, si la hay) muestran los signos que devolvió la API.
+     */
+    suspend fun guardarSignosVitales(citaId: String, signos: SignosVitales): Result<SignosVitales> {
+        val api = apiService ?: return sinApi()
+        if (!signos.hasAnyData) {
+            return Result.failure(IllegalArgumentException("Ingrese al menos un signo vital."))
+        }
+        return llamarApi { api.guardarSignosVitales(citaId, signos) }.onSuccess { guardados ->
+            _citasState.value = _citasState.value.map { if (it.id == citaId) it.copy(signosVitales = guardados) else it }
+            if (_consultaActiva.value.citaId == citaId) actualizarSignosConsulta(guardados)
+        }
     }
 
     fun actualizarSignosConsulta(signos: SignosVitales) {
@@ -1048,277 +951,4 @@ class HospitalClinicalDataSource(
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Datos Semilla Clínicos (17 camas estrictas, citas, consulta y LIS)
-    // ─────────────────────────────────────────────────────────────────────────
-
-    private fun seedInitialCamas(): List<Cama> {
-        val vips = (301..305).map { num ->
-            val cod = "VIP-$num"
-            val ocupada = num != 302
-            Cama(
-                id = "cama-$cod",
-                codigo = cod,
-                estado = if (ocupada) "OCUPADA" else "DISPONIBLE",
-                paciente = if (ocupada) {
-                    PacienteInfo("p-$num", "Paciente VIP $num", "PV-2026-0$num", "0482910$num-1", "M")
-                } else null
-            )
-        }
-
-        val semis = (201..206).flatMap { num ->
-            listOf("A", "B").map { letra ->
-                val cod = "HAB-$num-$letra"
-                val ocupada = !(num == 202 && letra == "B") && !(num == 205 && letra == "A")
-                Cama(
-                    id = "cama-$cod",
-                    codigo = cod,
-                    estado = if (ocupada) "OCUPADA" else "DISPONIBLE",
-                    paciente = if (ocupada) {
-                        PacienteInfo("p-$num-$letra", "Paciente $cod", "PH-2026-$num", "023910$num-4", "F")
-                    } else null
-                )
-            }
-        }
-        return vips + semis
-    }
-
-    private fun seedInitialCitas(): List<Cita> = listOf(
-        Cita(
-            id = "c-101",
-            fecha = "2026-10-29",
-            horaInicio = "08:30",
-            horaFin = "09:00",
-            estado = "EN_ATENCION",
-            motivo = "Control de hipertensión y dolor torácico leve",
-            paciente = PacienteInfo("p-carlos", "Carlos Mendoza", "CM-2026-001", "14.891.203-K", "M", "1981-05-14", protegido = true),
-            consultorio = ConsultorioInfo("cs-1", "Medicina Interna", "Box 03"),
-            medicoNombre = "Dr. Alejandro Restrepo",
-            especialidad = "Medicina Interna",
-            signosVitales = SignosVitales(
-                presionSistolica = 120,
-                presionDiastolica = 80,
-                frecuenciaCardiaca = 78,
-                frecuenciaRespiratoria = 18,
-                temperaturaC = 36.6,
-                pesoKg = 74.0,
-                tallaCm = 172.0,
-                saturacionOxigeno = 98,
-                observaciones = "Normotenso en reposo, hemodinámicamente estable"
-            )
-        ),
-        Cita(
-            id = "c-102",
-            fecha = "2026-10-29",
-            horaInicio = "09:00",
-            horaFin = "09:30",
-            estado = "EN_ESPERA",
-            motivo = "Cefalea persistente y mareos matutinos",
-            paciente = PacienteInfo("p-2", "Lucía Morales Castillo", "LM-2026-002", "16.782.341-8", "F", "1992-08-20"),
-            consultorio = ConsultorioInfo("cs-1", "Medicina General", "Box 03"),
-            medicoNombre = "Dr. Alejandro Restrepo",
-            especialidad = "Medicina General",
-            signosVitales = SignosVitales(
-                presionSistolica = 110,
-                presionDiastolica = 70,
-                frecuenciaCardiaca = 82,
-                saturacionOxigeno = 99
-            )
-        ),
-        Cita(
-            id = "c-103",
-            fecha = "2026-10-29",
-            horaInicio = "10:00",
-            horaFin = "10:30",
-            estado = "AGENDADA",
-            motivo = "Evaluación de dermatitis y rinitis alérgica",
-            paciente = PacienteInfo("p-3", "Rodrigo Valenzuela", "RV-2026-003", "05192834-9", "M", "2001-11-03"),
-            consultorio = ConsultorioInfo("cs-2", "Alergología", "Box 02"),
-            medicoNombre = "Dra. Sofía Valenzuela",
-            especialidad = "Medicina General"
-        ),
-        Cita(
-            id = "c-104",
-            fecha = "2026-10-29",
-            horaInicio = "08:00",
-            horaFin = "08:30",
-            estado = "ATENDIDA",
-            motivo = "Seguimiento post-alta bronquitis aguda",
-            paciente = PacienteInfo("p-4", "Elena Beatriz Campos", "EC-2026-004", "01928374-1", "F", "1975-02-17"),
-            consultorio = ConsultorioInfo("cs-1", "Medicina Interna", "Box 03"),
-            medicoNombre = "Dr. Alejandro Restrepo",
-            especialidad = "Medicina Interna"
-        )
-    )
-
-    private fun seedInitialAmbulancia(): AmbulanciaRecurso = AmbulanciaRecurso(
-        id = "amb-1",
-        placa = "P-123456",
-        estado = "EN_SERVICIO",
-        servicioActivo = ServicioAmbulanciaDetalle(
-            id = "srv-991",
-            pacienteNombre = "Adulto mayor politraumatizado",
-            direccion = "Av. Libertador #412",
-            descripcion = "Traslado UCI Coronario urgente",
-            prioridad = "CRITICA",
-            horaSalida = "12:20",
-            minutosLlegada = 18,
-            tripulacionParamedico = "M. Peralta (Par.)",
-            tripulacionChofer = "G. Soto (Chofer)",
-            destino = "Hosp. Universitario - Ala B",
-            reportes = listOf(
-                ReporteAmbulancia(
-                    estadoPaciente = "CRITICO",
-                    observaciones = "Paciente con soporte O2 alto flujo y monitoreo ECG activo.",
-                    minutosLlegada = 18,
-                    creadoEn = "12:24"
-                )
-            )
-        )
-    )
-
-    private fun seedPersonalGuardia(): List<PersonalGuardia> = listOf(
-        PersonalGuardia("1", "Dr. Alejandro Restrepo", "MEDICO", "Urgencias / Med. Interna", "07:00", "15:00", "Box 03", "Activo", "2h 18m"),
-        PersonalGuardia("2", "Dra. Sofía Valenzuela", "MEDICO", "Alergista / Ambulatorio", "08:30", "14:30", "Box 02", "En Consulta", "Cierre 14:00"),
-        PersonalGuardia("3", "Lic. Mariana Gómez", "RECEPCIONISTA", "Enfermera Jefe 3ª Planta VIP", "07:00", "19:00", "Planta 3", "Ronda Médica", "Turno 12h"),
-        PersonalGuardia("4", "Enf. Carlos Duarte", "RECEPCIONISTA", "Asistente 2ª Planta Semiprivada", "07:00", "15:00", "Planta 2", "Activo", "2h 18m"),
-        PersonalGuardia("5", "Roberto Morales", "RECEPCIONISTA", "Recepcionista Admisión Central", "07:00", "15:00", "Admisión", "En Mostrador", "2h 18m"),
-        PersonalGuardia("6", "Dr. Fernando Castro", "MEDICO", "Médico de Emergencia", "07:00", "19:00", "Ambulancia Alfa-1", "En Traslado", "En ruta")
-    )
-
-    private fun seedInitialOrdenesLab(): List<OrdenLaboratorioItem> = listOf(
-        OrdenLaboratorioItem(
-            id = "ord-01",
-            pacienteId = "p-mariana",
-            pacienteNombre = "Mariana Silva Rivas",
-            numeroExpediente = "MS-2026-002",
-            examenNombre = "Hemograma Completo + Plaquetas",
-            tipoTubo = "Tubo EDTA",
-            prioridad = "STAT",
-            estado = "En Proceso",
-            fechaSolicitud = "Hoy, 10:30",
-            observaciones = "Control urgente de hematocrito y leucocitos.",
-            medicoSolicitante = "Dr. Alejandro Restrepo"
-        ),
-        OrdenLaboratorioItem(
-            id = "ord-02",
-            pacienteId = "p-carlos",
-            pacienteNombre = "Carlos Mendoza",
-            numeroExpediente = "CM-2026-001",
-            examenNombre = "Troponina I Alta Sensibilidad (hs-cTnI)",
-            tipoTubo = "Protocolo SCA",
-            prioridad = "STAT",
-            estado = "En Espera",
-            fechaSolicitud = "Hoy, 10:32",
-            observaciones = "Cinética enzimática 0h - 1h por dolor torácico.",
-            medicoSolicitante = "Dr. Alejandro Restrepo"
-        ),
-        OrdenLaboratorioItem(
-            id = "ord-03",
-            pacienteId = "p-luis",
-            pacienteNombre = "Luis Barillas",
-            numeroExpediente = "LB-2026-003",
-            examenNombre = "Gasometría Arterial y Electrolitos",
-            tipoTubo = "Heparina Li",
-            prioridad = "STAT",
-            estado = "Realizado",
-            fechaSolicitud = "Hoy, 09:15",
-            fechaResultado = "Hoy, 09:42",
-            observaciones = "pH: 7.39, pO2: 92, pCO2: 38, Lactato 1.1 mmol/L.",
-            medicoSolicitante = "Dr. Alejandro Restrepo"
-        ),
-        OrdenLaboratorioItem(
-            id = "ord-04",
-            pacienteId = "p-luis",
-            pacienteNombre = "Luis Barillas",
-            numeroExpediente = "LB-2026-003",
-            examenNombre = "Perfil Lipídico & Glucemia en Ayunas",
-            tipoTubo = "Suero Gel",
-            prioridad = "RUTINA",
-            estado = "Agendado",
-            fechaSolicitud = "Hoy, 08:00",
-            observaciones = "Colesterol total, HDL, LDL, Triglicéridos y Glucosa basal.",
-            medicoSolicitante = "Dr. Alejandro Restrepo"
-        ),
-        OrdenLaboratorioItem(
-            id = "ord-05",
-            pacienteId = "p-mariana",
-            pacienteNombre = "Mariana Silva Rivas",
-            numeroExpediente = "MS-2026-002",
-            examenNombre = "Urocultivo & Antibiograma Automatizado",
-            tipoTubo = "Frasco Estéril",
-            prioridad = "RUTINA",
-            estado = "Cancelado",
-            fechaSolicitud = "Ayer, 16:40",
-            observaciones = "Cancelado a solicitud médica: muestra contaminada, se repetirá.",
-            medicoSolicitante = "Dr. Alejandro Restrepo"
-        )
-    )
-
-    private fun seedInitialExpedientes(): List<ExpedienteDetalle> {
-        val todasOrdenes = seedInitialOrdenesLab()
-        return listOf(
-            ExpedienteDetalle(
-                paciente = Paciente(
-                    id = "p-carlos",
-                    nombreCompleto = "Carlos Mendoza",
-                    fechaNacimiento = "1981-05-14",
-                    dui = "14.891.203-K",
-                    sexo = "M",
-                    telefono = "+503 7123-4567",
-                    numeroExpediente = "CM-2026-001",
-                    prevision = "ISSS"
-                ),
-                cama = "Box 03 (En Consulta)",
-                signosVitales = SignosVitales(120, 80, 78, 18, 36.6, 74.0, 172.0, 98),
-                alergiasCriticas = listOf("Alergia a Dipirona / AINEs"),
-                comorbilidades = listOf("Hipertensión Arterial"),
-                atencionesPrevias = listOf(
-                    AtencionHistorica("Hoy", "08:30", "Medicina Interna", "I10 - Hipertensión", "Dr. Alejandro Restrepo", "Consulta en curso.")
-                ),
-                ordenesLaboratorio = todasOrdenes.filter { it.numeroExpediente == "CM-2026-001" }
-            ),
-            ExpedienteDetalle(
-                paciente = Paciente(
-                    id = "p-mariana",
-                    nombreCompleto = "Mariana Silva Rivas",
-                    fechaNacimiento = "1988-03-24",
-                    dui = "15.902.341-2",
-                    sexo = "F",
-                    telefono = "+503 7890-1234",
-                    numeroExpediente = "MS-2026-002",
-                    prevision = "Seguro Privado"
-                ),
-                cama = "Cama VIP-301 (Planta 3)",
-                signosVitales = SignosVitales(125, 82, 72, 16, 36.5, 62.0, 165.0, 98),
-                alergiasCriticas = listOf("ALERGIA SEVERA: PENICILINA", "Alergia moderada a sulfas"),
-                comorbilidades = listOf("HTA Grado I", "Asma Leve", "Losartán 50mg/d"),
-                atencionesPrevias = listOf(
-                    AtencionHistorica("Hoy", "09:40", "Cardiología Adultos", "I10 - Hipertensión controlada", "Dr. Alejandro Restrepo", "Ecocardiograma normal. Se mantiene pauta terapéutica."),
-                    AtencionHistorica("12 Sep 2026", "11:15", "Consulta Externa", "J45 - Asma bronquial leve", "Dra. Sofía Valenzuela", "Espirometría estable con broncodilatador.")
-                ),
-                ordenesLaboratorio = todasOrdenes.filter { it.numeroExpediente == "MS-2026-002" }
-            ),
-            ExpedienteDetalle(
-                paciente = Paciente(
-                    id = "p-luis",
-                    nombreCompleto = "Luis Barillas",
-                    fechaNacimiento = "1975-09-12",
-                    dui = "03456789-1",
-                    sexo = "M",
-                    telefono = "+503 7654-9870",
-                    numeroExpediente = "LB-2026-003",
-                    prevision = "Particular / Privado"
-                ),
-                cama = "Cama HAB-202-A (Planta 2)",
-                signosVitales = SignosVitales(130, 85, 74, 17, 36.8, 78.5, 176.0, 97),
-                alergiasCriticas = listOf("Alergia a Contrastes Yodados"),
-                comorbilidades = listOf("Diabetes Mellitus Tipo 2", "Dislipidemia"),
-                atencionesPrevias = listOf(
-                    AtencionHistorica("Ayer", "16:00", "Medicina Interna", "E11 - Diabetes Mellitus Tipo 2", "Dr. Alejandro Restrepo", "Se indican controles metabólicos y gasometría.")
-                ),
-                ordenesLaboratorio = todasOrdenes.filter { it.numeroExpediente == "LB-2026-003" }
-            )
-        )
-    }
 }

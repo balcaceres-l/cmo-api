@@ -51,7 +51,15 @@ class TratanteTest extends TestCase
 
         $this->postJson('/api/v1/citas', ['id_paciente' => $p->id_paciente, 'fecha' => today()->addDay()->toDateString(), 'hora_inicio' => '08:00', 'motivo' => 'Seguimiento'])
             ->assertCreated();
-        $this->getJson("/api/v1/pacientes/{$p->id_paciente}/expediente")->assertOk()->assertSee('Dato reservado');
+        $exp = $this->getJson("/api/v1/pacientes/{$p->id_paciente}/expediente")->assertOk()->assertSee('Dato reservado');
+        // Cada cita trae quién atendió (con especialidad), sin usuario de acceso, correo ni teléfono.
+        $medico = collect($exp->json('data.citas'))->firstWhere('motivo', 'Primera')['medico'];
+        $this->assertSame($m->id, $medico['id']);
+        $this->assertSame($m->nombre_completo, $medico['nombre_completo']);
+        $this->assertArrayHasKey('especialidad_nombre', $medico);
+        $this->assertArrayNotHasKey('usuario', $medico);
+        $this->assertArrayNotHasKey('email', $medico);
+        $this->assertArrayNotHasKey('telefono', $medico);
     }
 
     public function test_cita_cancelada_o_solicitada_no_da_acceso_clinico(): void

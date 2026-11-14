@@ -9,119 +9,173 @@ import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import com.cmo.hospital.CmoApplication
 import com.cmo.hospital.core.domain.model.Cita
+import com.cmo.hospital.core.domain.model.EspecialidadCatalogo
 import com.cmo.hospital.core.domain.model.Paciente
+import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.databinding.DialogAgendarSeguimientoBinding
-import com.google.android.material.chip.Chip
+import com.cmo.hospital.features.recepcionista.citas.presentation.chipAgenda
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+/**
+ * Control de seguimiento agendado por el médico (POST /citas). Los pacientes son
+ * los que ya atiende (GET /pacientes) y los horarios, sus bloques libres dentro
+ * de su turno (GET /agenda/disponibilidad).
+ */
 class AgendarSeguimientoDialogFragment : DialogFragment() {
 
     var pacientePreseleccionado: Paciente? = null
-    var medicoNombre: String = "Dr. Alejandro Restrepo"
-    var especialidad: String = "Medicina Interna"
+    var idMedico: String? = null
+    var medicoNombre: String = ""
+    var especialidad: String = ""
     var onCitaAgendada: ((Cita) -> Unit)? = null
 
     private var pacienteSeleccionado: Paciente? = null
+    private var especialidadSeleccionada: EspecialidadCatalogo? = null
     private var horaSeleccionada: String? = null
+    private var bloquesJob: Job? = null
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val binding = DialogAgendarSeguimientoBinding.inflate(LayoutInflater.from(requireContext()))
         val ctx = requireContext()
+        val repo = (requireActivity().application as CmoApplication).appContainer.consultaRepository
         val appContainer = (requireActivity().application as CmoApplication).appContainer
 
-        val pacientes = appContainer.clinicalDataSource.expedientes.value
-            .map { it.paciente }
-            .distinctBy { it.numeroExpediente ?: it.nombreCompleto }
-
-        val fechaDefault = LocalDate.now().plusDays(7).toString()
-        binding.etSegFecha.setText(fechaDefault)
-        binding.tvSegMedicoInfo.text = "$medicoNombre • $especialidad (Bloques 30m)"
-
-        pacienteSeleccionado = pacientePreseleccionado ?: pacientes.firstOrNull()
-        pacientes.forEach { pac ->
-            val chip = Chip(ctx).apply {
-                id = View.generateViewId()
-                text = "${pac.nombreCompleto} (${pac.numeroExpediente ?: "S/E"})"
-                isCheckable = true
-                isChecked = pac.numeroExpediente == pacienteSeleccionado?.numeroExpediente
-                setOnCheckedChangeListener { _, checked ->
-                    if (checked) pacienteSeleccionado = pac
-                }
-            }
-            binding.chipGroupSegPacientes.addView(chip)
+        fun mostrarError(mensaje: String?) {
+            binding.tvSegErrorInline.text = mensaje
+            binding.tvSegErrorInline.visibility = if (mensaje == null) View.GONE else View.VISIBLE
         }
 
-        fun renderizarBloques(fecha: String) {
-            binding.chipGroupSegBloques.removeAllViews()
-            val citasExistentes = appContainer.clinicalDataSource.citasState.value
+        binding.tvSegMedicoInfo.text = listOf(medicoNombre, especialidad)
+            .filter { it.isNotBlank() }.joinToString(" • ") + " • agenda por especialidad"
+        binding.etSegFecha.setText(DateUtils.toUiDate(LocalDate.now().plusDays(7).toString()))
+        binding.etSegFecha.setOnClickListener {
+            DateUtils.showDatePicker(this, binding.etSegFecha.text?.toString()) { seleccionada ->
+                binding.etSegFecha.setText(seleccionada)
+            }
+        }
+
+        fun pintarPacientes(pacientes: List<Paciente>) {
+            binding.chipGroupSegPacientes.removeAllViews()
+            if (pacientes.none { it.id == pacienteSeleccionado?.id }) {
+                pacienteSeleccionado = pacientes.firstOrNull { it.id == pacientePreseleccionado?.id }
+                    ?: pacientes.firstOrNull()
+            }
+            pacientes.forEach { pac ->
+                val texto = "${pac.nombreCompleto} (${pac.numeroExpediente ?: "S/E"})"
+                binding.chipGroupSegPacientes.addView(chipAgenda(ctx, texto, pac.id == pacienteSeleccionado?.id).apply {
+                    setOnClickListener {
+                        pacienteSeleccionado = pac
+                        pintarPacientes(pacientes)
+                    }
+                })
+            }
+            if (pacientes.isEmpty()) mostrarError("Aún no tiene pacientes: aparecen al atenderlos en una cita.")
+        }
+
+        fun cargarBloques() {
+            val fecha = DateUtils.toIsoDate(binding.etSegFecha.text?.toString())
+            val espId = especialidadSeleccionada?.id
             horaSeleccionada = null
-
-            Cita.BLOQUES_30_MINUTOS.forEach { bloque ->
-                val ocupado = Cita.hayConflictoHorario(
-                    citasExistentes = citasExistentes,
-                    medicoNombre = medicoNombre,
-                    fecha = fecha.trim(),
-                    horaInicio = bloque
+            binding.chipGroupSegBloques.removeAllViews()
+            bloquesJob?.cancel()
+            if (espId.isNullOrBlank()) {
+                return
+            }
+            bloquesJob = lifecycleScope.launch {
+                repo.disponibilidad(idMedico = null, fecha = fecha, idEspecialidad = espId).fold(
+                    onSuccess = { bloques ->
+                        fun pintar() {
+                            binding.chipGroupSegBloques.removeAllViews()
+                            bloques.forEach { b ->
+                                binding.chipGroupSegBloques.addView(
+                                    chipAgenda(ctx, "${b.horaInicio} - ${b.horaFin}", b.horaInicio == horaSeleccionada).apply {
+                                        setOnClickListener {
+                                            horaSeleccionada = b.horaInicio
+                                            pintar()
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                        horaSeleccionada = bloques.firstOrNull()?.horaInicio
+                        pintar()
+                        mostrarError(if (bloques.isEmpty()) "Sin horarios libres ese día para la especialidad seleccionada." else null)
+                    },
+                    onFailure = { mostrarError(it.message) }
                 )
-                val chip = Chip(ctx).apply {
-                    id = View.generateViewId()
-                    text = if (ocupado) "$bloque (Ocupado)" else "$bloque - ${Cita.calcularFin30Minutos(bloque)}"
-                    isCheckable = !ocupado
-                    isEnabled = !ocupado
-                    if (!ocupado && horaSeleccionada == null) {
-                        horaSeleccionada = bloque
-                        isChecked = true
-                    }
-                    setOnCheckedChangeListener { _, checked ->
-                        if (checked) horaSeleccionada = bloque
-                    }
-                }
-                binding.chipGroupSegBloques.addView(chip)
             }
         }
 
-        renderizarBloques(fechaDefault)
-        binding.etSegFecha.doAfterTextChanged { editable ->
-            renderizarBloques(editable?.toString().orEmpty())
+        fun pintarEspecialidades(lista: List<EspecialidadCatalogo>) {
+            binding.chipGroupSegEspecialidades.removeAllViews()
+            if (lista.none { it.id == especialidadSeleccionada?.id }) {
+                especialidadSeleccionada = lista.firstOrNull {
+                    !especialidad.isNullOrBlank() && it.nombre.equals(especialidad, ignoreCase = true)
+                } ?: lista.firstOrNull {
+                    it.nombre.contains("general", ignoreCase = true)
+                } ?: lista.firstOrNull()
+            }
+            lista.forEach { esp ->
+                binding.chipGroupSegEspecialidades.addView(
+                    chipAgenda(ctx, esp.nombre, esp.id == especialidadSeleccionada?.id).apply {
+                        setOnClickListener {
+                            especialidadSeleccionada = esp
+                            pintarEspecialidades(lista)
+                            cargarBloques()
+                        }
+                    }
+                )
+            }
+            if (lista.isEmpty()) mostrarError("No hay especialidades activas disponibles.")
         }
+
+        lifecycleScope.launch {
+            repo.pacientesTratados().fold(
+                onSuccess = { pintarPacientes(it) },
+                onFailure = { mostrarError(it.message) }
+            )
+        }
+        lifecycleScope.launch {
+            repo.especialidades().fold(
+                onSuccess = {
+                    pintarEspecialidades(it)
+                    cargarBloques()
+                },
+                onFailure = { mostrarError(it.message) }
+            )
+        }
+        binding.etSegFecha.doAfterTextChanged { cargarBloques() }
 
         binding.btnSegCancelar.setOnClickListener { dismiss() }
         binding.btnSegConfirmar.setOnClickListener {
-            val pac = pacienteSeleccionado
-            if (pac == null) {
-                binding.tvSegErrorInline.text = "Seleccione un paciente."
-                binding.tvSegErrorInline.visibility = View.VISIBLE
-                return@setOnClickListener
-            }
-            val fecha = binding.etSegFecha.text?.toString()?.trim().orEmpty()
-            val hora = horaSeleccionada.orEmpty()
-            val motivo = binding.etSegMotivo.text?.toString()?.trim().orEmpty()
-
+            mostrarError(null)
+            binding.btnSegConfirmar.isEnabled = false
             lifecycleScope.launch {
                 appContainer.agendarCitaSeguimientoDoctorUseCase(
-                    paciente = pac,
-                    medicoNombre = medicoNombre,
-                    especialidad = especialidad,
-                    fecha = fecha,
-                    horaInicio = hora,
-                    motivo = motivo
+                    idPaciente = pacienteSeleccionado?.id,
+                    idMedico = null,
+                    idEspecialidad = especialidadSeleccionada?.id,
+                    fecha = DateUtils.toIsoDate(binding.etSegFecha.text?.toString()),
+                    horaInicio = horaSeleccionada,
+                    motivo = binding.etSegMotivo.text?.toString().orEmpty()
                 ).fold(
                     onSuccess = { cita ->
                         onCitaAgendada?.invoke(cita)
                         dismiss()
                     },
                     onFailure = { err ->
-                        binding.tvSegErrorInline.text =
-                            err.message ?: "No se pudo agendar el seguimiento."
-                        binding.tvSegErrorInline.visibility = View.VISIBLE
+                        binding.btnSegConfirmar.isEnabled = true
+                        mostrarError(err.message ?: "No se pudo agendar el seguimiento.")
+                        cargarBloques()
                     }
                 )
             }
         }
 
-        return MaterialAlertDialogBuilder(ctx)
+        return MaterialAlertDialogBuilder(requireContext())
             .setView(binding.root)
             .create()
     }

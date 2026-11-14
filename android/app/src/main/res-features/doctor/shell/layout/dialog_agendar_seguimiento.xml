@@ -77,13 +77,38 @@
                 app:singleSelection="true" />
         </HorizontalScrollView>
 
+        <!-- Selector de Especialidad -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/huc_space_md"
+            android:text="ESPECIALIDAD DE LA CITA *"
+            android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+            android:textColor="@color/huc_primary_container" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:scrollbars="none">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupSegEspecialidades"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:selectionRequired="true"
+                app:singleLine="true"
+                app:singleSelection="true" />
+        </HorizontalScrollView>
+
         <!-- Fecha -->
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.Huc.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/huc_space_sm"
-            android:hint="Fecha de Control * (YYYY-MM-DD)">
+            android:hint="Fecha de Control * (DD/MM/AAAA)"
+            app:startIconDrawable="@drawable/ic_event">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etSegFecha"

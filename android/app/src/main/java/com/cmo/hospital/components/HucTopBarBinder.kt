@@ -47,7 +47,11 @@ object HucTopBarBinder {
             } else {
                 val popup = PopupMenu(binding.root.context, binding.btnGuardiaPill)
                 val nombre = currentUser?.nombreCompleto ?: "Personal CMO"
-                val cargo = currentUser?.cargo ?: currentUser?.cargoPerfil?.etiquetaBadge ?: "Turno Activo"
+                val cargo = currentUser?.especialidadNombre
+                    ?: currentUser?.cargo
+                    ?: currentUser?.cargoPerfil?.etiquetaBadge
+                    ?: currentUser?.rol
+                    ?: "Turno Activo"
                 popup.menu.add(0, 1, 0, "● $nombre ($cargo)").isEnabled = false
                 popup.menu.add(0, 2, 1, "Hospital CMO • Sesión Sanctum Activa").isEnabled = false
                 popup.show()
@@ -55,18 +59,18 @@ object HucTopBarBinder {
         }
 
         binding.btnProfileAction.setOnClickListener {
-            val ctx = binding.root.context
+            val popup = PopupMenu(binding.root.context, binding.btnProfileAction)
             val nombre = currentUser?.nombreCompleto ?: "Usuario CMO"
-            val cargo = currentUser?.cargo ?: currentUser?.cargoPerfil?.etiquetaBadge ?: "Personal"
             val rol = currentUser?.rol ?: "OPERADOR"
-            MaterialAlertDialogBuilder(ctx)
-                .setTitle(nombre)
-                .setMessage("Cargo asignado: $cargo\nRol base: $rol\n\n¿Deseas cerrar tu sesión activa en Hospital CMO?")
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Cerrar sesión") { _, _ ->
+            popup.menu.add(0, 1, 0, "$nombre • $rol").isEnabled = false
+            popup.menu.add(0, 2, 1, "Cerrar sesión")
+            popup.setOnMenuItemClickListener { item ->
+                if (item.itemId == 2) {
                     onLogoutClick()
                 }
-                .show()
+                true
+            }
+            popup.show()
         }
     }
 

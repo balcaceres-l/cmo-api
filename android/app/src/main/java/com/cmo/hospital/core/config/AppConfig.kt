@@ -3,7 +3,7 @@ package com.cmo.hospital.core.config
 import com.cmo.hospital.BuildConfig
 
 /**
- * Configuración global de la aplicación Android HUC Móvil / CMO.
+ * Configuración global de la aplicación Android Centro Médico de Occidente / CMO.
  * Los valores provienen del archivo `.env` ubicado en la raíz de `cmo-api`
  * (o sobreescrituras en `local.properties`), inyectados a través de `BuildConfig`.
  */

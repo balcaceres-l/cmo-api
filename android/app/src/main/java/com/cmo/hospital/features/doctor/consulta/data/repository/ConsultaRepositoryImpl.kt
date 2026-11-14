@@ -1,8 +1,12 @@
 package com.cmo.hospital.features.doctor.consulta.data.repository
 
 import com.cmo.hospital.core.data.datasource.HospitalClinicalDataSource
+import com.cmo.hospital.core.domain.model.BloqueAgenda
 import com.cmo.hospital.core.domain.model.Cita
 import com.cmo.hospital.core.domain.model.ConsultaActiva
+import com.cmo.hospital.core.domain.model.EspecialidadCatalogo
+import com.cmo.hospital.core.domain.model.Paciente
+import com.cmo.hospital.core.domain.model.ProgramacionCita
 import com.cmo.hospital.core.domain.model.RecetaItem
 import com.cmo.hospital.core.domain.model.SignosVitales
 import com.cmo.hospital.features.doctor.consulta.domain.repository.ConsultaRepository
@@ -22,8 +26,12 @@ class ConsultaRepositoryImpl(
         clinicalDataSource.actualizarSegundosConsulta(segundos)
     }
 
-    override fun actualizarSignos(signos: SignosVitales) {
-        clinicalDataSource.actualizarSignosConsulta(signos)
+    override suspend fun guardarSignos(signos: SignosVitales): Result<Unit> {
+        val consulta = clinicalDataSource.consultaActiva.value
+        if (consulta.finalizada || consulta.citaId.isBlank()) {
+            return Result.failure(IllegalStateException("No hay una consulta abierta."))
+        }
+        return clinicalDataSource.guardarSignosVitales(consulta.citaId, signos).map { }
     }
 
     override fun agregarCie10(codigo: String, descripcion: String) {
@@ -50,7 +58,21 @@ class ConsultaRepositoryImpl(
     override suspend fun finalizarConsulta(): Result<String> =
         clinicalDataSource.finalizarConsulta()
 
-    override suspend fun agendarCitaSeguimiento(cita: Cita) {
-        clinicalDataSource.agendarCitaRemotaOLocal(cita)
-    }
+    override suspend fun pacientesTratados(): Result<List<Paciente>> = clinicalDataSource.buscarPacientes("")
+
+    override suspend fun especialidades(): Result<List<EspecialidadCatalogo>> =
+        clinicalDataSource.getEspecialidades()
+
+    override suspend fun disponibilidad(
+        idMedico: String?,
+        fecha: String,
+        idEspecialidad: String?
+    ): Result<List<BloqueAgenda>> =
+        clinicalDataSource.getDisponibilidad(idMedico = idMedico, fecha = fecha, idEspecialidad = idEspecialidad)
+
+    override suspend fun agendarSeguimiento(
+        idPaciente: String,
+        programacion: ProgramacionCita,
+        motivo: String
+    ): Result<Cita> = clinicalDataSource.agendarCita(idPaciente, programacion, motivo)
 }
