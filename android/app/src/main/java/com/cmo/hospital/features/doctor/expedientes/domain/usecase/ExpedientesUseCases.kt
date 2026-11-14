@@ -16,9 +16,12 @@ class FiltrarExpedientesUseCase {
         val q = query.trim()
         if (q.isBlank()) return expedientes
         return expedientes.filter { exp ->
-            exp.paciente.nombreCompleto.contains(q, ignoreCase = true) ||
-                (exp.paciente.numeroExpediente?.contains(q, ignoreCase = true) == true) ||
-                (exp.paciente.dui?.contains(q, ignoreCase = true) == true)
+            val nombre = exp.paciente.nombreCompleto.trim()
+            val coincideNombre = nombre.startsWith(q, ignoreCase = true) ||
+                nombre.split(" ").any { palabra -> palabra.startsWith(q, ignoreCase = true) }
+            val coincideExp = exp.paciente.numeroExpediente?.startsWith(q, ignoreCase = true) == true
+            val coincideDui = exp.paciente.dui?.startsWith(q, ignoreCase = true) == true
+            coincideNombre || coincideExp || coincideDui
         }
     }
 }

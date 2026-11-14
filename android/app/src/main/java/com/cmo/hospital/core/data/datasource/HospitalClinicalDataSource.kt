@@ -4,7 +4,10 @@ import com.cmo.hospital.core.data.mapper.aOrdenLaboratorio
 import com.cmo.hospital.core.domain.model.*
 import com.cmo.hospital.core.network.ApiService
 import com.cmo.hospital.core.network.dto.ConsultaDto
+import com.cmo.hospital.core.network.dto.ConsultorioDto
 import com.cmo.hospital.core.network.dto.ExamenDto
+import com.cmo.hospital.core.network.dto.IngresoDto
+import com.cmo.hospital.core.network.dto.MedicoDto
 import com.cmo.hospital.core.network.dto.OrdenLaboratorioDto
 import com.cmo.hospital.core.network.dto.RecetaDto
 import com.cmo.hospital.core.network.llamarApi
@@ -29,6 +32,9 @@ class HospitalClinicalDataSource(
 ) {
     private val _camasState = MutableStateFlow(seedInitialCamas())
     val camasState: StateFlow<List<Cama>> = _camasState.asStateFlow()
+
+    private val _ingresosActivos = MutableStateFlow<List<IngresoDto>>(emptyList())
+    val ingresosActivos: StateFlow<List<IngresoDto>> = _ingresosActivos.asStateFlow()
 
     private val _citasState = MutableStateFlow(seedInitialCitas())
     val citasState: StateFlow<List<Cita>> = _citasState.asStateFlow()
@@ -269,6 +275,54 @@ class HospitalClinicalDataSource(
         }
     }
 
+    suspend fun obtenerMedicosYConsultorios(): Pair<List<MedicoDto>, List<ConsultorioDto>> {
+        val api = apiService ?: return emptyList<MedicoDto>() to emptyList()
+        val medicos = try {
+            api.getMedicos().body()?.data.orEmpty()
+        } catch (_: Exception) {
+            emptyList()
+        }
+        val consultorios = try {
+            api.getConsultorios().body()?.data.orEmpty()
+        } catch (_: Exception) {
+            emptyList()
+        }
+        return medicos to consultorios
+    }
+
+    suspend fun confirmarCitaSolicitada(
+        citaId: String,
+        idMedico: String?,
+        idConsultorio: String?,
+        medicoNombre: String?,
+        consultorioCodigo: String?
+    ): Result<String> {
+        val api = apiService
+        if (api != null && !idMedico.isNullOrBlank() && !idConsultorio.isNullOrBlank()) {
+            val res = llamarApi {
+                api.confirmarCita(
+                    citaId,
+                    mapOf("id_medico" to idMedico, "id_consultorio" to idConsultorio)
+                )
+            }
+            if (res.isFailure) {
+                return Result.failure(res.exceptionOrNull() ?: IllegalStateException("No se pudo confirmar la cita."))
+            }
+            syncCitasFromRemote()
+            return Result.success("Cita confirmada con ${medicoNombre ?: "Médico"} en ${consultorioCodigo ?: "Consultorio"}.")
+        }
+        _citasState.value = _citasState.value.map {
+            if (it.id == citaId) {
+                it.copy(
+                    estado = "AGENDADA",
+                    medicoNombre = medicoNombre ?: it.medicoNombre,
+                    consultorio = consultorioCodigo?.let { cod -> ConsultorioInfo("cs-conf", cod, cod) } ?: it.consultorio
+                )
+            } else it
+        }
+        return Result.success("Cita confirmada y asignada.")
+    }
+
     suspend fun cancelarCita(citaId: String, motivo: String) {
         try {
             apiService?.cancelarCita(citaId, mapOf("motivo_cancelacion" to motivo))
@@ -356,6 +410,101 @@ class HospitalClinicalDataSource(
         )
     }
 
+    suspend fun refrescarCamasEIngresos() {
+        val api = apiService ?: return
+        try {
+            val ingRes = api.getIngresos(activos = 1, perPage = 50)
+            val ingresos = ingRes.body()?.data?.data.orEmpty()
+            _ingresosActivos.value = ingresos
+            val ingresoPorCamaId = ingresos.associateBy { it.idCama ?: it.cama?.id }
+
+            val habRes = api.getHabitaciones()
+            val habitaciones = habRes.body()?.data?.get("habitaciones").orEmpty()
+            if (habitaciones.isNotEmpty()) {
+                val camasApi = mutableListOf<Cama>()
+                habitaciones.forEach { hab ->
+                    val rawCamas = hab["camas"] as? List<*> ?: emptyList<Any>()
+                    rawCamas.forEach { item ->
+                        val map = item as? Map<*, *> ?: return@forEach
+                        val id = map["id_cama"]?.toString().orEmpty()
+                        val codigo = map["codigo"]?.toString().orEmpty()
+                        val estado = map["estado"]?.toString() ?: "DISPONIBLE"
+                        if (codigo.isNotBlank()) {
+                            val ing = ingresoPorCamaId[id]
+                            camasApi += Cama(
+                                id = id,
+                                codigo = codigo,
+                                estado = estado,
+                                paciente = ing?.paciente
+                            )
+                        }
+                    }
+                }
+                if (camasApi.isNotEmpty()) {
+                    _camasState.value = camasApi.sortedBy { it.codigo }
+                }
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    suspend fun trasladarCama(camaOrigenCodigo: String, camaDestinoCodigo: String): Result<String> {
+        val origen = _camasState.value.find { it.codigo == camaOrigenCodigo }
+            ?: return Result.failure(IllegalArgumentException("Cama origen no encontrada."))
+        val destino = _camasState.value.find { it.codigo == camaDestinoCodigo }
+            ?: return Result.failure(IllegalArgumentException("Cama destino no encontrada."))
+        if (!destino.estaDisponible) {
+            return Result.failure(IllegalStateException("La cama destino $camaDestinoCodigo está ocupada."))
+        }
+
+        val ingresoActivo = _ingresosActivos.value.find {
+            it.cama?.codigo == camaOrigenCodigo || (origen.id.isNotBlank() && it.idCama == origen.id)
+        }
+        val api = apiService
+        if (api != null && ingresoActivo != null && destino.id.isNotBlank()) {
+            val res = llamarApi {
+                api.trasladarIngreso(ingresoActivo.id, mapOf("id_cama_destino" to destino.id))
+            }
+            if (res.isFailure) {
+                return Result.failure(res.exceptionOrNull() ?: IllegalStateException("No se pudo trasladar."))
+            }
+            refrescarCamasEIngresos()
+            return Result.success("Paciente trasladado de $camaOrigenCodigo a $camaDestinoCodigo")
+        }
+
+        val pacienteEnCama = origen.paciente
+        _camasState.value = _camasState.value.map { c ->
+            when (c.codigo) {
+                camaOrigenCodigo -> c.copy(estado = "DISPONIBLE", paciente = null)
+                camaDestinoCodigo -> c.copy(estado = "OCUPADA", paciente = pacienteEnCama)
+                else -> c
+            }
+        }
+        return Result.success("Paciente trasladado de $camaOrigenCodigo a $camaDestinoCodigo")
+    }
+
+    suspend fun darAltaCama(camaCodigo: String): Result<String> {
+        val cama = _camasState.value.find { it.codigo == camaCodigo }
+            ?: return Result.failure(IllegalArgumentException("Cama no encontrada."))
+        val ingresoActivo = _ingresosActivos.value.find {
+            it.cama?.codigo == camaCodigo || (cama.id.isNotBlank() && it.idCama == cama.id)
+        }
+        val api = apiService
+        if (api != null && ingresoActivo != null) {
+            val res = llamarApiSinDatos { api.altaPaciente(ingresoActivo.id) }
+            if (res.isFailure) {
+                return Result.failure(res.exceptionOrNull() ?: IllegalStateException("No se pudo registrar el alta."))
+            }
+            refrescarCamasEIngresos()
+            return Result.success("Alta hospitalaria registrada. Cama $camaCodigo liberada.")
+        }
+
+        _camasState.value = _camasState.value.map { c ->
+            if (c.codigo == camaCodigo) c.copy(estado = "DISPONIBLE", paciente = null) else c
+        }
+        return Result.success("Alta hospitalaria registrada. Cama $camaCodigo liberada.")
+    }
+
     suspend fun registrarEIngresarPaciente(
         paciente: Paciente,
         signosVitales: SignosVitales?,
@@ -413,7 +562,7 @@ class HospitalClinicalDataSource(
                     especialidad = if (esEmergenciaDirecta) "Urgencias Adultos" else "Admisión Hospitalaria",
                     diagnostico = motivoIngreso,
                     medico = "Dr. Alejandro Restrepo",
-                    notas = "Previsión: ${pacienteConExp.prevision ?: "Fonasa Tramo D"}"
+                    notas = "Previsión: ${pacienteConExp.prevision ?: "Particular / Privado"}"
                 )
             )
         )
@@ -1118,7 +1267,7 @@ class HospitalClinicalDataSource(
                     sexo = "M",
                     telefono = "+503 7123-4567",
                     numeroExpediente = "CM-2026-001",
-                    prevision = "Fonasa Tramo D"
+                    prevision = "ISSS"
                 ),
                 cama = "Box 03 (En Consulta)",
                 signosVitales = SignosVitales(120, 80, 78, 18, 36.6, 74.0, 172.0, 98),
@@ -1138,7 +1287,7 @@ class HospitalClinicalDataSource(
                     sexo = "F",
                     telefono = "+503 7890-1234",
                     numeroExpediente = "MS-2026-002",
-                    prevision = "Isapre Colmena"
+                    prevision = "Seguro Privado"
                 ),
                 cama = "Cama VIP-301 (Planta 3)",
                 signosVitales = SignosVitales(125, 82, 72, 16, 36.5, 62.0, 165.0, 98),
@@ -1159,7 +1308,7 @@ class HospitalClinicalDataSource(
                     sexo = "M",
                     telefono = "+503 7654-9870",
                     numeroExpediente = "LB-2026-003",
-                    prevision = "Fonasa Tramo D"
+                    prevision = "Particular / Privado"
                 ),
                 cama = "Cama HAB-202-A (Planta 2)",
                 signosVitales = SignosVitales(130, 85, 74, 17, 36.8, 78.5, 176.0, 97),

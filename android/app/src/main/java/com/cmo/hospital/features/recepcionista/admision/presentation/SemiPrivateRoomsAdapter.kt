@@ -15,7 +15,8 @@ import com.cmo.hospital.core.domain.model.SalaSemiprivadaUi
 import com.cmo.hospital.databinding.ItemSalaSemiprivadaBinding
 
 class SemiPrivateRoomsAdapter(
-    private val onSelectBed: (Cama) -> Unit
+    private val onSelectBed: (Cama) -> Unit,
+    private val onOccupiedBedClick: (Cama) -> Unit = {}
 ) : RecyclerView.Adapter<SemiPrivateRoomsAdapter.SalaViewHolder>() {
 
     private var salas: List<SalaSemiprivadaUi> = emptyList()
@@ -85,8 +86,8 @@ class SemiPrivateRoomsAdapter(
                     label.text = "Cama $letra (Ocup.)"
                     label.setTextColor(ContextCompat.getColor(ctx, R.color.huc_error))
                     check.visibility = View.GONE
-                    container.isClickable = false
-                    container.setOnClickListener(null)
+                    container.isClickable = true
+                    container.setOnClickListener { onOccupiedBedClick(cama) }
                 }
                 isSelected -> {
                     container.setBackgroundResource(R.drawable.bg_bed_semi_selected)

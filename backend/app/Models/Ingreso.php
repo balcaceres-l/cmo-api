@@ -29,4 +29,9 @@ class Ingreso extends HospitalModel
     {
         return $this->belongsTo(User::class, 'id_medico');
     }
+
+    public function registradoPor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'id_registrado_por');
+    }
 }

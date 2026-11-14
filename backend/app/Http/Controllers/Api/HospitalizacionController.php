@@ -16,14 +16,41 @@ class HospitalizacionController extends ApiController
 
     public function habitaciones(Request $r)
     {
-        $habitaciones = Habitacion::with('camas.ingresoActivo.paciente')->orderBy('planta')->orderBy('codigo')->get();
-        $mapa = $habitaciones->groupBy('planta')->map(fn ($grupo) => $grupo->map(function ($h) use ($r) {
-            return ['codigo' => $h->codigo, 'tipo' => $h->tipo, 'capacidad' => $h->capacidad, 'camas' => $h->camas->map(function ($c) use ($r) {
-                $i = $c->ingresoActivo;
-                $puede = $i && (in_array($r->user()->rol, ['ADMINISTRADOR', 'RECEPCIONISTA']) || ($r->user()->rol === 'MEDICO' && $i->id_medico === $r->user()->id));
+        $habitaciones = Habitacion::with([
+            'camas.ingresoActivo.paciente',
+            'camas.ingresoActivo.medico:id,nombre_completo',
+            'camas.ingresoActivo.registradoPor:id,nombre_completo,cargo',
+        ])->orderBy('planta')->orderBy('codigo')->get();
 
-                return ['codigo' => $c->codigo, 'estado' => $c->estado, 'paciente' => $puede ? ['id_paciente' => $i->paciente->getKey(), 'nombre_completo' => $i->paciente->nombre_completo, 'numero_expediente' => $i->paciente->numero_expediente] : null];
-            })->values()];
+        $mapa = $habitaciones->groupBy('planta')->map(fn ($grupo) => $grupo->map(function ($h) use ($r) {
+            return [
+                'codigo' => $h->codigo,
+                'tipo' => $h->tipo,
+                'capacidad' => $h->capacidad,
+                'camas' => $h->camas->map(function ($c) use ($r) {
+                    $i = $c->ingresoActivo;
+                    $puede = $i && (in_array($r->user()->rol, ['ADMINISTRADOR', 'RECEPCIONISTA']) || ($r->user()->rol === 'MEDICO' && $i->id_medico === $r->user()->id));
+
+                    return [
+                        'id_cama' => $c->id_cama,
+                        'codigo' => $c->codigo,
+                        'estado' => $c->estado,
+                        'paciente' => $puede ? [
+                            'id_paciente' => $i->paciente->getKey(),
+                            'nombre_completo' => $i->paciente->nombre_completo,
+                            'numero_expediente' => $i->paciente->numero_expediente,
+                            'dui' => $i->paciente->dui,
+                        ] : null,
+                        'ingreso' => $puede ? [
+                            'id_ingreso' => $i->id_ingreso,
+                            'fecha_ingreso' => $i->fecha_ingreso?->toIso8601String(),
+                            'motivo' => $i->motivo,
+                            'medico' => $i->medico?->nombre_completo,
+                            'registrado_por' => $i->registradoPor?->nombre_completo,
+                        ] : null,
+                    ];
+                })->values(),
+            ];
         })->values());
 
         return $this->success($mapa);
@@ -31,7 +58,10 @@ class HospitalizacionController extends ApiController
 
     public function ingresos(Request $r)
     {
-        $q = Ingreso::with(['paciente', 'cama.habitacion', 'medico'])->when($r->boolean('activos'), fn ($q) => $q->whereNull('fecha_alta'))->orderByDesc('fecha_ingreso');
+        $q = Ingreso::with(['paciente', 'cama.habitacion', 'medico', 'registradoPor:id,nombre_completo,cargo'])
+            ->when($r->boolean('activos'), fn ($q) => $q->whereNull('fecha_alta'))
+            ->when($r->boolean('historial'), fn ($q) => $q->whereNotNull('fecha_alta'))
+            ->orderByDesc('fecha_ingreso');
         if ($r->user()->rol === 'MEDICO') {
             $q->where('id_medico', $r->user()->id);
         }
@@ -41,21 +71,37 @@ class HospitalizacionController extends ApiController
 
     public function ingresar(Request $r)
     {
+        $this->exigirOperacionCamas($r);
         $d = $r->validate(['id_paciente' => 'required|exists:paciente,id_paciente', 'tipo' => 'required|in:VIP,SEMIPRIVADA', 'id_cama' => 'nullable|exists:cama,id_cama', 'id_medico' => ['required', $this->reglaMedico()], 'motivo' => 'required|string']);
         $i = $this->servicio->asignar(Paciente::findOrFail($d['id_paciente']), $d['tipo'], $d['id_cama'] ?? null, User::findOrFail($d['id_medico']), $d['motivo'], $r->user());
 
         return $this->success($i, 'Ingreso creado.', 201);
     }
 
-    public function alta(Ingreso $ingreso)
+    public function alta(Request $r, Ingreso $ingreso)
     {
+        $this->exigirOperacionCamas($r);
+
         return $this->success($this->servicio->alta($ingreso), 'Alta registrada.');
     }
 
     public function trasladar(Request $r, Ingreso $ingreso)
     {
+        $this->exigirOperacionCamas($r);
         $d = $r->validate(['id_cama' => 'required|exists:cama,id_cama']);
 
         return $this->success($this->servicio->trasladar($ingreso, Cama::with('habitacion')->findOrFail($d['id_cama']), $r->user()), 'Traslado realizado.');
+    }
+
+    private function exigirOperacionCamas(Request $r): void
+    {
+        $u = $r->user();
+        if ($u->rol === 'ADMINISTRADOR') {
+            $cargo = mb_strtolower((string) ($u->cargo ?? ''));
+            $usuario = mb_strtolower((string) ($u->usuario ?? ''));
+            if (! str_contains($cargo, 'operaciones') && $usuario !== 'operaciones') {
+                abort(403, 'El Administrador General tiene acceso de solo lectura en el módulo de camas. Esta acción corresponde al Jefe de Operaciones o Recepción.');
+            }
+        }
     }
 }

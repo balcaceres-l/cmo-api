@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\CitaController;
 use App\Http\Controllers\Api\ConsultaController;
 use App\Http\Controllers\Api\ConsultorioController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\EspecialidadController;
 use App\Http\Controllers\Api\HospitalizacionController;
 use App\Http\Controllers\Api\InventarioController;
 use App\Http\Controllers\Api\LaboratorioController;
@@ -30,9 +31,11 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::patch('auth/password', [AuthController::class, 'changePassword'])->middleware('throttle:6,1');
+    Route::get('especialidades', [EspecialidadController::class, 'index']);
     Route::middleware('role:ADMINISTRADOR')->group(function () {
         Route::apiResource('usuarios', UsuarioController::class)->except('destroy');
         Route::patch('usuarios/{usuario}/estado', [UsuarioController::class, 'cambiarEstado']);
+        Route::apiResource('especialidades', EspecialidadController::class)->except(['index', 'show'])->parameters(['especialidades' => 'especialidad']);
         Route::apiResource('turnos', TurnoController::class)->parameters(['turnos' => 'turno']);
         Route::apiResource('avisos', AvisoController::class)->except('index');
         Route::get('dashboard/metricas', [DashboardController::class, 'metricas']);
@@ -60,7 +63,7 @@ Route::middleware(['auth:sanctum', 'activo'])->group(function () {
         Route::get('agenda/disponibilidad', [CitaController::class, 'disponibilidad']);
         Route::get('consultorios', [ConsultorioController::class, 'index']);
     });
-    Route::post('citas', [CitaController::class, 'store'])->middleware('role:MEDICO,RECEPCIONISTA');
+    Route::post('citas', [CitaController::class, 'store'])->middleware('role:ADMINISTRADOR,MEDICO,RECEPCIONISTA');
     Route::middleware('role:ADMINISTRADOR,RECEPCIONISTA')->group(function () {
         Route::patch('citas/{cita}/cancelar', [CitaController::class, 'cancelar']);
         Route::patch('citas/{cita}/reprogramar', [CitaController::class, 'reprogramar']);

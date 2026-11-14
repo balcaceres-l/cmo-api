@@ -15,13 +15,12 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cmo.hospital.CmoApplication
 import com.cmo.hospital.R
-import com.cmo.hospital.components.HucMicroBannerBinder
+import com.cmo.hospital.core.domain.model.CargoAccessPolicy
 import com.cmo.hospital.core.domain.model.EstadoSemaforo
 import com.cmo.hospital.core.domain.model.Paciente
 import com.cmo.hospital.core.ui.simpleViewModelFactory
 import com.cmo.hospital.databinding.FragmentDoctorInicioBinding
 import com.cmo.hospital.features.doctor.shell.presentation.DoctorShellHost
-import com.google.android.material.chip.Chip
 import kotlinx.coroutines.launch
 
 class InicioDoctorFragment : Fragment() {
@@ -48,17 +47,23 @@ class InicioDoctorFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val appContainer = (requireActivity().application as CmoApplication).appContainer
-        val activeUser = appContainer.getActiveUserUseCase()
-        val nombreDoc = activeUser?.nombreCompleto ?: "Dr. Alejandro Restrepo"
-        val cargoDoc = activeUser?.cargo ?: "Medicina Interna"
-
-        HucMicroBannerBinder.bind(
-            binding = binding.microBannerDoctorInicio,
-            title = "Panel Médico Principal • $nombreDoc",
-            subtitle = "$cargoDoc • Agenda de Citas y Pacientes",
-            badgeText = "En Turno",
-            iconRes = R.drawable.ic_local_hospital
-        )
+        if (CargoAccessPolicy.esMedicoEmergencia(appContainer.getActiveUserUseCase())) {
+            binding.cardEmergenciaAmbulanciaDoc.visibility = View.VISIBLE
+            viewLifecycleOwner.lifecycleScope.launch {
+                viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    appContainer.clinicalDataSource.ambulanciaState.collect { amb ->
+                        val serv = amb.servicioActivo
+                        binding.tvEmergenciaAmbulanciaEstado.text =
+                            "AMBULANCIA ALFA-1 • ${amb.estado}"
+                        binding.tvEmergenciaAmbulanciaDetalle.text = if (serv != null) {
+                            "Paciente: ${serv.pacienteNombre} • ${serv.prioridad} • ETA ${serv.minutosLlegada} min\n${serv.direccion} — ${serv.descripcion}"
+                        } else {
+                            "Unidad disponible en base para despacho de código rojo."
+                        }
+                    }
+                }
+            }
+        }
 
         val citasAdapter = CitasMedicoAdapter(
             onIniciarORetomarClick = { cita ->
@@ -104,18 +109,15 @@ class InicioDoctorFragment : Fragment() {
         binding.rvPacientesMedico.layoutManager = LinearLayoutManager(requireContext())
         binding.rvPacientesMedico.adapter = pacientesAdapter
 
-        // Chips de filtro de citas
-        listOf("Todas", "Pendientes", "En Atención", "Atendidas").forEachIndexed { idx, filtro ->
-            val chip = Chip(requireContext()).apply {
-                id = View.generateViewId()
-                text = filtro
-                isCheckable = true
-                isChecked = idx == 0
-                setOnCheckedChangeListener { _, checked ->
-                    if (checked) viewModel.seleccionarFiltroCitas(filtro)
-                }
-            }
-            binding.chipGroupFiltroCitasDoc.addView(chip)
+        // Cuadrícula 2x2 de filtro de citas (sin scroll horizontal)
+        val filtrosMap = listOf(
+            binding.btnFiltroTodas to "Todas",
+            binding.btnFiltroPendientes to "Pendientes",
+            binding.btnFiltroEnAtencion to "En Atención",
+            binding.btnFiltroAtendidas to "Atendidas"
+        )
+        filtrosMap.forEach { (btn, filtro) ->
+            btn.setOnClickListener { viewModel.seleccionarFiltroCitas(filtro) }
         }
 
         binding.btnSegmentoMisCitas.setOnClickListener {
@@ -244,6 +246,32 @@ class InicioDoctorFragment : Fragment() {
         )
 
         binding.scrollFiltrosCitasDoc.visibility = if (viendoCitas) View.VISIBLE else View.GONE
+        listOf(
+            binding.btnFiltroTodas to "Todas",
+            binding.btnFiltroPendientes to "Pendientes",
+            binding.btnFiltroEnAtencion to "En Atención",
+            binding.btnFiltroAtendidas to "Atendidas"
+        ).forEach { (btn, filtro) ->
+            val activo = state.filtroCitas == filtro
+            btn.backgroundTintList = ColorStateList.valueOf(
+                ContextCompat.getColor(
+                    ctx,
+                    if (activo) R.color.cmo_primary else R.color.cmo_surface
+                )
+            )
+            btn.setTextColor(
+                ContextCompat.getColor(
+                    ctx,
+                    if (activo) R.color.cmo_white else R.color.cmo_text
+                )
+            )
+            btn.strokeColor = ColorStateList.valueOf(
+                ContextCompat.getColor(
+                    ctx,
+                    if (activo) R.color.cmo_primary else R.color.cmo_border_strong
+                )
+            )
+        }
         binding.sectionListaMisCitas.visibility = if (viendoCitas) View.VISIBLE else View.GONE
         binding.tilBuscarMiPaciente.visibility = if (!viendoCitas) View.VISIBLE else View.GONE
         binding.sectionListaMisPacientes.visibility = if (!viendoCitas) View.VISIBLE else View.GONE

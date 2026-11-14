@@ -24,12 +24,19 @@ class Paciente extends HospitalModel
 
     /**
      * Pacientes con los que el médico tiene relación clínica: una cita vigente
-     * o atendida, o un ingreso hospitalario a su cargo.
+     * o atendida (asignada a él o abierta para su especialidad), o un ingreso hospitalario a su cargo.
      */
     public function scopeTratadoPor(Builder $q, string $medico): void
     {
+        $idEsp = User::whereKey($medico)->value('id_especialidad');
+
         $q->where(fn ($x) => $x
-            ->whereHas('citas', fn ($c) => $c->where('id_medico', $medico)->whereIn('estado', self::ESTADOS_CITA_TRATANTE))
+            ->whereHas('citas', fn ($c) => $c
+                ->whereIn('estado', self::ESTADOS_CITA_TRATANTE)
+                ->where(fn ($m) => $m
+                    ->where('id_medico', $medico)
+                    ->when($idEsp, fn ($e) => $e->orWhere(fn ($sub) => $sub->whereNull('id_medico')->where('id_especialidad', $idEsp)))
+                ))
             ->orWhereHas('ingresos', fn ($i) => $i->where('id_medico', $medico)));
     }
 

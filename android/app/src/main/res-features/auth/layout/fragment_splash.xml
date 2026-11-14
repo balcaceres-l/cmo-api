@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_cmo_radial_dark">
+
+    <!-- Anillos decorativos idénticos a Web Login -->
+    <View
+        android:layout_width="420dp"
+        android:layout_height="420dp"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_cmo_ring_subtle" />
+
+    <View
+        android:layout_width="280dp"
+        android:layout_height="280dp"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_cmo_ring_subtle" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingHorizontal="32dp">
+
+        <FrameLayout
+            android:id="@+id/cardSplashLogo"
+            android:layout_width="112dp"
+            android:layout_height="112dp"
+            android:background="@drawable/bg_logo_card_24"
+            android:elevation="12dp"
+            android:padding="12dp">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/app_name"
+                android:scaleType="fitCenter"
+                android:src="@drawable/logo_cmo_icon" />
+        </FrameLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:fontFamily="@font/plus_jakarta_sans_extrabold"
+            android:letterSpacing="0.02"
+            android:text="@string/cmo_brand_title"
+            android:textColor="@color/cmo_white"
+            android:textSize="26sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:fontFamily="@font/plus_jakarta_sans_semibold"
+            android:letterSpacing="0.06"
+            android:text="CENTRO MÉDICO DE OCCIDENTE"
+            android:textColor="@color/cmo_teal_accent"
+            android:textSize="12sp" />
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progressSplash"
+            android:layout_width="160dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:indeterminate="true"
+            app:indicatorColor="@color/cmo_teal_accent"
+            app:trackColor="#183329"
+            app:trackCornerRadius="4dp"
+            app:trackThickness="4dp" />
+
+        <TextView
+            android:id="@+id/tvSplashStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:fontFamily="@font/plus_jakarta_sans"
+            android:text="Iniciando terminal clínico..."
+            android:textColor="@color/cmo_header_text"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="28dp"
+        android:fontFamily="@font/plus_jakarta_sans_semibold"
+        android:text="Terminal Clínico • Laravel Sanctum"
+        android:textColor="#6B8B7D"
+        android:textSize="11sp" />
+
+</FrameLayout>
+

@@ -13,16 +13,39 @@
         android:orientation="vertical"
         android:padding="@dimen/huc_space_md">
 
-        <!-- Micro-Banner Institucional del Panel Médico -->
-        <include
-            android:id="@+id/microBannerDoctorInicio"
-            layout="@layout/comp_huc_micro_banner" />
+        <!-- Alerta Ambulancia Alfa-1 (solo Médico de Emergencia) -->
+        <LinearLayout
+            android:id="@+id/cardEmergenciaAmbulanciaDoc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/bg_error_container_16"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvEmergenciaAmbulanciaEstado"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="AMBULANCIA ALFA-1 • EN BASE"
+                android:textAppearance="@style/TextAppearance.Cmo.Etiqueta"
+                android:textColor="@color/triage_critico_text" />
+
+            <TextView
+                android:id="@+id/tvEmergenciaAmbulanciaDetalle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Sin traslados activos en curso."
+                android:textAppearance="@style/TextAppearance.Cmo.Cuerpo"
+                android:textColor="@color/triage_critico_text" />
+        </LinearLayout>
 
         <!-- KPIs Operativos de la Jornada Médica -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/huc_space_md"
             android:orientation="horizontal">
 
             <!-- KPI 1: En Sala / Pendientes -->
@@ -302,22 +325,83 @@
                     app:strokeWidth="0dp" />
             </LinearLayout>
 
-            <!-- Filtros para Mis Citas -->
-            <HorizontalScrollView
+            <!-- Filtros para Mis Citas (Cuadrícula 2x2 sin scroll horizontal) -->
+            <LinearLayout
                 android:id="@+id/scrollFiltrosCitasDoc"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:scrollbars="none">
+                android:layout_marginTop="10dp"
+                android:orientation="vertical">
 
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/chipGroupFiltroCitasDoc"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:selectionRequired="true"
-                    app:singleLine="true"
-                    app:singleSelection="true" />
-            </HorizontalScrollView>
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFiltroTodas"
+                        style="@style/Widget.Huc.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minHeight="40dp"
+                        android:paddingVertical="6dp"
+                        android:text="Todas"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFiltroPendientes"
+                        style="@style/Widget.Huc.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_weight="1"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minHeight="40dp"
+                        android:paddingVertical="6dp"
+                        android:text="Pendientes"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFiltroEnAtencion"
+                        style="@style/Widget.Huc.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="4dp"
+                        android:layout_weight="1"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minHeight="40dp"
+                        android:paddingVertical="6dp"
+                        android:text="En Atención"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFiltroAtendidas"
+                        style="@style/Widget.Huc.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:layout_weight="1"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minHeight="40dp"
+                        android:paddingVertical="6dp"
+                        android:text="Atendidas"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </LinearLayout>
 
             <!-- Buscador para Mis Pacientes -->
             <com.google.android.material.textfield.TextInputLayout

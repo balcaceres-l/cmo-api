@@ -35,6 +35,18 @@ interface ApiService {
         @Path("id") id: String
     ): Response<ApiResponse<Cita>>
 
+    @PATCH("citas/{id}/confirmar")
+    suspend fun confirmarCita(
+        @Path("id") id: String,
+        @Body body: Map<String, Any?>
+    ): Response<ApiResponse<Cita>>
+
+    @GET("medicos")
+    suspend fun getMedicos(): Response<ApiResponse<List<MedicoDto>>>
+
+    @GET("consultorios")
+    suspend fun getConsultorios(): Response<ApiResponse<List<ConsultorioDto>>>
+
     @PATCH("citas/{id}/cancelar")
     suspend fun cancelarCita(
         @Path("id") id: String,
@@ -71,12 +83,24 @@ interface ApiService {
 
     // Habitaciones y Camas Hospitalarias (17 camas estrictas)
     @GET("habitaciones")
-    suspend fun getHabitaciones(): Response<ApiResponse<List<List<Habitacion>>>>
+    suspend fun getHabitaciones(): Response<ApiResponse<Map<String, List<Map<String, Any?>>>>>
+
+    @GET("ingresos")
+    suspend fun getIngresos(
+        @Query("activos") activos: Int = 1,
+        @Query("per_page") perPage: Int = 50
+    ): Response<ApiResponse<PaginatedData<IngresoDto>>>
 
     @POST("ingresos")
     suspend fun ingresarPaciente(
         @Body request: IngresoPacienteRequest
-    ): Response<ApiResponse<Map<String, Any>>>
+    ): Response<ApiResponse<IngresoDto>>
+
+    @PATCH("ingresos/{id}/trasladar")
+    suspend fun trasladarIngreso(
+        @Path("id") id: String,
+        @Body body: Map<String, Any?>
+    ): Response<ApiResponse<IngresoDto>>
 
     @PATCH("ingresos/{id}/alta")
     suspend fun altaPaciente(
@@ -167,11 +191,24 @@ interface ApiService {
         @Path("id") ordenId: String
     ): Response<ApiResponse<OrdenLaboratorioDto>>
 
-    /** Recepción / laboratorio: EN_PROCESO → COMPLETADO (sin resultados). */
+    /** Recepción / laboratorio: EN_PROCESO → COMPLETADO (observaciones opcionales). */
     @PATCH("ordenes-laboratorio/{id}/completar")
     suspend fun completarOrdenLaboratorio(
-        @Path("id") ordenId: String
+        @Path("id") ordenId: String,
+        @Body body: Map<String, Any?> = emptyMap()
     ): Response<ApiResponse<OrdenLaboratorioDto>>
+
+    // Recursos e Insumos (Enfermería: descargo de salidas en piso)
+    @GET("recursos")
+    suspend fun getRecursos(
+        @Query("per_page") perPage: Int = 100
+    ): Response<ApiResponse<PaginatedData<RecursoDto>>>
+
+    @POST("recursos/{id}/movimientos")
+    suspend fun registrarMovimientoRecurso(
+        @Path("id") recursoId: String,
+        @Body body: Map<String, Any?>
+    ): Response<ApiResponse<Map<String, Any?>>>
 
     @PATCH("ordenes-laboratorio/{id}/cancelar")
     suspend fun cancelarOrdenLaboratorio(

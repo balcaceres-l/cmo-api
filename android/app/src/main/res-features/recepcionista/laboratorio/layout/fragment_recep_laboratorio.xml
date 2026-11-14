@@ -15,14 +15,9 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <include
-            android:id="@+id/microBannerLabRecep"
-            layout="@layout/comp_huc_micro_banner" />
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/huc_space_md"
             android:background="@drawable/bg_card_rounded_16"
             android:elevation="1dp"
             android:orientation="vertical"

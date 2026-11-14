@@ -15,8 +15,12 @@ class EnsureUserIsActive
 {
     public function handle(Request $request, Closure $next): Response|JsonResponse
     {
-        if ($request->user() && $request->user()->estado !== 'ACTIVO') {
-            $request->user()->currentAccessToken()?->delete();
+        $u = $request->user();
+        if ($u && $u->fecha_salida && $u->fecha_salida->lt(today()) && $u->estado === 'ACTIVO') {
+            $u->update(['estado' => 'INACTIVO']);
+        }
+        if ($u && ($u->estado !== 'ACTIVO' || ! $u->estaVigenteEn(today()))) {
+            $u->currentAccessToken()?->delete();
 
             return response()->json([
                 'success' => false,

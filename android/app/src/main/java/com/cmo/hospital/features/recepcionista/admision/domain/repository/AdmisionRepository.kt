@@ -18,4 +18,12 @@ interface AdmisionRepository {
         motivoIngreso: String,
         esEmergenciaDirecta: Boolean
     ): Result<Paciente>
+
+    suspend fun refrescarCamas() {}
+
+    suspend fun trasladarCama(origenCodigo: String, destinoCodigo: String): Result<String> =
+        Result.failure(UnsupportedOperationException("No implementado"))
+
+    suspend fun darAltaCama(camaCodigo: String): Result<String> =
+        Result.failure(UnsupportedOperationException("No implementado"))
 }

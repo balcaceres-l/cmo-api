@@ -1,9 +1,13 @@
 package com.cmo.hospital.features.doctor.expedientes.presentation
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
+import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -11,7 +15,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.cmo.hospital.CmoApplication
+import com.cmo.hospital.R
 import com.cmo.hospital.components.LabOrderCardBinder
 import com.cmo.hospital.components.VitalsGridBinder
 import com.cmo.hospital.core.domain.model.ExpedienteDetalle
@@ -27,6 +33,8 @@ class ExpedientesFragment : Fragment() {
 
     private var _binding: FragmentDoctorExpedientesBinding? = null
     private val binding get() = _binding!!
+    private var dropdownAbierto = false
+    private lateinit var dropdownAdapter: PacientesDropdownAdapter
 
     private val viewModel: ExpedientesViewModel by viewModels {
         simpleViewModelFactory {
@@ -50,8 +58,28 @@ class ExpedientesFragment : Fragment() {
         binding.rvAtencionesHistoricas.layoutManager = LinearLayoutManager(requireContext())
         binding.rvAtencionesHistoricas.adapter = histAdapter
 
+        dropdownAdapter = PacientesDropdownAdapter { exp ->
+            viewModel.selectExpediente(exp.paciente.numeroExpediente)
+            cerrarDropdownYTeclado()
+        }
+        binding.rvPacientesDropdown.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvPacientesDropdown.adapter = dropdownAdapter
+
+        binding.etBuscarExpediente.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) abrirDropdown()
+        }
+        binding.etBuscarExpediente.setOnClickListener {
+            abrirDropdown()
+        }
+        binding.btnCerrarDropdownPacientes.setOnClickListener {
+            cerrarDropdownYTeclado()
+        }
+
         binding.etBuscarExpediente.doAfterTextChanged { editable ->
             val currentText = editable?.toString().orEmpty()
+            if (binding.etBuscarExpediente.hasFocus() && !dropdownAbierto) {
+                abrirDropdown()
+            }
             if (currentText != viewModel.uiState.value.query) {
                 viewModel.onQueryChanged(currentText)
             }
@@ -77,7 +105,9 @@ class ExpedientesFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     viewModel.uiState.collect { state ->
-                        if (binding.etBuscarExpediente.text?.toString().orEmpty() != state.query) {
+                        if (!binding.etBuscarExpediente.hasFocus() &&
+                            binding.etBuscarExpediente.text?.toString().orEmpty() != state.query
+                        ) {
                             binding.etBuscarExpediente.setText(state.query)
                             binding.etBuscarExpediente.setSelection(state.query.length)
                         }
@@ -110,23 +140,87 @@ class ExpedientesFragment : Fragment() {
         }
     }
 
+    private fun abrirDropdown() {
+        dropdownAbierto = true
+        binding.containerDropdownPacientes.visibility = View.VISIBLE
+    }
+
+    private fun cerrarDropdownYTeclado() {
+        dropdownAbierto = false
+        binding.containerDropdownPacientes.visibility = View.GONE
+        binding.etBuscarExpediente.clearFocus()
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(binding.etBuscarExpediente.windowToken, 0)
+    }
+
     private fun renderSelectorPacientes(state: ExpedientesUiState) {
-        val ctx = requireContext()
-        binding.chipGroupPacientesExpediente.removeAllViews()
+        val q = state.query.trim().lowercase()
+        val ordenados = state.resultados.sortedWith(
+            compareBy<ExpedienteDetalle> { exp ->
+                if (q.isNotEmpty() && exp.paciente.nombreCompleto.lowercase().startsWith(q)) 0 else 1
+            }.thenBy { it.paciente.nombreCompleto.lowercase() }
+        )
         val selNum = state.expedienteSeleccionado?.paciente?.numeroExpediente
-        state.resultados.forEach { exp ->
-            val numExp = exp.paciente.numeroExpediente
-            val chip = Chip(ctx).apply {
-                id = View.generateViewId()
-                text = "${exp.paciente.nombreCompleto} (${numExp ?: "S/E"})"
-                isCheckable = true
-                isChecked = numExp == selNum
-                setOnClickListener {
-                    viewModel.selectExpediente(numExp)
-                }
-            }
-            binding.chipGroupPacientesExpediente.addView(chip)
+        binding.tvDropdownPacientesCount.text = if (ordenados.isEmpty()) {
+            "Sin coincidencias para \"$q\""
+        } else {
+            "Pacientes (${ordenados.size} • A–Z)"
         }
+        dropdownAdapter.submit(ordenados, selNum)
+        binding.rvPacientesDropdown.visibility = if (ordenados.isEmpty()) View.GONE else View.VISIBLE
+        binding.containerDropdownPacientes.visibility = if (dropdownAbierto) View.VISIBLE else View.GONE
+    }
+
+    private class PacientesDropdownAdapter(
+        private val onSelect: (ExpedienteDetalle) -> Unit
+    ) : RecyclerView.Adapter<PacientesDropdownAdapter.VH>() {
+
+        private var items: List<ExpedienteDetalle> = emptyList()
+        private var selectedExp: String? = null
+
+        fun submit(list: List<ExpedienteDetalle>, selected: String?) {
+            items = list
+            selectedExp = selected
+            notifyDataSetChanged()
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+            val tv = TextView(parent.context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                setPadding(24, 22, 24, 22)
+                textSize = 13.5f
+            }
+            return VH(tv)
+        }
+
+        override fun getItemCount(): Int = items.size
+
+        override fun onBindViewHolder(holder: VH, position: Int) {
+            val exp = items[position]
+            val p = exp.paciente
+            val isSel = p.numeroExpediente != null && p.numeroExpediente == selectedExp
+            val tv = holder.itemView as TextView
+            val duiStr = p.dui?.takeIf { it.isNotBlank() }?.let { " • $it" } ?: ""
+            tv.text = "${p.nombreCompleto} (${p.numeroExpediente ?: "S/E"})$duiStr"
+            tv.setTextColor(
+                ContextCompat.getColor(
+                    tv.context,
+                    if (isSel) R.color.cmo_primary else R.color.cmo_text
+                )
+            )
+            tv.setBackgroundColor(
+                ContextCompat.getColor(
+                    tv.context,
+                    if (isSel) R.color.cmo_primary_soft else R.color.huc_transparent
+                )
+            )
+            tv.setOnClickListener { onSelect(exp) }
+        }
+
+        class VH(view: View) : RecyclerView.ViewHolder(view)
     }
 
     private fun renderExpedienteDetalle(
@@ -140,7 +234,7 @@ class ExpedientesFragment : Fragment() {
 
         val edadStr = if (pac.edad > 0) "${pac.edad} años" else "Edad N/D"
         val dniStr = pac.dui ?: "S/D"
-        val prevStr = pac.prevision ?: "Fonasa Tramo D"
+        val prevStr = pac.prevision ?: "Particular / Privado"
         val sangreStr = pac.tipoSangre ?: "O+"
         binding.tvExpPacienteMeta.text =
             "$edadStr • DNI: $dniStr • Sangre: $sangreStr • $prevStr"

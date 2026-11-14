@@ -17,6 +17,12 @@ class LaboratorioRecepcionRepositoryImpl(
     override suspend fun iniciar(ordenId: String): Result<OrdenLaboratorioItem> =
         llamarApi { apiService.iniciarOrdenLaboratorio(ordenId) }.map { it.aOrdenLaboratorio() }
 
-    override suspend fun completar(ordenId: String): Result<OrdenLaboratorioItem> =
-        llamarApi { apiService.completarOrdenLaboratorio(ordenId) }.map { it.aOrdenLaboratorio() }
+    override suspend fun completar(ordenId: String, observaciones: String?): Result<OrdenLaboratorioItem> {
+        val body = if (!observaciones.isNullOrBlank()) {
+            mapOf("observaciones" to observaciones.trim())
+        } else {
+            emptyMap()
+        }
+        return llamarApi { apiService.completarOrdenLaboratorio(ordenId, body) }.map { it.aOrdenLaboratorio() }
+    }
 }

@@ -14,7 +14,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cmo.hospital.CmoApplication
 import com.cmo.hospital.R
-import com.cmo.hospital.components.HucMicroBannerBinder
 import com.cmo.hospital.core.ui.simpleViewModelFactory
 import com.cmo.hospital.databinding.FragmentRecepAmbulanciaBinding
 import com.cmo.hospital.features.recepcionista.shell.presentation.RecepcionistaToastHost
@@ -44,14 +43,6 @@ class AmbulanciaGuardiaFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        HucMicroBannerBinder.bind(
-            binding = binding.microBannerAmbulancia,
-            title = "Hospital Universitario Central - Guardia & Flota",
-            subtitle = "Coordinación Prehospitalaria Alfa-1 y Dotación en Turno",
-            badgeText = "24/7 Activo",
-            iconRes = R.drawable.ic_ambulance
-        )
 
         personalAdapter = PersonalGuardiaAdapter()
         binding.rvPersonalGuardia.layoutManager = LinearLayoutManager(requireContext())

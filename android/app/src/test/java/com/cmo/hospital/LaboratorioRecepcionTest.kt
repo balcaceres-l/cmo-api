@@ -23,7 +23,7 @@ class LaboratorioRecepcionTest {
             llamadas += "iniciar $ordenId"
             return Result.success(OrdenLaboratorioItem(id = ordenId, examenNombre = "X", estado = OrdenLaboratorioItem.EN_PROCESO))
         }
-        override suspend fun completar(ordenId: String): Result<OrdenLaboratorioItem> {
+        override suspend fun completar(ordenId: String, observaciones: String?): Result<OrdenLaboratorioItem> {
             llamadas += "completar $ordenId"
             return Result.success(OrdenLaboratorioItem(id = ordenId, examenNombre = "X", estado = OrdenLaboratorioItem.COMPLETADO))
         }

@@ -3,6 +3,7 @@ package com.cmo.hospital.features.recepcionista.admision.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cmo.hospital.core.domain.model.*
+import com.cmo.hospital.features.recepcionista.admision.domain.repository.AdmisionRepository
 import com.cmo.hospital.features.recepcionista.admision.domain.usecase.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,7 +30,8 @@ class AdmisionViewModel(
     observeCapacidadCamasUseCase: ObserveCapacidadCamasUseCase,
     private val simularEscanerDocumentoUseCase: SimularEscanerDocumentoUseCase,
     private val registrarIngresoPacienteUseCase: RegistrarIngresoPacienteUseCase,
-    private val generarBrazaleteQrUseCase: GenerarBrazaleteQrUseCase
+    private val generarBrazaleteQrUseCase: GenerarBrazaleteQrUseCase,
+    private val repository: AdmisionRepository? = null
 ) : ViewModel() {
 
     val capacidad: StateFlow<CapacidadHospitalaria> = observeCapacidadCamasUseCase()
@@ -170,5 +172,55 @@ class AdmisionViewModel(
 
     fun consumeToast() {
         _uiState.value = _uiState.value.copy(toastTitle = null, toastMessage = null)
+    }
+
+    fun refrescarCamas() {
+        viewModelScope.launch {
+            repository?.refrescarCamas()
+        }
+    }
+
+    fun trasladarCama(origenCodigo: String, destinoCodigo: String) {
+        val repo = repository ?: return
+        viewModelScope.launch {
+            repo.trasladarCama(origenCodigo, destinoCodigo).fold(
+                onSuccess = { msg ->
+                    _uiState.value = _uiState.value.copy(
+                        toastTitle = "Traslado Completado",
+                        toastMessage = msg,
+                        toastIsError = false
+                    )
+                },
+                onFailure = { err ->
+                    _uiState.value = _uiState.value.copy(
+                        toastTitle = "Error de Traslado",
+                        toastMessage = err.message ?: "No se pudo trasladar al paciente.",
+                        toastIsError = true
+                    )
+                }
+            )
+        }
+    }
+
+    fun darAltaCama(camaCodigo: String) {
+        val repo = repository ?: return
+        viewModelScope.launch {
+            repo.darAltaCama(camaCodigo).fold(
+                onSuccess = { msg ->
+                    _uiState.value = _uiState.value.copy(
+                        toastTitle = "Alta Hospitalaria",
+                        toastMessage = msg,
+                        toastIsError = false
+                    )
+                },
+                onFailure = { err ->
+                    _uiState.value = _uiState.value.copy(
+                        toastTitle = "Error al Dar de Alta",
+                        toastMessage = err.message ?: "No se pudo liberar la cama.",
+                        toastIsError = true
+                    )
+                }
+            )
+        }
     }
 }

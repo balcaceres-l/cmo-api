@@ -1,27 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { CalendarIcon, PlusCircleIcon, RefreshCwIcon, SearchIcon } from '../../components/Icons';
+import React, { useState, useEffect, useMemo } from 'react';
+import { CalendarIcon, PlusCircleIcon, RefreshCwIcon } from '../../components/Icons';
 import { apiClient, ApiError } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { isJefeOperaciones, getRoleBadgeConfig } from '../../utils/roles';
-
-interface TurnoRaw {
-  id: string;
-  id_usuario: string;
-  empleado: string;
-  cargo: string;
-  rol: 'MEDICO' | 'RECEPCIONISTA' | 'ADMINISTRADOR';
-  area: string;
-  fecha: string;
-  hora_inicio: string;
-  hora_fin: string;
-}
-
-interface PersonalOption {
-  id: string;
-  nombre_completo: string;
-  rol: string;
-  cargo: string | null;
-}
+import { PersonalOption, ShiftPrefill, ShiftViewMode, TurnoRaw, WeekGroupBy } from './types';
+import { addDays, addMonths, CORE_AREAS, getMonthGridDays, getWeekDays, isStaffActiveOnDate, normalizeSpecialtyLabel } from './shiftUtils';
+import { SuggestedShift } from './shiftSuggester';
+import { ShiftToolbar } from './components/ShiftToolbar';
+import { DayTimelineView } from './components/DayTimelineView';
+import { WeekGridView } from './components/WeekGridView';
+import { MonthCalendarView } from './components/MonthCalendarView';
+import { ShiftDetailDrawer } from './components/ShiftDetailDrawer';
+import { SpecialtyCoverageMonitor } from './components/SpecialtyCoverageMonitor';
+import { SuggestCoverageModal } from './components/SuggestCoverageModal';
 
 const FALLBACK_SHIFTS: TurnoRaw[] = [
   {
@@ -32,8 +23,8 @@ const FALLBACK_SHIFTS: TurnoRaw[] = [
     rol: 'MEDICO',
     area: 'Consulta Externa (C-101)',
     fecha: new Date().toISOString().split('T')[0],
-    hora_inicio: '07:00',
-    hora_fin: '15:00',
+    hora_inicio: '08:00',
+    hora_fin: '16:00',
   },
   {
     id: 't-hoy-2',
@@ -54,8 +45,8 @@ const FALLBACK_SHIFTS: TurnoRaw[] = [
     rol: 'MEDICO',
     area: 'Consulta Externa (C-102)',
     fecha: new Date().toISOString().split('T')[0],
-    hora_inicio: '14:00',
-    hora_fin: '22:00',
+    hora_inicio: '16:00',
+    hora_fin: '23:59',
   },
   {
     id: 't-hoy-4',
@@ -65,8 +56,8 @@ const FALLBACK_SHIFTS: TurnoRaw[] = [
     rol: 'RECEPCIONISTA',
     area: 'Triaje y Emergencias (Enfermería)',
     fecha: new Date().toISOString().split('T')[0],
-    hora_inicio: '07:00',
-    hora_fin: '15:00',
+    hora_inicio: '08:00',
+    hora_fin: '16:00',
   },
   {
     id: 't-hoy-5',
@@ -76,8 +67,8 @@ const FALLBACK_SHIFTS: TurnoRaw[] = [
     rol: 'RECEPCIONISTA',
     area: 'Admisión Central y Recepción',
     fecha: new Date().toISOString().split('T')[0],
-    hora_inicio: '07:00',
-    hora_fin: '15:00',
+    hora_inicio: '08:00',
+    hora_fin: '16:00',
   },
 ];
 
@@ -101,6 +92,20 @@ export const ShiftsPage: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Vistas de Cuadrícula (Día / Semana / Mes / Lista)
+  const [viewMode, setViewMode] = useState<ShiftViewMode>('week');
+  const [anchorDate, setAnchorDate] = useState<string>(todayStr);
+  const [weekGroupBy, setWeekGroupBy] = useState<WeekGroupBy>('area');
+  const [drawerTurno, setDrawerTurno] = useState<TurnoRaw | null>(null);
+  const [showSuggestModal, setShowSuggestModal] = useState<boolean>(false);
+  const [modalSpecialtyFilter, setModalSpecialtyFilter] = useState<string | null>(null);
+  const [showClearRangeModal, setShowClearRangeModal] = useState<boolean>(false);
+  const [clearRange, setClearRange] = useState<{ from: string; to: string }>(() => {
+    const week = getWeekDays(new Date().toISOString().split('T')[0]);
+    return { from: week[0], to: addDays(week[6], 7) };
+  });
+  const [isClearingRange, setIsClearingRange] = useState<boolean>(false);
+
   // Modal Relevo de Guardia / Incapacidad
   const [selectedTurno, setSelectedTurno] = useState<TurnoRaw | null>(null);
   const [showReliefModal, setShowReliefModal] = useState<boolean>(false);
@@ -110,13 +115,13 @@ export const ShiftsPage: React.FC = () => {
     observaciones: '',
   });
 
-  // Formulario de Turno Nuevo
+  // Formulario de Turno Nuevo (Turno estándar de 8h: Mañana 08:00 – 16:00 por defecto)
   const [turnoForm, setTurnoForm] = useState({
     id_usuario: '',
     fecha: new Date().toISOString().split('T')[0],
-    hora_inicio: '07:00',
-    hora_fin: '15:00',
-    area: 'Consulta Externa C-101',
+    hora_inicio: '08:00',
+    hora_fin: '16:00',
+    area: 'Consulta Externa',
   });
 
   const notify = (msg: string) => {
@@ -128,29 +133,39 @@ export const ShiftsPage: React.FC = () => {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res: any = await apiClient.get('/turnos?per_page=100');
-      const list = Array.isArray(res)
-        ? res
-        : Array.isArray(res?.data)
-        ? res.data
-        : res?.data?.data || [];
+      const firstRes: any = await apiClient.get('/turnos?per_page=100&page=1');
+      const extractList = (r: any) =>
+        Array.isArray(r) ? r : Array.isArray(r?.data) ? r.data : r?.data?.data || [];
 
-      if (list.length > 0) {
-        const mapped: TurnoRaw[] = list.map((t: any) => ({
-          id: t.id_turno || t.id,
-          id_usuario: t.id_usuario,
-          empleado: t.usuario?.nombre_completo || 'Personal',
-          cargo: t.usuario?.cargo || 'Personal Hospitalario',
-          rol: t.usuario?.rol || 'MEDICO',
-          area: t.area || 'Hospital General',
-          fecha: t.fecha ? String(t.fecha).split('T')[0] : '',
-          hora_inicio: t.hora_inicio ? String(t.hora_inicio).slice(0, 5) : '00:00',
-          hora_fin: t.hora_fin ? String(t.hora_fin).slice(0, 5) : '00:00',
-        }));
-        setShifts(mapped);
-      } else {
-        setShifts(FALLBACK_SHIFTS);
+      let list: any[] = extractList(firstRes);
+      const lastPage = Number(firstRes?.last_page || 1);
+
+      if (lastPage > 1) {
+        const restPages = await Promise.all(
+          Array.from({ length: lastPage - 1 }, (_, i) =>
+            apiClient.get(`/turnos?per_page=100&page=${i + 2}`)
+          )
+        );
+        restPages.forEach((r) => {
+          list = list.concat(extractList(r));
+        });
       }
+
+      const mapped: TurnoRaw[] = list.map((t: any) => ({
+        id: t.id_turno || t.id,
+        id_usuario: t.id_usuario,
+        empleado: t.usuario?.nombre_completo || 'Personal',
+        cargo:
+          t.usuario?.rol === 'MEDICO'
+            ? t.usuario?.especialidad_nombre || t.usuario?.especialidad?.nombre || t.usuario?.cargo || 'Medicina general'
+            : t.usuario?.cargo || 'Personal Hospitalario',
+        rol: t.usuario?.rol || 'MEDICO',
+        area: t.area || 'Hospital General',
+        fecha: t.fecha ? String(t.fecha).split('T')[0] : '',
+        hora_inicio: t.hora_inicio ? String(t.hora_inicio).slice(0, 5) : '00:00',
+        hora_fin: t.hora_fin ? String(t.hora_fin).slice(0, 5) : '00:00',
+      }));
+      setShifts(mapped);
     } catch {
       setShifts(FALLBACK_SHIFTS);
     } finally {
@@ -160,13 +175,30 @@ export const ShiftsPage: React.FC = () => {
 
   const fetchPersonal = async () => {
     try {
-      const res: any = await apiClient.get('/usuarios');
-      const list = Array.isArray(res) ? res : res?.data || [];
+      const res: any = await apiClient.get('/usuarios?per_page=500');
+      const list = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.data)
+        ? res.data
+        : res?.data?.data || [];
       if (list.length > 0) {
-        const activePersonal = list.filter((u: any) => u.rol !== 'PACIENTE');
+        const activePersonal = list
+          .filter(
+            (u: any) =>
+              u.rol !== 'PACIENTE' &&
+              u.rol !== 'ADMINISTRADOR' &&
+              (!u.estado || String(u.estado).toUpperCase() === 'ACTIVO')
+          )
+          .map((u: any) => ({
+            ...u,
+            cargo:
+              u.rol === 'MEDICO'
+                ? u.especialidad_nombre || u.especialidad?.nombre || u.cargo || 'Medicina general'
+                : u.cargo,
+          }));
         setPersonal(activePersonal);
         if (activePersonal.length > 0) {
-          setTurnoForm((prev) => ({ ...prev, id_usuario: activePersonal[0].id }));
+          setTurnoForm((prev) => ({ ...prev, id_usuario: prev.id_usuario || activePersonal[0].id }));
         }
       }
     } catch {
@@ -382,6 +414,187 @@ export const ShiftsPage: React.FC = () => {
     return true;
   });
 
+  const handleNavigateDate = (direction: 'prev' | 'next' | 'today') => {
+    if (direction === 'today') {
+      setAnchorDate(todayStr);
+      return;
+    }
+    const sign = direction === 'next' ? 1 : -1;
+    if (viewMode === 'day') {
+      setAnchorDate((prev) => addDays(prev, sign));
+    } else if (viewMode === 'week') {
+      setAnchorDate((prev) => addDays(prev, sign * 7));
+    } else if (viewMode === 'month') {
+      setAnchorDate((prev) => addMonths(prev, sign));
+    }
+  };
+
+  const getEligibleStaffForArea = (
+    staffList: PersonalOption[],
+    area: string,
+    specialtyFilter: string | null,
+    fecha?: string
+  ): PersonalOption[] => {
+    const base = staffList.filter(
+      (p) =>
+        p.rol !== 'PACIENTE' &&
+        p.rol !== 'ADMINISTRADOR' &&
+        (!fecha || isStaffActiveOnDate(p, fecha))
+    );
+
+    if (specialtyFilter) {
+      return base.filter(
+        (p) => p.rol === 'MEDICO' && normalizeSpecialtyLabel(p.cargo) === specialtyFilter
+      );
+    }
+
+    if (!area) return base;
+
+    const a = area.toLowerCase();
+    if (/emergenc|urgenc|trauma/.test(a)) {
+      return base.filter((p) => p.rol === 'MEDICO' && /emergenc|urgenc|trauma/i.test(p.cargo || ''));
+    }
+    if (/consulta externa/.test(a)) {
+      return base.filter((p) => p.rol === 'MEDICO' && !/emergenc|urgenc|trauma/i.test(p.cargo || ''));
+    }
+    if (/enferm|triaje/.test(a)) {
+      return base.filter((p) => p.rol === 'RECEPCIONISTA' && /enferm|triaje/i.test(p.cargo || ''));
+    }
+    if (/admisi|recepci/.test(a)) {
+      return base.filter((p) => p.rol === 'RECEPCIONISTA' && !/enferm|triaje/i.test(p.cargo || ''));
+    }
+    if (/hospitaliz/.test(a)) {
+      return base.filter(
+        (p) => p.rol === 'MEDICO' || (p.rol === 'RECEPCIONISTA' && /enferm|triaje/i.test(p.cargo || ''))
+      );
+    }
+    return base;
+  };
+
+  const handleQuickCreate = (prefill: ShiftPrefill) => {
+    const requestedArea = prefill.area || 'Consulta Externa';
+    const targetArea = CORE_AREAS.includes(requestedArea) ? requestedArea : 'Consulta Externa';
+    const targetFecha = prefill.fecha || turnoForm.fecha;
+
+    const nextSpecialty = prefill.specialtyFilter || null;
+    setModalSpecialtyFilter(nextSpecialty);
+
+    const eligible = getEligibleStaffForArea(personal, targetArea, nextSpecialty, targetFecha);
+    const currentValid = eligible.some((p) => String(p.id) === String(turnoForm.id_usuario));
+    const defaultUserId = currentValid
+      ? turnoForm.id_usuario
+      : eligible.length > 0
+      ? String(eligible[0].id)
+      : '';
+
+    setTurnoForm((prev) => ({
+      ...prev,
+      id_usuario: defaultUserId,
+      fecha: targetFecha,
+      area: targetArea,
+      hora_inicio: prefill.hora_inicio || '08:00',
+      hora_fin: prefill.hora_fin || '16:00',
+    }));
+    setShowModal(true);
+  };
+
+  const handleClearRange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clearRange.from || !clearRange.to || clearRange.from > clearRange.to) {
+      alert('Selecciona un rango de fechas válido (Desde <= Hasta).');
+      return;
+    }
+
+    const targets = shifts.filter((s) => s.fecha >= clearRange.from && s.fecha <= clearRange.to);
+    if (targets.length === 0) {
+      notify('No hay turnos en ese rango de fechas.');
+      setShowClearRangeModal(false);
+      return;
+    }
+
+    if (!confirm(`¿Eliminar ${targets.length} turno(s) entre ${clearRange.from} y ${clearRange.to}?`)) {
+      return;
+    }
+
+    setIsClearingRange(true);
+    let deleted = 0;
+    try {
+      for (let i = 0; i < targets.length; i += 10) {
+        const batch = targets.slice(i, i + 10);
+        const results = await Promise.allSettled(
+          batch.map((t) => apiClient.delete(`/turnos/${t.id}`))
+        );
+        deleted += results.filter((r) => r.status === 'fulfilled').length;
+      }
+      await fetchTurnos();
+      setShowClearRangeModal(false);
+      notify(`✓ Se eliminaron ${deleted} de ${targets.length} turno(s) (${clearRange.from} al ${clearRange.to}).`);
+    } finally {
+      setIsClearingRange(false);
+    }
+  };
+
+  const handleConfirmSaveSuggestions = async (selected: SuggestedShift[]) => {
+    if (selected.length === 0) return;
+    setIsSubmitting(true);
+    let created = 0;
+    const errors: string[] = [];
+
+    for (const s of selected) {
+      try {
+        await apiClient.post('/turnos', {
+          id_usuario: s.id_usuario,
+          fecha: s.fecha,
+          hora_inicio: s.hora_inicio,
+          hora_fin: s.hora_fin,
+          area: s.area,
+        });
+        created++;
+      } catch (err: unknown) {
+        const e = err as ApiError;
+        const details = e.errors ? Object.values(e.errors).flat().join(' ') : '';
+        errors.push(`${s.empleado} (${s.fecha}): ${details || e.message}`);
+      }
+    }
+
+    setIsSubmitting(false);
+    setShowSuggestModal(false);
+    await fetchTurnos();
+
+    if (errors.length > 0) {
+      alert(`Se guardaron ${created} turnos, pero ${errors.length} fallaron:\n${errors.join('\n')}`);
+    } else {
+      notify(`✓ Cobertura aplicada: se crearon ${created} turno(s) en la base de datos.`);
+    }
+  };
+
+  const visibleRangeDates = useMemo(() => {
+    if (viewMode === 'day') return [anchorDate];
+    if (viewMode === 'week') return getWeekDays(anchorDate);
+    if (viewMode === 'month') {
+      return getMonthGridDays(anchorDate)
+        .filter((d) => d.inMonth)
+        .map((d) => d.date);
+    }
+    return [];
+  }, [viewMode, anchorDate]);
+
+  const visibleShiftsInRange = useMemo(() => {
+    if (viewMode === 'list') return filteredShifts;
+    const dateSet = new Set(visibleRangeDates);
+    return filteredShifts.filter((s) => dateSet.has(s.fecha));
+  }, [viewMode, visibleRangeDates, filteredShifts]);
+
+  const emergenciasUncoveredDays = useMemo(() => {
+    if (viewMode === 'list') return 0;
+    return visibleRangeDates.filter((d) => {
+      if (d < todayStr) return false;
+      return !filteredShifts.some(
+        (s) => s.fecha === d && s.rol === 'MEDICO' && /emergenc|urgenc|trauma/i.test(s.area)
+      );
+    }).length;
+  }, [viewMode, visibleRangeDates, filteredShifts, todayStr]);
+
   return (
     <div style={{ display: 'grid', gap: '24px' }}>
       {/* Header */}
@@ -460,9 +673,39 @@ export const ShiftsPage: React.FC = () => {
           >
             <RefreshCwIcon size={14} /> {loading ? 'Cargando...' : 'Sincronizar'}
           </button>
+          {isOps && (
+            <button
+              type="button"
+              onClick={() => setShowClearRangeModal(true)}
+              title="Eliminar turnos de un rango de fechas (útil para pruebas)"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '9px 14px',
+                borderRadius: '8px',
+                border: '1px solid #fecaca',
+                background: '#fff5f5',
+                color: '#b91c1c',
+                fontSize: '0.84rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              }}
+            >
+              🗑 Limpiar
+            </button>
+          )}
           {isOps ? (
             <button
-              onClick={() => setShowModal(true)}
+              onClick={() =>
+                handleQuickCreate({
+                  fecha: anchorDate,
+                  area: 'Consulta Externa',
+                  hora_inicio: '08:00',
+                  hora_fin: '16:00',
+                })
+              }
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1133,79 +1376,91 @@ export const ShiftsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Filter and Search Bar for the Cuadrante Table */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px',
-          background: '#ffffff',
-          padding: '14px 18px',
-          borderRadius: '12px',
-          border: '1px solid #e2ece7',
-        }}
-      >
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {['TODOS', 'MEDICO', 'RECEPCIONISTA'].map((rol) => (
-            <button
-              key={rol}
-              onClick={() => setFilterRol(rol)}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '6px',
-                border: 'none',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                background:
-                  filterRol === rol
-                    ? rol === 'MEDICO'
-                      ? '#0284c7'
-                      : rol === 'RECEPCIONISTA'
-                      ? '#0b5d4b'
-                      : '#073f33'
-                    : '#f0f4f2',
-                color: filterRol === rol ? '#ffffff' : '#526b60',
-              }}
-            >
-              {rol === 'TODOS' ? 'Todo el Personal' : rol === 'MEDICO' ? 'Médicos' : 'Recepción / Enfermería'}
-            </button>
-          ))}
-        </div>
+      {/* Monitor de Cobertura por Especialidad y Guardia Mínima 24/7 */}
+      <SpecialtyCoverageMonitor
+        anchorDate={anchorDate}
+        todayStr={todayStr}
+        shifts={shifts}
+        personal={personal}
+        isOps={isOps}
+        onQuickCreate={handleQuickCreate}
+        onOpenSuggestModal={() => setShowSuggestModal(true)}
+      />
 
-        <div style={{ position: 'relative', minWidth: '260px' }}>
-          <div style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#849a90' }}>
-            <SearchIcon size={16} />
-          </div>
-          <input
-            type="text"
-            placeholder="Buscar por empleado, cargo, área o fecha..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 12px 8px 34px',
-              borderRadius: '8px',
-              border: '1px solid #cad8d1',
-              fontSize: '0.85rem',
-            }}
-          />
-        </div>
-      </div>
+      {/* Toolbar Unificado: Día / Semana / Mes / Lista + Filtros + Distribución */}
+      <ShiftToolbar
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        anchorDate={anchorDate}
+        todayStr={todayStr}
+        onNavigate={handleNavigateDate}
+        weekGroupBy={weekGroupBy}
+        onWeekGroupByChange={setWeekGroupBy}
+        filterRol={filterRol}
+        onFilterRolChange={setFilterRol}
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        visibleShifts={visibleShiftsInRange}
+        emergenciasUncoveredDays={emergenciasUncoveredDays}
+      />
 
-      {/* Table of Shifts (Sorted Most Recent / Today First) */}
-      <div
-        style={{
-          background: '#ffffff',
-          borderRadius: '16px',
-          border: '1px solid #e2ece7',
-          overflowX: 'auto',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-        }}
-      >
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+      {/* Vista Activa del Cuadrante */}
+      {viewMode === 'day' && (
+        <DayTimelineView
+          date={anchorDate}
+          todayStr={todayStr}
+          nowHHMM={nowHHMM}
+          shifts={filteredShifts}
+          isOps={isOps}
+          onSelectShift={setDrawerTurno}
+          onQuickCreate={handleQuickCreate}
+        />
+      )}
+
+      {viewMode === 'week' && (
+        <WeekGridView
+          anchorDate={anchorDate}
+          todayStr={todayStr}
+          nowHHMM={nowHHMM}
+          shifts={filteredShifts}
+          personal={personal}
+          groupBy={weekGroupBy}
+          isOps={isOps}
+          onSelectShift={setDrawerTurno}
+          onSelectDay={(d) => {
+            setAnchorDate(d);
+            setViewMode('day');
+          }}
+          onQuickCreate={handleQuickCreate}
+        />
+      )}
+
+      {viewMode === 'month' && (
+        <MonthCalendarView
+          anchorDate={anchorDate}
+          todayStr={todayStr}
+          shifts={filteredShifts}
+          isOps={isOps}
+          onSelectShift={setDrawerTurno}
+          onSelectDay={(d) => {
+            setAnchorDate(d);
+            setViewMode('day');
+          }}
+          onQuickCreate={handleQuickCreate}
+        />
+      )}
+
+      {viewMode === 'list' && (
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            border: '1px solid #e2ece7',
+            overflowX: 'auto',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+          }}
+        >
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
           <thead>
             <tr style={{ background: '#f8faf9', borderBottom: '1px solid #e2ece7', color: '#526b60' }}>
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Fecha / Horario</th>
@@ -1384,6 +1639,30 @@ export const ShiftsPage: React.FC = () => {
           </tbody>
         </table>
       </div>
+      )}
+
+      {/* Drawer Lateral de Detalle del Turno */}
+      <ShiftDetailDrawer
+        turno={drawerTurno}
+        allShifts={shifts}
+        todayStr={todayStr}
+        nowHHMM={nowHHMM}
+        isOps={isOps}
+        onClose={() => setDrawerTurno(null)}
+        onOpenRelief={handleOpenRelief}
+        onDelete={handleEliminarTurno}
+      />
+
+      {/* Modal Algoritmo de Cobertura Semanal 24/7 */}
+      <SuggestCoverageModal
+        isOpen={showSuggestModal}
+        anchorDate={anchorDate}
+        shifts={shifts}
+        personal={personal}
+        isSubmitting={isSubmitting}
+        onClose={() => setShowSuggestModal(false)}
+        onConfirmSave={handleConfirmSaveSuggestions}
+      />
 
       {/* MODAL RELEVO DE GUARDIA / INCAPACIDAD */}
       {showReliefModal && selectedTurno && (
@@ -1583,30 +1862,105 @@ export const ShiftsPage: React.FC = () => {
             </p>
 
             <form onSubmit={handleCrearTurno} style={{ display: 'grid', gap: '14px' }}>
+              {/* 1. Primero seleccionar el Área / Servicio */}
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#13221c', display: 'block', marginBottom: '4px' }}>
-                  Empleado
+                  1. Área / Servicio de Atención
                 </label>
                 <select
-                  value={turnoForm.id_usuario}
-                  onChange={(e) => setTurnoForm({ ...turnoForm, id_usuario: e.target.value })}
+                  value={turnoForm.area}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setModalSpecialtyFilter(null);
+                    const eligible = getEligibleStaffForArea(personal, val, null, turnoForm.fecha);
+                    const keepCurrent = eligible.some((p) => String(p.id) === String(turnoForm.id_usuario));
+                    setTurnoForm({
+                      ...turnoForm,
+                      area: val,
+                      id_usuario: keepCurrent ? turnoForm.id_usuario : eligible[0]?.id ? String(eligible[0].id) : '',
+                    });
+                  }}
                   style={{
                     width: '100%',
                     padding: '8px 12px',
                     borderRadius: '8px',
                     border: '1px solid #cad8d1',
                     fontSize: '0.85rem',
+                    background: '#ffffff',
                   }}
                   required
                 >
-                  <option value="">-- Seleccionar Empleado --</option>
-                  {personal.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre_completo} ({p.rol} - {p.cargo || 'General'})
+                  {CORE_AREAS.map((areaName) => (
+                    <option key={areaName} value={areaName}>
+                      {areaName}
                     </option>
                   ))}
                 </select>
               </div>
+
+              {/* 2. Personal elegible según el área y fecha seleccionadas (sin administradores ni contratos vencidos) */}
+              {(() => {
+                const eligibleStaff = getEligibleStaffForArea(
+                  personal,
+                  turnoForm.area,
+                  modalSpecialtyFilter,
+                  turnoForm.fecha
+                );
+                return (
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#13221c' }}>
+                        2. Personal Asignado ({eligibleStaff.length} vigentes el {turnoForm.fecha})
+                      </label>
+                      {modalSpecialtyFilter && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setModalSpecialtyFilter(null);
+                            const eligible = getEligibleStaffForArea(personal, turnoForm.area, null, turnoForm.fecha);
+                            setTurnoForm((prev) => ({
+                              ...prev,
+                              id_usuario: eligible[0]?.id ? String(eligible[0].id) : '',
+                            }));
+                          }}
+                          style={{
+                            border: 'none',
+                            background: '#e0f2fe',
+                            color: '#0369a1',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Filtro: {modalSpecialtyFilter} ✕
+                        </button>
+                      )}
+                    </div>
+                    <select
+                      value={turnoForm.id_usuario}
+                      onChange={(e) => setTurnoForm({ ...turnoForm, id_usuario: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #cad8d1',
+                        fontSize: '0.85rem',
+                      }}
+                      required
+                    >
+                      <option value="">-- Seleccionar Personal Elegible --</option>
+                      {eligibleStaff.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.nombre_completo} ({p.cargo || p.rol})
+                          {p.fecha_salida ? ` · Rotación hasta ${String(p.fecha_salida).slice(0, 10)}` : ' · Planta Indefinido'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
 
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#13221c', display: 'block', marginBottom: '4px' }}>
@@ -1615,75 +1969,133 @@ export const ShiftsPage: React.FC = () => {
                 <input
                   type="date"
                   value={turnoForm.fecha}
-                  onChange={(e) => setTurnoForm({ ...turnoForm, fecha: e.target.value })}
+                  onChange={(e) => {
+                    const nextFecha = e.target.value;
+                    const eligible = getEligibleStaffForArea(
+                      personal,
+                      turnoForm.area,
+                      modalSpecialtyFilter,
+                      nextFecha
+                    );
+                    const stillValid = eligible.some((p) => String(p.id) === String(turnoForm.id_usuario));
+                    setTurnoForm({
+                      ...turnoForm,
+                      fecha: nextFecha,
+                      id_usuario: stillValid
+                        ? turnoForm.id_usuario
+                        : eligible[0]?.id
+                        ? String(eligible[0].id)
+                        : '',
+                    });
+                  }}
                   style={{
                     width: '100%',
                     padding: '8px 12px',
                     borderRadius: '8px',
                     border: '1px solid #cad8d1',
                     fontSize: '0.85rem',
+                    boxSizing: 'border-box',
                   }}
                   required
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#13221c', display: 'block', marginBottom: '4px' }}>
-                    Hora Inicio
-                  </label>
-                  <input
-                    type="time"
-                    value={turnoForm.hora_inicio}
-                    onChange={(e) => setTurnoForm({ ...turnoForm, hora_inicio: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #cad8d1',
-                      fontSize: '0.85rem',
-                    }}
-                    required
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#13221c', display: 'block', marginBottom: '4px' }}>
-                    Hora Fin
-                  </label>
-                  <input
-                    type="time"
-                    value={turnoForm.hora_fin}
-                    onChange={(e) => setTurnoForm({ ...turnoForm, hora_fin: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #cad8d1',
-                      fontSize: '0.85rem',
-                    }}
-                    required
-                  />
-                </div>
-              </div>
-
+              {/* Atajos Turnos 8h (jornada desde 08:00) */}
               <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#13221c', display: 'block', marginBottom: '4px' }}>
-                  Área / Consultorio de Atención
-                </label>
-                <input
-                  type="text"
-                  value={turnoForm.area}
-                  onChange={(e) => setTurnoForm({ ...turnoForm, area: e.target.value })}
-                  placeholder="Ej. Consulta Externa C-101 o Servicio de Emergencias"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #cad8d1',
-                    fontSize: '0.85rem',
-                  }}
-                  required
-                />
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setTurnoForm({ ...turnoForm, hora_inicio: '00:00', hora_fin: '08:00' })}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      borderRadius: '7px',
+                      border: turnoForm.hora_inicio === '00:00' && turnoForm.hora_fin === '08:00' ? '1px solid #6d28d9' : '1px solid #cad8d1',
+                      background: turnoForm.hora_inicio === '00:00' && turnoForm.hora_fin === '08:00' ? '#ede9fe' : '#f8faf9',
+                      color: '#5b21b6',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    🌙 Noche (00–08)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTurnoForm({ ...turnoForm, hora_inicio: '08:00', hora_fin: '16:00' })}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      borderRadius: '7px',
+                      border: turnoForm.hora_inicio === '08:00' && turnoForm.hora_fin === '16:00' ? '1px solid #0b5d4b' : '1px solid #cad8d1',
+                      background: turnoForm.hora_inicio === '08:00' && turnoForm.hora_fin === '16:00' ? '#eaf5f1' : '#f8faf9',
+                      color: '#073f33',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ☀ Mañana (08–16)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTurnoForm({ ...turnoForm, hora_inicio: '16:00', hora_fin: '23:59' })}
+                    style={{
+                      flex: 1,
+                      padding: '6px 8px',
+                      borderRadius: '7px',
+                      border: turnoForm.hora_inicio === '16:00' && turnoForm.hora_fin === '23:59' ? '1px solid #b45309' : '1px solid #cad8d1',
+                      background: turnoForm.hora_inicio === '16:00' && turnoForm.hora_fin === '23:59' ? '#fef3c7' : '#f8faf9',
+                      color: '#92400e',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    🌤 Tarde (16–24)
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#13221c', display: 'block', marginBottom: '4px' }}>
+                      Hora Inicio
+                    </label>
+                    <input
+                      type="time"
+                      value={turnoForm.hora_inicio}
+                      onChange={(e) => setTurnoForm({ ...turnoForm, hora_inicio: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #cad8d1',
+                        fontSize: '0.85rem',
+                        boxSizing: 'border-box',
+                      }}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#13221c', display: 'block', marginBottom: '4px' }}>
+                      Hora Fin
+                    </label>
+                    <input
+                      type="time"
+                      value={turnoForm.hora_fin}
+                      onChange={(e) => setTurnoForm({ ...turnoForm, hora_fin: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #cad8d1',
+                        fontSize: '0.85rem',
+                        boxSizing: 'border-box',
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
@@ -1717,6 +2129,198 @@ export const ShiftsPage: React.FC = () => {
                   }}
                 >
                   {isSubmitting ? 'Asignando...' : 'Guardar Turno'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL LIMPIAR TURNOS POR RANGO DE FECHAS (DEMO / PRUEBAS) */}
+      {showClearRangeModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 55,
+            padding: '16px',
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '440px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+            }}
+          >
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, margin: '0 0 6px', color: '#991b1b' }}>
+              🗑 Limpiar Turnos por Rango
+            </h3>
+            <p style={{ margin: '0 0 14px', fontSize: '0.82rem', color: '#526b60' }}>
+              Elimina los turnos guardados entre dos fechas usando la API oficial (`DELETE /turnos/:id`).
+            </p>
+
+            {/* Atajos rápidos */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const w = getWeekDays(anchorDate);
+                  setClearRange({ from: w[0], to: w[6] });
+                }}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '999px',
+                  border: '1px solid #cad8d1',
+                  background: '#f8faf9',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Semana visible
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const w = getWeekDays(todayStr);
+                  setClearRange({ from: w[0], to: addDays(w[6], 7) });
+                }}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '999px',
+                  border: '1px solid #cad8d1',
+                  background: '#f8faf9',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Esta y próx. semana
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setClearRange({ from: todayStr, to: addDays(todayStr, 30) });
+                }}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '999px',
+                  border: '1px solid #cad8d1',
+                  background: '#f8faf9',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Desde hoy (+30d)
+              </button>
+            </div>
+
+            <form onSubmit={handleClearRange} style={{ display: 'grid', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#13221c', display: 'block', marginBottom: '4px' }}>
+                    Desde
+                  </label>
+                  <input
+                    type="date"
+                    value={clearRange.from}
+                    onChange={(e) => setClearRange((r) => ({ ...r, from: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #cad8d1',
+                      fontSize: '0.84rem',
+                      boxSizing: 'border-box',
+                    }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#13221c', display: 'block', marginBottom: '4px' }}>
+                    Hasta
+                  </label>
+                  <input
+                    type="date"
+                    value={clearRange.to}
+                    onChange={(e) => setClearRange((r) => ({ ...r, to: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid #cad8d1',
+                      fontSize: '0.84rem',
+                      boxSizing: 'border-box',
+                    }}
+                    required
+                  />
+                </div>
+              </div>
+
+              {(() => {
+                const count = shifts.filter(
+                  (s) => s.fecha >= clearRange.from && s.fecha <= clearRange.to
+                ).length;
+                return (
+                  <div
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      background: count > 0 ? '#fff5f5' : '#f8faf9',
+                      border: count > 0 ? '1px solid #fecaca' : '1px solid #e2ece7',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      color: count > 0 ? '#991b1b' : '#526b60',
+                    }}
+                  >
+                    {count > 0
+                      ? `Se encontraron ${count} turno(s) en este rango.`
+                      : 'No hay turnos registrados en este rango.'}
+                  </div>
+                );
+              })()}
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowClearRangeModal(false)}
+                  disabled={isClearingRange}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isClearingRange}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: '#b91c1c',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {isClearingRange ? 'Eliminando...' : 'Eliminar Turnos'}
                 </button>
               </div>
             </form>

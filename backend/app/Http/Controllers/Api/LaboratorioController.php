@@ -48,7 +48,13 @@ class LaboratorioController extends ApiController
 
     public function completar(Request $r, OrdenLaboratorio $orden)
     {
-        return $this->avanzar($orden, 'EN_PROCESO', ['estado' => 'COMPLETADO', 'fecha_resultado' => now(), 'id_registrado_por' => $r->user()->id], 'Orden completada.');
+        $d = $r->validate(['observaciones' => 'nullable|string|max:2000']);
+        $cambios = ['estado' => 'COMPLETADO', 'fecha_resultado' => now(), 'id_registrado_por' => $r->user()->id];
+        if (! empty($d['observaciones'])) {
+            $cambios['observaciones'] = $d['observaciones'];
+        }
+
+        return $this->avanzar($orden, 'EN_PROCESO', $cambios, 'Orden completada.');
     }
 
     /** El médico que la pidió puede cancelarla mientras el laboratorio no la haya iniciado. */

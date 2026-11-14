@@ -23,7 +23,12 @@ class PublicoController extends ApiController
 
     public function medicos()
     {
-        $data = TurnoPersonal::with('usuario:id,nombre_completo,cargo')->whereDate('fecha', today())->where('hora_inicio', '<=', now()->format('H:i:s'))->where('hora_fin', '>=', now()->format('H:i:s'))->whereHas('usuario', fn ($q) => $q->where('rol', 'MEDICO'))->get();
+        $data = TurnoPersonal::with(['usuario:id,nombre_completo,cargo,rol,id_especialidad', 'usuario.especialidad:id_especialidad,nombre'])
+            ->whereDate('fecha', today())
+            ->where('hora_inicio', '<=', now()->format('H:i:s'))
+            ->where('hora_fin', '>=', now()->format('H:i:s'))
+            ->whereHas('usuario', fn ($q) => $q->where('rol', 'MEDICO'))
+            ->get();
 
         return $this->success(PublicTurnoResource::collection($data));
     }

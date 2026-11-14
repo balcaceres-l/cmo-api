@@ -47,4 +47,57 @@ class HabitacionesTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors('id_medico');
         $this->postJson('/api/v1/ingresos', $datos)->assertCreated();
     }
+
+    public function test_permisos_de_camas_entre_admin_general_jefe_operaciones_y_medico(): void
+    {
+        $this->seed(HabitacionSeeder::class);
+        $medico = User::factory()->create(['rol' => 'MEDICO']);
+        $otroMedico = User::factory()->create(['rol' => 'MEDICO']);
+        $adminGeneral = User::factory()->create(['rol' => 'ADMINISTRADOR', 'cargo' => 'Administración']);
+        $jefeOps = User::factory()->create(['rol' => 'ADMINISTRADOR', 'cargo' => 'Jefe de Operaciones']);
+
+        $p = Paciente::create(['numero_expediente' => 'EXP-2026-999993', 'nombre_completo' => 'Paciente Prueba', 'fecha_nacimiento' => '2000-01-01', 'sexo' => 'M', 'fecha_registro' => now()]);
+        HistorialClinico::create(['id_paciente' => $p->id_paciente]);
+
+        $cama1 = Cama::where('codigo', 'VIP-301')->firstOrFail();
+        $cama2 = Cama::where('codigo', 'VIP-302')->firstOrFail();
+
+        $payload = [
+            'id_paciente' => $p->id_paciente,
+            'tipo' => 'VIP',
+            'id_cama' => $cama1->id_cama,
+            'id_medico' => $medico->id,
+            'motivo' => 'Observación postoperatoria',
+        ];
+
+        // Admin General no puede operar camas (solo lectura)
+        Sanctum::actingAs($adminGeneral);
+        $this->getJson('/api/v1/habitaciones')->assertOk();
+        $this->getJson('/api/v1/ingresos')->assertOk();
+        $this->postJson('/api/v1/ingresos', $payload)->assertForbidden();
+
+        // Jefe de Operaciones sí puede ingresar, trasladar y dar de alta
+        Sanctum::actingAs($jefeOps);
+        $resIngreso = $this->postJson('/api/v1/ingresos', $payload)->assertCreated();
+        $idIngreso = $resIngreso->json('data.id_ingreso');
+
+        // Médico ajeno ve la cama ocupada pero paciente/ingreso ocultos (privacidad iOS)
+        Sanctum::actingAs($otroMedico);
+        $resHabMedico = $this->getJson('/api/v1/habitaciones')->assertOk();
+        $vip301 = collect($resHabMedico->json('data.3'))->flatMap(fn ($h) => $h['camas'])->firstWhere('codigo', 'VIP-301');
+        $this->assertSame('OCUPADA', $vip301['estado']);
+        $this->assertNotEmpty($vip301['id_cama']);
+        $this->assertNull($vip301['paciente']);
+        $this->assertNull($vip301['ingreso']);
+
+        // Admin General tampoco puede trasladar ni dar de alta
+        Sanctum::actingAs($adminGeneral);
+        $this->patchJson("/api/v1/ingresos/{$idIngreso}/trasladar", ['id_cama' => $cama2->id_cama])->assertForbidden();
+        $this->patchJson("/api/v1/ingresos/{$idIngreso}/alta")->assertForbidden();
+
+        // Jefe de Operaciones traslada y da de alta correctamente
+        Sanctum::actingAs($jefeOps);
+        $this->patchJson("/api/v1/ingresos/{$idIngreso}/trasladar", ['id_cama' => $cama2->id_cama])->assertOk();
+        $this->patchJson("/api/v1/ingresos/{$idIngreso}/alta")->assertOk();
+    }
 }

@@ -2,6 +2,8 @@ package com.cmo.hospital.features.recepcionista.citas.domain.repository
 
 import com.cmo.hospital.core.domain.model.Cita
 import com.cmo.hospital.core.domain.model.SignosVitales
+import com.cmo.hospital.core.network.dto.ConsultorioDto
+import com.cmo.hospital.core.network.dto.MedicoDto
 import kotlinx.coroutines.flow.StateFlow
 
 interface CitaRepository {
@@ -24,6 +26,17 @@ interface CitaRepository {
 
     suspend fun marcarLlegada(citaId: String)
     suspend fun cancelarCita(citaId: String, motivo: String)
+
+    suspend fun obtenerMedicosYConsultorios(): Pair<List<MedicoDto>, List<ConsultorioDto>> =
+        emptyList<MedicoDto>() to emptyList()
+
+    suspend fun confirmarCitaSolicitada(
+        citaId: String,
+        idMedico: String?,
+        idConsultorio: String?,
+        medicoNombre: String?,
+        consultorioCodigo: String?
+    ): Result<String> = Result.failure(UnsupportedOperationException("No implementado"))
 
     suspend fun registrarTriajeOPasarAConsulta(
         citaId: String,

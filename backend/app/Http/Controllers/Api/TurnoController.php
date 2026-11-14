@@ -4,15 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Exceptions\ConflictoException;
 use App\Models\TurnoPersonal;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class TurnoController extends ApiController
 {
     public function index(Request $r)
     {
-        return $this->success($this->paginar(TurnoPersonal::with('usuario')->orderBy('fecha')->orderBy('hora_inicio'), $r));
+        return $this->success($this->paginar(TurnoPersonal::with(['usuario.especialidad'])->orderBy('fecha')->orderBy('hora_inicio'), $r));
     }
 
     /**
@@ -32,6 +34,7 @@ class TurnoController extends ApiController
 
         return DB::transaction(function () use ($partes) {
             foreach ($partes as $parte) {
+                $this->validarVigenciaPersonal($parte['id_usuario'], $parte['fecha']);
                 $this->sinSolape($parte);
             }
 
@@ -43,16 +46,29 @@ class TurnoController extends ApiController
 
     public function show(TurnoPersonal $turno)
     {
-        return $this->success($turno->load('usuario'));
+        return $this->success($turno->load('usuario.especialidad'));
     }
 
     public function update(Request $r, TurnoPersonal $turno)
     {
         $d = $this->datos($r);
+        $this->validarVigenciaPersonal($d['id_usuario'], $d['fecha']);
         $this->sinSolape($d, $turno->getKey());
         $turno->update($d);
 
         return $this->success($turno->refresh());
+    }
+
+    private function validarVigenciaPersonal(string $idUsuario, string $fecha): void
+    {
+        $u = User::find($idUsuario);
+        if ($u && ! $u->estaVigenteEn($fecha)) {
+            $desde = $u->fecha_ingreso ? $u->fecha_ingreso->format('Y-m-d') : 'inicio';
+            $hasta = $u->fecha_salida ? $u->fecha_salida->format('Y-m-d') : 'indefinido';
+            throw ValidationException::withMessages([
+                'fecha' => "El colaborador {$u->nombre_completo} no está vigente en la fecha {$fecha} (período: {$desde} a {$hasta}).",
+            ]);
+        }
     }
 
     public function destroy(TurnoPersonal $turno)

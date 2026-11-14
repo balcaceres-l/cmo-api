@@ -15,7 +15,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cmo.hospital.CmoApplication
 import com.cmo.hospital.R
-import com.cmo.hospital.components.HucMicroBannerBinder
 import com.cmo.hospital.core.domain.model.CatalogoClinico
 import com.cmo.hospital.core.domain.model.Cita
 import com.cmo.hospital.core.domain.model.Paciente
@@ -23,6 +22,7 @@ import com.cmo.hospital.core.ui.simpleViewModelFactory
 import com.cmo.hospital.databinding.FragmentRecepCitasBinding
 import com.cmo.hospital.features.recepcionista.shell.presentation.RecepcionistaToastHost
 import com.google.android.material.chip.Chip
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 
 class CitasFragment : Fragment() {
@@ -55,13 +55,6 @@ class CitasFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        HucMicroBannerBinder.bind(
-            binding = binding.microBannerCitas,
-            title = "Hospital Universitario Central - Consultorios",
-            subtitle = "Admisión Externa • Puesto 04 • Bloques 30 min",
-            badgeText = "Puesto 04"
-        )
-
         setupRecyclerView()
         setupLlamadorSala()
         setupFormularioCascada()
@@ -71,6 +64,7 @@ class CitasFragment : Fragment() {
     private fun setupRecyclerView() {
         citasAdapter = CitasRecepcionAdapter(
             onRegistrarLlegada = { cita -> viewModel.registrarLlegada(cita.id) },
+            onConfirmarSolicitada = { cita -> mostrarDialogoConfirmarCita(cita) },
             onAbrirTriaje = { cita ->
                 TriajeCitaDialogFragment(cita) { signos, pasar ->
                     viewModel.guardarTriajeOPasarConsulta(cita.id, signos, pasar)
@@ -83,6 +77,48 @@ class CitasFragment : Fragment() {
         )
         binding.rvCitasRecepcion.layoutManager = LinearLayoutManager(requireContext())
         binding.rvCitasRecepcion.adapter = citasAdapter
+    }
+
+    private fun mostrarDialogoConfirmarCita(cita: Cita) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val (medicos, consultorios) = viewModel.cargarMedicosYConsultorios()
+            if (medicos.isEmpty() || consultorios.isEmpty()) {
+                viewModel.confirmarCita(
+                    citaId = cita.id,
+                    idMedico = null,
+                    idConsultorio = null,
+                    medicoNombre = medicoSeleccionado,
+                    consultorioCodigo = "Box 03"
+                )
+                return@launch
+            }
+            val medLabels = medicos.map {
+                val cargo = it.cargo?.takeIf { c -> c.isNotBlank() }?.let { c -> " ($c)" } ?: ""
+                "${it.nombreCompleto}$cargo"
+            }.toTypedArray()
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Asignar Médico (${cita.paciente?.nombreCompleto ?: "Paciente"})")
+                .setItems(medLabels) { _, medIdx ->
+                    val med = medicos[medIdx]
+                    val boxLabels = consultorios.map { "${it.codigo} • ${it.nombre}" }.toTypedArray()
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Asignar Consultorio")
+                        .setItems(boxLabels) { _, boxIdx ->
+                            val box = consultorios[boxIdx]
+                            viewModel.confirmarCita(
+                                citaId = cita.id,
+                                idMedico = med.id,
+                                idConsultorio = box.id,
+                                medicoNombre = med.nombreCompleto,
+                                consultorioCodigo = box.codigo
+                            )
+                        }
+                        .setNegativeButton("Cancelar", null)
+                        .show()
+                }
+                .setNegativeButton("Cancelar", null)
+                .show()
+        }
     }
 
     private fun setupLlamadorSala() {

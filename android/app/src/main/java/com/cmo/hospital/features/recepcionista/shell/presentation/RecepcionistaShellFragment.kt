@@ -10,13 +10,15 @@ import com.cmo.hospital.CmoApplication
 import com.cmo.hospital.R
 import com.cmo.hospital.components.HucToastManager
 import com.cmo.hospital.components.HucTopBarBinder
+import com.cmo.hospital.core.domain.model.CargoAccessPolicy
 import com.cmo.hospital.databinding.FragmentRecepcionistaShellBinding
 import com.cmo.hospital.features.auth.presentation.AuthNavigationHost
 import com.cmo.hospital.features.recepcionista.admision.presentation.AdmisionFragment
 import com.cmo.hospital.features.recepcionista.ambulancia.presentation.AmbulanciaGuardiaFragment
 import com.cmo.hospital.features.recepcionista.citas.presentation.CitasFragment
-import com.cmo.hospital.features.recepcionista.pacientes.presentation.PacientesFragment
+import com.cmo.hospital.features.recepcionista.insumos.presentation.InsumosEnfermeriaFragment
 import com.cmo.hospital.features.recepcionista.laboratorio.presentation.LaboratorioRecepcionFragment
+import com.cmo.hospital.features.recepcionista.pacientes.presentation.PacientesFragment
 import kotlinx.coroutines.launch
 
 interface RecepcionistaToastHost {
@@ -35,11 +37,13 @@ class RecepcionistaShellFragment : Fragment(), RecepcionistaToastHost {
         private const val TAG_PACIENTES = "tab_recep_pacientes"
         private const val TAG_LABORATORIO = "tab_recep_laboratorio"
         private const val TAG_ADMISION = "tab_recep_admision"
+        private const val TAG_INSUMOS = "tab_enf_insumos"
         private const val TAG_AMBULANCIA = "tab_recep_ambulancia"
         private const val KEY_SELECTED_ITEM = "selected_recep_item"
     }
 
-    private var selectedItemId: Int = R.id.nav_recep_admision
+    private var esEnfermeria: Boolean = false
+    private var selectedItemId: Int = R.id.nav_recep_citas
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -55,13 +59,25 @@ class RecepcionistaShellFragment : Fragment(), RecepcionistaToastHost {
 
         val appContainer = (requireActivity().application as CmoApplication).appContainer
         val currentUser = appContainer.getActiveUserUseCase()
+        esEnfermeria = CargoAccessPolicy.esEnfermeria(currentUser)
         toastManager = HucToastManager(binding.toastOverlay)
+
+        // Separación por cargo: Enfermería vs Recepción de Mostrador
+        binding.bottomNavRecepcionista.menu.clear()
+        if (esEnfermeria) {
+            binding.bottomNavRecepcionista.inflateMenu(R.menu.menu_enfermeria_bottom)
+        } else {
+            binding.bottomNavRecepcionista.inflateMenu(R.menu.menu_recepcionista_bottom)
+        }
+
+        val defaultTab = if (esEnfermeria) R.id.nav_recep_admision else R.id.nav_recep_citas
+        selectedItemId = savedInstanceState?.getInt(KEY_SELECTED_ITEM) ?: defaultTab
 
         HucTopBarBinder.bind(
             binding = binding.topBar,
-            moduleSubtitle = "PACIENTES",
+            moduleSubtitle = subtitleFor(selectedItemId),
             currentUser = currentUser,
-            guardiaLabel = "Guardia Activa",
+            guardiaLabel = if (esEnfermeria) "En Piso" else "Mostrador",
             onGuardiaClick = {
                 binding.bottomNavRecepcionista.selectedItemId = R.id.nav_recep_ambulancia
             },
@@ -73,7 +89,6 @@ class RecepcionistaShellFragment : Fragment(), RecepcionistaToastHost {
             }
         )
 
-        selectedItemId = savedInstanceState?.getInt(KEY_SELECTED_ITEM) ?: R.id.nav_recep_admision
         switchTab(selectedItemId)
         binding.bottomNavRecepcionista.selectedItemId = selectedItemId
 
@@ -84,30 +99,33 @@ class RecepcionistaShellFragment : Fragment(), RecepcionistaToastHost {
         }
     }
 
+    private fun subtitleFor(itemId: Int): String = when (itemId) {
+        R.id.nav_recep_citas -> "CITAS Y SALA"
+        R.id.nav_recep_pacientes -> "REGISTRO DE PACIENTES"
+        R.id.nav_recep_admision -> if (esEnfermeria) "CENSO DE PISO (17 CAMAS)" else "HOSPITALIZACIÓN (17 CAMAS)"
+        R.id.nav_enf_insumos -> "INSUMOS Y BOTIQUÍN"
+        R.id.nav_recep_laboratorio -> "LABORATORIO LIS"
+        R.id.nav_recep_ambulancia -> if (esEnfermeria) "TELEMETRÍA AMBULANCIA" else "GUARDIA Y AMBULANCIA"
+        else -> "HOSPITAL CMO"
+    }
+
     private fun switchTab(itemId: Int) {
-        val subtitle = when (itemId) {
-            R.id.nav_recep_citas -> "CITAS & SALA"
-            R.id.nav_recep_pacientes -> "REGISTRO DE PACIENTES"
-            R.id.nav_recep_admision -> "PACIENTES"
-            R.id.nav_recep_laboratorio -> "LABORATORIO"
-            R.id.nav_recep_ambulancia -> "GUARDIA & FLOTA"
-            else -> "PACIENTES"
-        }
-        HucTopBarBinder.updateSubtitle(binding.topBar, subtitle)
+        HucTopBarBinder.updateSubtitle(binding.topBar, subtitleFor(itemId))
 
         val targetTag = when (itemId) {
             R.id.nav_recep_citas -> TAG_CITAS
             R.id.nav_recep_pacientes -> TAG_PACIENTES
             R.id.nav_recep_admision -> TAG_ADMISION
+            R.id.nav_enf_insumos -> TAG_INSUMOS
             R.id.nav_recep_laboratorio -> TAG_LABORATORIO
             R.id.nav_recep_ambulancia -> TAG_AMBULANCIA
-            else -> TAG_ADMISION
+            else -> if (esEnfermeria) TAG_ADMISION else TAG_CITAS
         }
 
         val fm = childFragmentManager
         val tx = fm.beginTransaction()
 
-        listOf(TAG_CITAS, TAG_PACIENTES, TAG_ADMISION, TAG_LABORATORIO, TAG_AMBULANCIA).forEach { tag ->
+        listOf(TAG_CITAS, TAG_PACIENTES, TAG_ADMISION, TAG_INSUMOS, TAG_LABORATORIO, TAG_AMBULANCIA).forEach { tag ->
             fm.findFragmentByTag(tag)?.let { frag ->
                 if (tag != targetTag && !frag.isHidden) {
                     tx.hide(frag)
@@ -122,6 +140,7 @@ class RecepcionistaShellFragment : Fragment(), RecepcionistaToastHost {
             val newFrag: Fragment = when (targetTag) {
                 TAG_CITAS -> CitasFragment()
                 TAG_PACIENTES -> PacientesFragment()
+                TAG_INSUMOS -> InsumosEnfermeriaFragment()
                 TAG_LABORATORIO -> LaboratorioRecepcionFragment()
                 TAG_ADMISION -> AdmisionFragment()
                 else -> AmbulanciaGuardiaFragment()

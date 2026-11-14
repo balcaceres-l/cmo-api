@@ -15,16 +15,11 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Micro-Banner Institucional Web Mirroring (Idéntico al Prototipo HTML) -->
-        <include
-            android:id="@+id/microBannerAdmision"
-            layout="@layout/comp_huc_micro_banner" />
-
-        <!-- Header del Módulo y Toggle Ley de Protección / Anonimización (Ley 19.628) -->
+        <!-- Header del Módulo y Toggle de Privacidad de Pantalla -->
         <LinearLayout
+            android:id="@+id/cardHeaderAdmision"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
             android:background="@drawable/bg_card_rounded_16"
             android:elevation="1dp"
             android:orientation="vertical"
@@ -111,7 +106,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Ley de Datos / Anonimización"
+                            android:text="Privacidad / Anonimización"
                             android:textAppearance="@style/TextAppearance.Huc.TitleSm"
                             android:textSize="13sp" />
 
@@ -122,7 +117,7 @@
                             android:background="@drawable/bg_pill_secondary_fixed"
                             android:paddingHorizontal="6dp"
                             android:paddingVertical="1dp"
-                            android:text="Ley 19.628"
+                            android:text="Privacidad"
                             android:textColor="@color/huc_on_secondary_fixed"
                             android:textSize="10sp"
                             android:textStyle="bold" />
@@ -147,6 +142,7 @@
 
         <!-- Bloque 1: Identificación y Filiación (Paso 1 de 3) -->
         <LinearLayout
+            android:id="@+id/cardPaso1Filiacion"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
@@ -388,7 +384,7 @@
                     android:id="@+id/etAdmisionContacto"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Nombre + Teléfono (+56 9 8765 4321)"
+                    android:hint="Nombre + Teléfono (+503 7890-1234)"
                     android:inputType="text"
                     android:maxLines="1"
                     android:paddingVertical="12dp" />
@@ -397,6 +393,7 @@
 
         <!-- Bloque 2: Motivo Clínico, Triage Manchester & Signos Vitales (Paso 2 de 3) -->
         <LinearLayout
+            android:id="@+id/cardPaso2Triage"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
@@ -1123,6 +1120,7 @@
 
         <!-- Bloque de Trazabilidad y Seguridad QR (Idéntico al Prototipo HTML) -->
         <LinearLayout
+            android:id="@+id/cardTrazaQrAdmision"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"

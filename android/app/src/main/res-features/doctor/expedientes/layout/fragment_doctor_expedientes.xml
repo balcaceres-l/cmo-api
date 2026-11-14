@@ -46,14 +46,14 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Acceso Clínico Auditado • Ley 19.628"
+                    android:text="Acceso Clínico Auditado • Privacidad"
                     android:textAppearance="@style/TextAppearance.Huc.TitleSm"
                     android:textColor="@color/huc_primary_fixed" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Trazabilidad de lectura de historia clínica electrónica HUC"
+                    android:text="Trazabilidad de lectura de historia clínica electrónica CMO"
                     android:textAppearance="@style/TextAppearance.Huc.BodySm"
                     android:textColor="@color/huc_on_primary_container" />
             </LinearLayout>
@@ -108,7 +108,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/huc_space_sm"
-                android:hint="Buscar por Nombre, DNI o N° Expediente (ej. CM-2026-001)"
+                app:endIconMode="clear_text"
+                app:hintEnabled="false"
                 app:startIconDrawable="@drawable/ic_search"
                 app:startIconTint="@color/huc_primary_container">
 
@@ -116,25 +117,57 @@
                     android:id="@+id/etBuscarExpediente"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:hint="Buscar por Nombre, DUI o Expediente"
                     android:inputType="text"
                     android:maxLines="1"
                     android:textAppearance="@style/TextAppearance.Huc.BodyMd" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <HorizontalScrollView
+            <!-- Lista Desplegable Alfabética al Tocar/Escribir en el Buscador -->
+            <LinearLayout
+                android:id="@+id/containerDropdownPacientes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/huc_space_sm"
-                android:scrollbars="none">
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_surface_low_16"
+                android:orientation="vertical"
+                android:padding="10dp"
+                android:visibility="gone">
 
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/chipGroupPacientesExpediente"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:selectionRequired="true"
-                    app:singleLine="true"
-                    app:singleSelection="true" />
-            </HorizontalScrollView>
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="4dp"
+                    android:paddingBottom="6dp">
+
+                    <TextView
+                        android:id="@+id/tvDropdownPacientesCount"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Pacientes (A–Z)"
+                        android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                        android:textColor="@color/huc_on_surface_variant" />
+
+                    <TextView
+                        android:id="@+id/btnCerrarDropdownPacientes"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="4dp"
+                        android:text="Cerrar"
+                        android:textAppearance="@style/TextAppearance.Huc.LabelSm"
+                        android:textColor="@color/huc_primary" />
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvPacientesDropdown"
+                    android:layout_width="match_parent"
+                    android:layout_height="220dp"
+                    android:nestedScrollingEnabled="true" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Mensaje sin coincidencias -->
@@ -192,7 +225,7 @@
                         android:background="@drawable/bg_pill_tertiary_fixed"
                         android:paddingHorizontal="10dp"
                         android:paddingVertical="4dp"
-                        android:text="Protegido Ley 19.628"
+                        android:text="Protegido • Privacidad"
                         android:textAppearance="@style/TextAppearance.Huc.LabelSm"
                         android:textColor="@color/huc_on_tertiary_fixed"
                         android:visibility="gone" />
