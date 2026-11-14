@@ -38,6 +38,11 @@ class Cita extends HospitalModel
         return $this->belongsTo(User::class, 'id_medico');
     }
 
+    public function especialidad(): BelongsTo
+    {
+        return $this->belongsTo(Especialidad::class, 'id_especialidad', 'id_especialidad');
+    }
+
     public function consultorio(): BelongsTo
     {
         return $this->belongsTo(Consultorio::class, 'id_consultorio');

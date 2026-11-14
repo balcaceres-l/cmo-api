@@ -14,10 +14,18 @@ class ConsultaController extends ApiController
 {
     public function store(Request $r, Cita $cita)
     {
-        abort_unless($cita->id_medico === $r->user()->id, 403);
+        $esMedicoAsignado = $cita->id_medico !== null && $cita->id_medico === $r->user()->id;
+        $esDeSuEspecialidad = $cita->id_medico === null
+            && $cita->id_especialidad !== null
+            && $cita->id_especialidad === $r->user()->id_especialidad;
+
+        abort_unless($esMedicoAsignado || $esDeSuEspecialidad, 403);
 
         return DB::transaction(function () use ($cita, $r) {
             $cita = Cita::lockForUpdate()->findOrFail($cita->getKey());
+            if ($cita->id_medico !== null && $cita->id_medico !== $r->user()->id) {
+                throw new ConflictoException('Otro médico ya tomó esta cita.');
+            }
             $cita->exigirEstado(['AGENDADA', 'EN_ESPERA'], 'iniciar la consulta de');
             if (! $cita->fecha->isToday()) {
                 throw new ConflictoException('La consulta solo se inicia el día de la cita.');
@@ -31,7 +39,7 @@ class ConsultaController extends ApiController
             } catch (UniqueConstraintViolationException) {
                 throw new ConflictoException('La cita ya tiene una consulta.');
             }
-            $cita->update(['estado' => 'EN_ATENCION']);
+            $cita->update(['estado' => 'EN_ATENCION', 'id_medico' => $r->user()->id]);
 
             return $this->success($c, 'Consulta iniciada.', 201);
         });

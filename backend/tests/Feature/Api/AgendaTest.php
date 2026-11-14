@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Cita;
+use App\Models\Especialidad;
 use App\Models\HistorialClinico;
 use App\Models\Paciente;
 use App\Models\TurnoPersonal;
@@ -117,5 +118,38 @@ class AgendaTest extends TestCase
         // Reprogramar la de las 09:00 a las 08:00 con el otro médico choca con la primera del mismo paciente.
         $this->patchJson("/api/v1/citas/{$solicitud->id_cita}/reprogramar", ['id_medico' => $otro->id, 'fecha' => $this->fecha, 'hora_inicio' => '08:00'])->assertStatus(409);
         $this->patchJson("/api/v1/citas/{$solicitud->id_cita}/reprogramar", ['id_medico' => $otro->id, 'fecha' => $this->fecha, 'hora_inicio' => '09:30'])->assertOk();
+    }
+
+    public function test_citas_por_especialidad_y_asignacion_al_iniciar_consulta(): void
+    {
+        $esp = Especialidad::where('nombre', 'Cardiología')->firstOrFail();
+        $this->medico->update(['id_especialidad' => $esp->id_especialidad]);
+
+        $bloques = $this->getJson("/api/v1/agenda/disponibilidad?id_especialidad={$esp->id_especialidad}&fecha={$this->fecha}")
+            ->assertOk()
+            ->json('data');
+        $this->assertSame(['08:00', '08:30', '09:00', '09:30'], array_column($bloques, 'hora_inicio'));
+
+        $cita = $this->postJson('/api/v1/citas', [
+            'id_paciente' => $this->paciente->id_paciente,
+            'id_especialidad' => $esp->id_especialidad,
+            'fecha' => $this->fecha,
+            'hora_inicio' => '08:00',
+            'motivo' => 'Chequeo cardiológico',
+        ])->assertCreated()
+            ->assertJsonPath('data.id_medico', null)
+            ->assertJsonPath('data.id_especialidad', $esp->id_especialidad)
+            ->json('data');
+
+        $bloquesDespues = $this->getJson("/api/v1/agenda/disponibilidad?id_especialidad={$esp->id_especialidad}&fecha={$this->fecha}")
+            ->assertOk()
+            ->json('data');
+        $this->assertSame(['08:30', '09:00', '09:30'], array_column($bloquesDespues, 'hora_inicio'));
+
+        $this->travelTo(today()->addDay()->setTime(8, 5));
+        Sanctum::actingAs($this->medico);
+        $this->postJson("/api/v1/citas/{$cita['id_cita']}/consulta")->assertCreated();
+
+        $this->assertSame($this->medico->id, Cita::findOrFail($cita['id_cita'])->id_medico);
     }
 }

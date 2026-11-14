@@ -63,14 +63,28 @@ class AsignacionCamaService
 
     public function trasladar(Ingreso $ingreso, Cama $destino, User $actor): Ingreso
     {
-        return DB::transaction(function () use ($ingreso, $destino, $actor) {
-            $paciente = $ingreso->paciente;
-            $medico = $ingreso->medico;
-            $motivo = 'Traslado: '.$ingreso->motivo;
-            $tipo = $destino->habitacion->tipo;
-            $this->alta($ingreso);
+        return DB::transaction(function () use ($ingreso, $destino) {
+            $ingreso = Ingreso::lockForUpdate()->findOrFail($ingreso->getKey());
+            if ($ingreso->fecha_alta) {
+                throw new ConflictoException('No se puede trasladar un ingreso que ya fue dado de alta.');
+            }
 
-            return $this->asignar($paciente, $tipo, $destino->getKey(), $medico, $motivo, $actor);
+            $destino = Cama::lockForUpdate()->with('habitacion')->findOrFail($destino->getKey());
+            if ($destino->estado !== 'DISPONIBLE') {
+                throw new ConflictoException('La cama destino seleccionada no está disponible.');
+            }
+
+            if ($ingreso->id_cama) {
+                Cama::where('id_cama', $ingreso->id_cama)->update(['estado' => 'DISPONIBLE']);
+            }
+
+            $destino->update(['estado' => 'OCUPADA']);
+            $ingreso->update([
+                'id_cama' => $destino->getKey(),
+            ]);
+            TiempoReal::emitir(new OcupacionActualizada);
+
+            return $ingreso->refresh();
         });
     }
 }
