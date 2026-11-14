@@ -168,20 +168,55 @@ final class SolicitudAtencionViewModelTests: PruebaConAPIFalsa {
         vm = SolicitudAtencionViewModel(repositorio: CitasRepository(cliente: cliente))
     }
 
-    func testSinMotivoNoSePuedeEnviar() {
+    func testSinMotivoNoSePuedeEnviarPeroFechasEsOpcional() {
         vm.motivo = "  \n "
-        XCTAssertFalse(vm.puedeEnviar)
+        vm.rangoFechas = "Mañana a las 10"
+        XCTAssertFalse(vm.puedeEnviar, "sin motivo válido no se puede enviar")
+
+        vm.motivo = "Fiebre y dolor"
+        vm.rangoFechas = ""
+        XCTAssertTrue(vm.puedeEnviar, "el rango de fechas es opcional, con solo motivo debe poderse enviar")
     }
 
-    func testElMotivoSeRecortaAlLimite() {
+    func testElMotivoYFechasSeRecortanAlLimite() {
         vm.motivo = String(repeating: "a", count: SolicitudAtencionViewModel.limite + 50)
         XCTAssertEqual(vm.motivo.count, SolicitudAtencionViewModel.limite)
+
+        vm.rangoFechas = String(repeating: "b", count: SolicitudAtencionViewModel.limiteFechas + 20)
+        XCTAssertEqual(vm.rangoFechas.count, SolicitudAtencionViewModel.limiteFechas)
     }
 
-    func testSolicitudEnviadaQuedaPendiente() async {
+    func testTextoConcatenadoFormateaDisponibilidadYMotivo() {
+        vm.motivo = "Dolor de espalda"
+        vm.rangoFechas = ""
+        XCTAssertEqual(vm.textoConcatenado, "Dolor de espalda")
+
+        vm.rangoFechas = "Del 18 al 22 de noviembre"
+        XCTAssertEqual(vm.textoConcatenado, "[Disponibilidad: Del 18 al 22 de noviembre] Dolor de espalda")
+    }
+
+    func testSolicitudEnviadaConDisponibilidadQuedaPendiente() async {
+        APIFalsa.responder("POST solicitudes-atencion", 201, """
+        {"success":true,"message":"Solicitud creada.","data":{"id_cita":"c-1","id_paciente":"p-1","motivo":"[Disponibilidad: Tardes] Dolor de muelas","estado":"SOLICITADA"}}
+        """)
+        vm.rangoFechas = "  Tardes  "
+        vm.motivo = "  Dolor de muelas  "
+
+        let enviada = await vm.enviar()
+
+        XCTAssertTrue(enviada)
+        XCTAssertEqual(APIFalsa.peticion("POST solicitudes-atencion")?.cuerpo["motivo"] as? String, "[Disponibilidad: Tardes] Dolor de muelas")
+        XCTAssertEqual(vm.motivo, "")
+        XCTAssertEqual(vm.rangoFechas, "")
+        if case .exito = vm.aviso {} else { XCTFail("se esperaba un aviso de éxito") }
+        XCTAssertFalse(vm.enviando)
+    }
+
+    func testSolicitudEnviadaSinFechasEnviaSoloMotivo() async {
         APIFalsa.responder("POST solicitudes-atencion", 201, """
         {"success":true,"message":"Solicitud creada.","data":{"id_cita":"c-1","id_paciente":"p-1","motivo":"Dolor de garganta","estado":"SOLICITADA"}}
         """)
+        vm.rangoFechas = ""
         vm.motivo = "  Dolor de garganta  "
 
         let enviada = await vm.enviar()
@@ -189,12 +224,13 @@ final class SolicitudAtencionViewModelTests: PruebaConAPIFalsa {
         XCTAssertTrue(enviada)
         XCTAssertEqual(APIFalsa.peticion("POST solicitudes-atencion")?.cuerpo["motivo"] as? String, "Dolor de garganta")
         XCTAssertEqual(vm.motivo, "")
-        if case .exito = vm.aviso {} else { XCTFail("se esperaba un aviso de éxito") }
+        XCTAssertEqual(vm.rangoFechas, "")
         XCTAssertFalse(vm.enviando)
     }
 
-    func testErrorDeLaAPISeMuestraYConservaElMotivo() async {
+    func testErrorDeLaAPISeMuestraYConservaCampos() async {
         APIFalsa.responder("POST solicitudes-atencion", 422, JSONPrueba.validacion("El motivo es obligatorio.", campos: ["motivo": "El motivo es obligatorio."]))
+        vm.rangoFechas = "Próxima semana"
         vm.motivo = "Fiebre"
 
         let enviada = await vm.enviar()
@@ -202,6 +238,7 @@ final class SolicitudAtencionViewModelTests: PruebaConAPIFalsa {
         XCTAssertFalse(enviada)
         XCTAssertEqual(vm.aviso, .error("El motivo es obligatorio."))
         XCTAssertEqual(vm.motivo, "Fiebre")
+        XCTAssertEqual(vm.rangoFechas, "Próxima semana")
     }
 }
 
