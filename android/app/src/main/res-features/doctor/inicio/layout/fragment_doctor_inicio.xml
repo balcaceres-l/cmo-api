@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/huc_surface"
@@ -232,6 +233,116 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Mis turnos: GET /mi/turnos -->
+        <LinearLayout
+            android:id="@+id/cardMisTurnos"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_card_rounded_16"
+            android:elevation="1dp"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mis turnos"
+                android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
+
+            <TextView
+                android:id="@+id/tvTurnoActual"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_surface_low_16"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:text="Cargando turnos…"
+                android:textColor="@color/huc_on_surface"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvTurnosProximos"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:lineSpacingExtra="2dp"
+                android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+        </LinearLayout>
+
+        <!-- Ambulancia: GET /ambulancia (forma reducida para el médico) + avisos en vivo -->
+        <LinearLayout
+            android:id="@+id/cardAmbulanciaMedico"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_card_rounded_16"
+            android:elevation="1dp"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Ambulancia"
+                    android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
+
+                <TextView
+                    android:id="@+id/tvAmbMedEstado"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_pill_primary_fixed"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="3dp"
+                    android:textColor="@color/huc_on_primary_fixed"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    tools:text="En servicio" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvAmbMedDetalle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_surface_low_16"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp"
+                android:textColor="@color/huc_on_surface"
+                android:textSize="13sp"
+                tools:text="Prioridad crítica • salió 10:42\nÚltimo reporte 10:55 • Delicado • llega 11:10" />
+
+            <TextView
+                android:id="@+id/tvAmbMedEnVivo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textAppearance="@style/TextAppearance.Huc.BodySm"
+                tools:text="● En vivo" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAmbMedReportar"
+                style="@style/Widget.Huc.Button.Outlined"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:layout_marginTop="6dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="Enviar reporte desde la ambulancia"
+                android:textSize="12sp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+        </LinearLayout>
+
         <!-- Tarjeta Principal con Selector Segmentado: Mis Citas | Mis Pacientes -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -410,7 +521,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:hint="Buscar paciente por nombre, DNI o expediente"
+                android:hint="Buscar paciente por nombre, DUI o expediente"
                 android:visibility="gone"
                 app:startIconDrawable="@drawable/ic_search"
                 app:startIconTint="@color/huc_primary_container">

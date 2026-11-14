@@ -1,6 +1,11 @@
 package com.cmo.hospital.core.domain.model
 
+import com.google.gson.TypeAdapter
+import com.google.gson.annotations.JsonAdapter
 import com.google.gson.annotations.SerializedName
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonToken
+import com.google.gson.stream.JsonWriter
 import java.time.LocalDate
 import java.time.Period
 import java.util.Locale
@@ -57,7 +62,7 @@ data class SignosVitales(
 }
 
 /**
- * Clasificación de Triage Manchester del prototipo institucional HUC Móvil.
+ * Clasificación de Triage Manchester institucional Centro Médico de Occidente / CMO.
  */
 enum class NivelTriageManchester(
     val nivel: Int,
@@ -77,7 +82,7 @@ enum class NivelTriageManchester(
 
 /**
  * Entidad de dominio Paciente con cálculo dinámico de edad, generación de expediente
- * (LB-2026-001) y anonimización para monitores públicos (Ley 19.628).
+ * (LB-2026-001) y anonimización para monitores públicos (datos protegidos).
  */
 data class Paciente(
     @SerializedName(value = "id", alternate = ["id_paciente"]) val id: String? = null,
@@ -95,7 +100,9 @@ data class Paciente(
     val protegido: Boolean = false,
     @SerializedName("contacto_emergencia") val contactoEmergencia: String? = null,
     val prevision: String? = null,
-    val nivelTriage: NivelTriageManchester = NivelTriageManchester.NIVEL_III_AMARILLO
+    val nivelTriage: NivelTriageManchester = NivelTriageManchester.NIVEL_III_AMARILLO,
+    @SerializedName("tipo_documento") val tipoDocumento: String? = "DUI",
+    val responsableMenor: ResponsableMenor? = null
 ) {
     val edad: Int
         get() {
@@ -113,6 +120,38 @@ data class Paciente(
             } catch (_: Exception) {
                 0
             }
+        }
+
+    val esMenorDeEdad: Boolean
+        get() = !fechaNacimiento.isNullOrBlank() && edad < 18
+
+    val direccionLimpia: String?
+        get() = direccion?.substringBefore(" | Resp:")?.trim()?.ifBlank { null }
+
+    val responsableEfectivo: ResponsableMenor?
+        get() {
+            if (responsableMenor != null) return responsableMenor
+            val raw = direccion ?: return null
+            if (!raw.contains(" | Resp:")) return null
+            val bloque = raw.substringAfter(" | Resp:").trim()
+            val nombre = bloque.substringBefore(" (").trim()
+            val interior = bloque.substringAfter("(", "").substringBeforeLast(")", "")
+            val partes = interior.split(",").map { it.trim() }
+            val parentesco = partes.getOrNull(0).orEmpty().ifBlank { "Responsable" }
+            val docParte = partes.firstOrNull { it.startsWith("DUI:", true) || it.startsWith("PASAPORTE:", true) }.orEmpty()
+            val tipoDoc = if (docParte.startsWith("PASAPORTE", true)) "PASAPORTE" else "DUI"
+            val docValor = docParte.substringAfter(":", "").trim()
+            val telValor = partes.firstOrNull { it.startsWith("Tel:", true) }?.substringAfter(":", "")?.trim().orEmpty()
+            val nacValor = partes.firstOrNull { it.startsWith("Nac:", true) }?.substringAfter(":", "")?.trim()?.ifBlank { null }
+            if (nombre.isBlank()) return null
+            return ResponsableMenor(
+                tipoDocumento = tipoDoc,
+                documento = docValor,
+                nombreCompleto = nombre,
+                telefono = telValor,
+                parentesco = parentesco,
+                fechaNacimiento = nacValor
+            )
         }
 
     companion object {
@@ -140,7 +179,7 @@ data class Paciente(
         }
 
         /**
-         * Anonimización Ley 19.628 para pantallas y llamador de sala: "C. M**** (Protegido)".
+         * Anonimización de datos protegidos para pantallas y llamador de sala: "C. M**** (Protegido)".
          */
         fun anonimizarNombre(nombreCompleto: String): String {
             val tokens = nombreCompleto.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
@@ -168,7 +207,25 @@ data class PacienteInfo(
     val alergias: String? = null,
     @SerializedName("tipo_sangre") val tipoSangre: String? = null,
     val protegido: Boolean = false
-)
+) {
+    val edad: Int
+        get() {
+            val fn = fechaNacimiento ?: return 0
+            return try {
+                val parts = fn.split("-")
+                if (parts.size == 3) {
+                    val year = parts[0].toIntOrNull() ?: 1990
+                    val month = parts[1].toIntOrNull() ?: 1
+                    val day = parts[2].toIntOrNull() ?: 1
+                    val birthDate = LocalDate.of(year, month, day)
+                    val today = LocalDate.now()
+                    Period.between(birthDate, today).years.coerceAtLeast(0)
+                } else 0
+            } catch (_: Exception) {
+                0
+            }
+        }
+}
 
 data class ConsultaRef(
     @SerializedName("id_consulta") val id: String,
@@ -184,6 +241,43 @@ data class ConsultorioInfo(
 )
 
 /**
+ * Deserializa `especialidad` tanto si la API envía un objeto `{ id_especialidad, nombre }`
+ * como si un mock o versión previa envía un texto plano.
+ */
+class EspecialidadTextoAdapter : TypeAdapter<String?>() {
+    override fun write(out: JsonWriter, value: String?) {
+        if (value == null) out.nullValue() else out.value(value)
+    }
+
+    override fun read(reader: JsonReader): String? {
+        return when (reader.peek()) {
+            JsonToken.NULL -> {
+                reader.nextNull()
+                null
+            }
+            JsonToken.STRING -> reader.nextString()
+            JsonToken.BEGIN_OBJECT -> {
+                var nombre: String? = null
+                reader.beginObject()
+                while (reader.hasNext()) {
+                    if (reader.nextName() == "nombre" && reader.peek() == JsonToken.STRING) {
+                        nombre = reader.nextString()
+                    } else {
+                        reader.skipValue()
+                    }
+                }
+                reader.endObject()
+                nombre
+            }
+            else -> {
+                reader.skipValue()
+                null
+            }
+        }
+    }
+}
+
+/**
  * Cita clínica en bloques fijos obligatorios de 30 minutos con regla estricta anti-solapamiento.
  */
 data class Cita(
@@ -191,13 +285,15 @@ data class Cita(
     val fecha: String,
     @SerializedName("hora_inicio") val horaInicio: String,
     @SerializedName("hora_fin") val horaFin: String?,
-    val estado: String,
+    val estado: String = EstadoCita.AGENDADA,
     val motivo: String? = null,
     val paciente: PacienteInfo? = null,
     val consultorio: ConsultorioInfo? = null,
     val medico: User? = null,
     @SerializedName("id_medico") val idMedico: String? = null,
+    @SerializedName("id_especialidad") val idEspecialidad: String? = null,
     @SerializedName("medico_nombre") val medicoNombre: String? = "Dr. Alejandro Restrepo",
+    @JsonAdapter(EspecialidadTextoAdapter::class)
     @SerializedName("especialidad") val especialidad: String? = "Medicina General",
     @SerializedName("signos_vitales") val signosVitales: SignosVitales? = null,
     /** Consulta registrada en la API para esta cita (null si aún no se inició). */
@@ -205,6 +301,19 @@ data class Cita(
 ) {
     /** Una cita creada solo en el teléfono no existe en la API y no admite consulta. */
     val esRemota: Boolean get() = !id.startsWith("c-")
+
+    /** Indica si la cita ya cuenta con signos vitales registrados en triaje. */
+    val tieneSignosVitales: Boolean
+        get() = signosVitales?.hasAnyData == true
+
+    /**
+     * Indica si la cita corresponde al día indicado (por defecto la fecha actual).
+     * La toma de signos vitales y el paso a sala de espera solo se habilitan el día de la cita.
+     */
+    fun esDelDia(hoyIso: String = LocalDate.now().toString()): Boolean {
+        val citaIso = com.cmo.hospital.core.ui.DateUtils.toIsoDate(fecha)
+        return citaIso.isNotBlank() && citaIso == hoyIso
+    }
 
     companion object {
         val BLOQUES_30_MINUTOS = listOf(
@@ -236,9 +345,11 @@ data class Cita(
             horaInicio: String,
             citaIdExcluir: String? = null
         ): Boolean {
+            val fechaIso = com.cmo.hospital.core.ui.DateUtils.toIsoDate(fecha)
             return citasExistentes.any { cita ->
                 if (cita.id == citaIdExcluir || cita.estado == "CANCELADA") return@any false
-                val coincideFecha = cita.fecha == fecha
+                val coincideFecha = cita.fecha == fecha ||
+                    com.cmo.hospital.core.ui.DateUtils.toIsoDate(cita.fecha) == fechaIso
                 val coincideHora = cita.horaInicio == horaInicio
                 val coincideMedico = medicoNombre.isNullOrBlank() ||
                     cita.medicoNombre.isNullOrBlank() ||
@@ -256,6 +367,8 @@ data class Cama(
     @SerializedName(value = "id", alternate = ["id_cama"]) val id: String = "",
     val codigo: String,
     val estado: String = "DISPONIBLE", // DISPONIBLE, OCUPADA
+    /** Ingreso activo (solo lo reciben recepción, admin y el médico tratante). */
+    @SerializedName("id_ingreso") val idIngreso: String? = null,
     val paciente: PacienteInfo? = null
 ) {
     val esVip: Boolean get() = codigo.startsWith("VIP-")
@@ -274,6 +387,30 @@ data class SalaSemiprivadaUi(
     val camaA: Cama,
     val camaB: Cama
 )
+
+data class ResponsableMenor(
+    @SerializedName("tipo_documento") val tipoDocumento: String = "DUI",
+    val documento: String,
+    @SerializedName("nombre_completo") val nombreCompleto: String,
+    val telefono: String,
+    val parentesco: String,
+    @SerializedName("fecha_nacimiento") val fechaNacimiento: String? = null
+)
+
+data class HabitacionDetalleUi(
+    val codigo: String, // ej. "VIP-301", "HAB-201"
+    val tipo: String, // "VIP Individual" o "Semiprivada"
+    val planta: String, // "3ª Planta" o "2ª Planta"
+    val camas: List<Cama>,
+    val totalCamas: Int,
+    val camasOcupadas: Int,
+    val camasDisponibles: Int
+) {
+    val estaDisponible: Boolean get() = camasDisponibles > 0
+    val estaCompletamenteDisponible: Boolean get() = camasOcupadas == 0
+    val estaCompletamenteOcupada: Boolean get() = camasDisponibles == 0
+    val estaParcialmenteOcupada: Boolean get() = camasOcupadas > 0 && camasDisponibles > 0
+}
 
 data class CapacidadHospitalaria(
     val totalCamas: Int = 17,
@@ -446,50 +583,54 @@ data class ExpedienteDetalle(
     val alergiasCriticas: List<String> = emptyList(),
     val comorbilidades: List<String> = emptyList(),
     val atencionesPrevias: List<AtencionHistorica> = emptyList(),
-    val ordenesLaboratorio: List<OrdenLaboratorioItem> = emptyList()
+    val ordenesLaboratorio: List<OrdenLaboratorioItem> = emptyList(),
+    /** Texto libre del historial clínico (PUT /pacientes/{id}/historial). */
+    val antecedentesPersonales: String? = null,
+    val antecedentesFamiliares: String? = null
 )
 
+/** Reporte clínico enviado desde la ambulancia en camino (tabla reporte_ambulancia). */
 data class ReporteAmbulancia(
-    val id: String = UUID.randomUUID().toString(),
-    @SerializedName("estado_paciente") val estadoPaciente: String = "ESTABLE",
+    @SerializedName("id_reporte") val id: String? = null,
+    @SerializedName("estado_paciente") val estadoPaciente: String,
     val observaciones: String? = null,
-    @SerializedName("minutos_llegada") val minutosLlegada: Int? = null,
-    @SerializedName("creado_en") val creadoEn: String? = null
+    @SerializedName("llegada_estimada") val llegadaEstimada: String? = null,
+    val fecha: String? = null
 )
 
+/** Servicio (traslado) de la ambulancia, tal como lo devuelve la API. */
 data class ServicioAmbulanciaDetalle(
-    val id: String,
+    @SerializedName("id_servicio") val id: String,
     @SerializedName("paciente_nombre") val pacienteNombre: String? = null,
     val direccion: String? = null,
     val descripcion: String? = null,
-    val prioridad: String = "ALTA",
+    val prioridad: String = "MEDIA",
+    val estado: String = "EN_CURSO", // EN_CURSO, FINALIZADO, CANCELADO
+    @SerializedName("hora_solicitud") val horaSolicitud: String? = null,
     @SerializedName("hora_salida") val horaSalida: String? = null,
-    @SerializedName("hora_llegada") val horaLlegada: String? = null,
-    val estado: String = "EN_CURSO",
-    @SerializedName("tripulacion_paramedico") val tripulacionParamedico: String? = "M. Peralta (Par.)",
-    @SerializedName("tripulacion_chofer") val tripulacionChofer: String? = "G. Soto (Chofer)",
-    val destino: String? = "Hosp. Universitario - Urgencias",
-    @SerializedName("minutos_llegada") val minutosLlegada: Int? = null,
-    val reportes: List<ReporteAmbulancia> = emptyList()
+    @SerializedName("hora_cierre") val horaCierre: String? = null,
+    val notas: String? = null,
+    @SerializedName("ultimo_reporte") val ultimoReporte: ReporteAmbulancia? = null
 )
 
+/** La única ambulancia del hospital (GET /ambulancia trae solo el servicio en curso). */
 data class AmbulanciaRecurso(
-    val id: String = "amb-1",
-    val placa: String = "P-123456",
+    @SerializedName("id_ambulancia") val id: String? = null,
+    val placa: String = "",
     val estado: String = "DISPONIBLE", // DISPONIBLE, EN_SERVICIO, EN_MANTENIMIENTO
-    @SerializedName("servicio_activo") val servicioActivo: ServicioAmbulanciaDetalle? = null
-)
+    val servicios: List<ServicioAmbulanciaDetalle> = emptyList(),
+    /** Forma reducida que la API entrega al médico: sin paciente ni dirección. */
+    @SerializedName("servicio_activo") val servicioActivoMedico: ServicioAmbulanciaDetalle? = null
+) {
+    val servicioActivo: ServicioAmbulanciaDetalle?
+        get() = servicios.firstOrNull { it.estado == "EN_CURSO" } ?: servicioActivoMedico
+}
 
-data class PersonalGuardia(
-    val id: String,
-    @SerializedName("nombre_completo") val nombreCompleto: String,
-    val rol: String, // MEDICO, RECEPCIONISTA
-    val cargo: String,
-    @SerializedName("hora_inicio") val horaInicio: String,
-    @SerializedName("hora_fin") val horaFin: String,
-    val area: String,
-    val estado: String = "Activo",
-    @SerializedName("relevo_en") val relevoEn: String? = null
+/** Médico con turno en curso (GET /publico/medicos-de-turno). */
+data class MedicoDeTurno(
+    val nombre: String,
+    val cargo: String? = null,
+    val area: String? = null
 )
 
 data class DatosDocumentoEscaneado(
@@ -544,12 +685,5 @@ object CatalogoClinico {
         "Urocultivo & Antibiograma",
         "Examen General de Orina (EGO)",
         "Dímero D Cuantitativo"
-    )
-
-    val OPCIONES_PREVISION: List<String> = listOf(
-        "Particular / Privado",
-        "ISSS",
-        "Seguro Privado",
-        "Convenio Institucional"
     )
 }

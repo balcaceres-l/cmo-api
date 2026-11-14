@@ -1,8 +1,10 @@
 package com.cmo.hospital.core.network.dto
 
+import com.cmo.hospital.core.domain.model.EspecialidadTextoAdapter
 import com.cmo.hospital.core.domain.model.PacienteInfo
 import com.cmo.hospital.core.domain.model.SignosVitales
 import com.cmo.hospital.core.domain.model.User
+import com.google.gson.annotations.JsonAdapter
 import com.google.gson.annotations.SerializedName
 
 data class LoginRequest(
@@ -96,42 +98,63 @@ data class RecursoDto(
     val ubicacion: String? = null
 )
 
-data class MedicoDto(
-    val id: String,
+/** GET /pacientes/{id}/expediente: paciente con historial, citas/consultas, laboratorio e ingresos. */
+data class ExpedienteDto(
+    @SerializedName("id_paciente") val id: String,
     @SerializedName("nombre_completo") val nombreCompleto: String,
-    val cargo: String? = null
+    @SerializedName("numero_expediente") val numeroExpediente: String?,
+    @SerializedName("fecha_nacimiento") val fechaNacimiento: String?,
+    val dui: String?,
+    val sexo: String?,
+    val telefono: String?,
+    @SerializedName("tipo_sangre") val tipoSangre: String?,
+    val alergias: String?,
+    val historial: HistorialDto?,
+    val citas: List<CitaExpedienteDto>?,
+    @SerializedName("ordenes_laboratorio") val ordenesLaboratorio: List<OrdenLaboratorioDto>?,
+    val ingresos: List<IngresoExpedienteDto>?
 )
 
-data class ConsultorioDto(
-    @SerializedName("id_consultorio") val id: String,
-    val codigo: String,
-    val nombre: String,
-    val planta: Int? = null
+data class HistorialDto(
+    @SerializedName("antecedentes_personales") val antecedentesPersonales: String?,
+    @SerializedName("antecedentes_familiares") val antecedentesFamiliares: String?
 )
 
-data class HabitacionResumenDto(
-    @SerializedName("id_habitacion") val id: String? = null,
-    val codigo: String? = null,
-    val tipo: String? = null,
-    val planta: Int? = null
+data class CitaExpedienteDto(
+    @SerializedName("id_cita") val id: String,
+    val fecha: String?,
+    @SerializedName("hora_inicio") val horaInicio: String?,
+    val estado: String?,
+    val motivo: String?,
+    @SerializedName("id_especialidad") val idEspecialidad: String? = null,
+    @JsonAdapter(EspecialidadTextoAdapter::class) val especialidad: String? = null,
+    val medico: User?,
+    val consulta: ConsultaDto?
 )
 
-data class CamaApiDto(
-    @SerializedName("id_cama") val id: String,
-    val codigo: String,
-    val estado: String? = null,
-    val habitacion: HabitacionResumenDto? = null
-)
-
-data class IngresoDto(
+data class IngresoExpedienteDto(
     @SerializedName("id_ingreso") val id: String,
-    @SerializedName("id_paciente") val idPaciente: String?,
-    @SerializedName("id_cama") val idCama: String?,
-    @SerializedName("id_medico") val idMedico: String?,
     @SerializedName("fecha_ingreso") val fechaIngreso: String?,
     @SerializedName("fecha_alta") val fechaAlta: String?,
     val motivo: String?,
-    val paciente: PacienteInfo? = null,
-    val cama: CamaApiDto? = null,
-    val medico: MedicoDto? = null
+    val cama: CamaIngresoDto?
+)
+
+data class CamaIngresoDto(
+    val codigo: String,
+    val habitacion: HabitacionIngresoDto?
+)
+
+data class HabitacionIngresoDto(
+    val tipo: String?,
+    val planta: Int?
+)
+
+/** Turno del usuario (GET /mi/turnos). */
+data class TurnoDto(
+    @SerializedName("id_turno") val id: String,
+    val fecha: String,
+    @SerializedName("hora_inicio") val horaInicio: String,
+    @SerializedName("hora_fin") val horaFin: String,
+    val area: String?
 )

@@ -3,6 +3,7 @@ package com.cmo.hospital.features.doctor.inicio.domain.repository
 import com.cmo.hospital.core.domain.model.Cita
 import com.cmo.hospital.core.domain.model.ConsultaActiva
 import com.cmo.hospital.core.domain.model.ExpedienteDetalle
+import com.cmo.hospital.core.domain.model.TurnoPersonal
 import kotlinx.coroutines.flow.StateFlow
 
 interface InicioDoctorRepository {
@@ -13,4 +14,5 @@ interface InicioDoctorRepository {
     suspend fun sincronizarPanelMedico()
     suspend fun iniciarORetomarConsulta(citaId: String): Result<ConsultaActiva>
     fun solicitarAperturaExpediente(numeroExpediente: String?)
+    suspend fun misTurnos(): Result<List<TurnoPersonal>>
 }

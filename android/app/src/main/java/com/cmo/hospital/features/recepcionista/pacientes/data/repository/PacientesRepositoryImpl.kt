@@ -1,6 +1,7 @@
 package com.cmo.hospital.features.recepcionista.pacientes.data.repository
 
 import com.cmo.hospital.core.domain.model.Paciente
+import com.cmo.hospital.core.domain.model.ResponsableMenor
 import com.cmo.hospital.core.network.ApiService
 import com.cmo.hospital.core.network.dto.CodigoActivacion
 import com.cmo.hospital.core.network.llamarApi
@@ -21,9 +22,11 @@ class PacientesRepositoryImpl(
 
     override suspend fun crear(form: PacienteForm): Result<Paciente> =
         llamarApi { apiService.registrarPaciente(form.toBody(incluirClinicos = true)) }
+            .map { form.enriquecerPaciente(it) }
 
     override suspend fun actualizar(id: String, form: PacienteForm): Result<Paciente> =
         llamarApi { apiService.actualizarPaciente(id, form.toBody(incluirClinicos = false)) }
+            .map { form.enriquecerPaciente(it) }
 
     override suspend fun generarCodigoActivacion(id: String): Result<CodigoActivacion> =
         llamarApi { apiService.generarCodigoActivacion(id) }
@@ -33,11 +36,37 @@ class PacientesRepositoryImpl(
         put("fecha_nacimiento", fechaNacimiento)
         put("sexo", sexo)
         put("dui", dui)
-        put("telefono", telefono)
-        put("direccion", direccion)
+        put("telefono", telefono ?: responsableTelefono)
+        val dirBase = direccion?.substringBefore(" | Resp:")?.trim()?.ifBlank { null }
+        val dirCompleta = if (!responsableNombre.isNullOrBlank()) {
+            val sufijo = "Resp: ${responsableNombre.trim()} (${responsableParentesco ?: "Tutor"}, ${responsableTipoDocumento}: ${responsableDocumento.orEmpty()}, Tel: ${responsableTelefono.orEmpty()}, Nac: ${responsableFechaNacimiento.orEmpty()})"
+            if (dirBase != null) "$dirBase | $sufijo" else sufijo
+        } else {
+            dirBase
+        }
+        put("direccion", dirCompleta)
         if (incluirClinicos) {
             put("tipo_sangre", tipoSangre)
             put("alergias", alergias)
         }
+    }
+
+    private fun PacienteForm.enriquecerPaciente(paciente: Paciente): Paciente {
+        val resp = if (!responsableNombre.isNullOrBlank()) {
+            ResponsableMenor(
+                tipoDocumento = responsableTipoDocumento,
+                documento = responsableDocumento.orEmpty(),
+                nombreCompleto = responsableNombre,
+                telefono = responsableTelefono.orEmpty(),
+                parentesco = responsableParentesco ?: "Responsable",
+                fechaNacimiento = responsableFechaNacimiento
+            )
+        } else {
+            paciente.responsableEfectivo
+        }
+        return paciente.copy(
+            tipoDocumento = tipoDocumento,
+            responsableMenor = resp
+        )
     }
 }

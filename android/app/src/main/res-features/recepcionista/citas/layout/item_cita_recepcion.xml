@@ -25,20 +25,7 @@
             android:textColor="@color/huc_primary_container"
             android:textSize="14sp"
             android:textStyle="bold"
-            tools:text="09:00 - 09:30" />
-
-        <TextView
-            android:id="@+id/tvItemCitaBox"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:background="@drawable/bg_surface_container_16"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="2dp"
-            android:textColor="@color/huc_on_surface_variant"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            tools:text="Box 03" />
+            tools:text="29/10/2026 • 09:00 - 09:30" />
 
         <View
             android:layout_width="0dp"
@@ -55,7 +42,7 @@
             android:textColor="@color/huc_on_tertiary_fixed"
             android:textSize="10sp"
             android:textStyle="bold"
-            tools:text="EN_ESPERA" />
+            tools:text="Agendada" />
     </LinearLayout>
 
     <!-- Paciente y Expediente -->
@@ -100,6 +87,56 @@
         tools:text="✓ Triaje: PA 110/70 mmHg • FC 82 lpm • SpO2 99%"
         tools:visibility="visible" />
 
+    <!-- Aviso informativo cuando la cita no es del día de hoy -->
+    <TextView
+        android:id="@+id/tvCitaAvisoDia"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/bg_surface_low_16"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="6dp"
+        android:textColor="@color/huc_on_surface_variant"
+        android:textSize="11sp"
+        android:visibility="gone"
+        tools:text="⏱ Signos vitales y llegada habilitados solo el día de la cita."
+        tools:visibility="visible" />
+
+    <!-- Acciones para estado SOLICITADA (pedida desde la app del paciente, sin horario) -->
+    <LinearLayout
+        android:id="@+id/actionsCitaSolicitada"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCitaConfirmarSolicitud"
+            style="@style/Widget.Huc.Button.Primary"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minHeight="40dp"
+            android:text="Asignar horario"
+            android:textSize="11sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCitaRechazarSolicitud"
+            style="@style/Widget.Huc.Button.Outlined"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minHeight="40dp"
+            android:text="Cancelar"
+            android:textColor="@color/huc_error"
+            android:textSize="11sp" />
+    </LinearLayout>
+
     <!-- Acciones para estado AGENDADA -->
     <LinearLayout
         android:id="@+id/actionsCitaAgendada"
@@ -115,24 +152,47 @@
             android:layout_width="0dp"
             android:layout_height="40dp"
             android:layout_marginEnd="6dp"
-            android:layout_weight="1"
+            android:layout_weight="0.9"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:minHeight="40dp"
-            android:text="Registrar Llegada"
+            android:text="Llegada"
             android:textSize="11sp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnCitaCancelarAgendada"
-            style="@style/Widget.Huc.Button.Outlined"
-            android:layout_width="wrap_content"
+            android:id="@+id/btnCitaTriajeAgendada"
+            style="@style/Widget.Huc.Button.Secondary"
+            android:layout_width="0dp"
             android:layout_height="40dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1.1"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:minHeight="40dp"
-            android:text="Cancelar"
-            android:textColor="@color/huc_error"
+            android:text="Signos Vitales"
             android:textSize="11sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCitaReprogramar"
+            style="@style/Widget.Huc.Button.Outlined"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginEnd="6dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minHeight="40dp"
+            android:text="Reprogramar"
+            android:textSize="11sp" />
+
+        <ImageButton
+            android:id="@+id/btnCitaCancelarAgendada"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/bg_surface_container_16"
+            android:contentDescription="Cancelar cita"
+            android:padding="8dp"
+            android:src="@drawable/ic_close"
+            app:tint="@color/huc_error" />
     </LinearLayout>
 
     <!-- Acciones para estado EN_ESPERA -->
@@ -191,7 +251,7 @@
         android:background="@drawable/bg_primary_fixed_16"
         android:gravity="center"
         android:paddingVertical="8dp"
-        android:text="● Paciente actualmente en Box con Consulta Médica Activa"
+        android:text="● Paciente en consulta con el médico"
         android:textColor="@color/huc_on_primary_fixed"
         android:textSize="11sp"
         android:textStyle="bold"

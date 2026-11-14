@@ -61,7 +61,17 @@ class PacienteController extends ApiController
     public function expediente(Paciente $paciente)
     {
         $this->authorize('viewClinical', $paciente);
-        $paciente->load(['historial', 'citas.consulta.recetas', 'ordenesLaboratorio.examen', 'ingresos.cama.habitacion']);
+        // Del médico de cada cita basta nombre, cargo y especialidad para el historial de atenciones.
+        $paciente->load([
+            'historial',
+            'citas.medico:id,nombre_completo,cargo,rol,id_especialidad',
+            'citas.medico.especialidad:id_especialidad,nombre',
+            'citas.especialidad:id_especialidad,nombre',
+            'citas.signosVitales',
+            'citas.consulta.recetas',
+            'ordenesLaboratorio.examen',
+            'ingresos.cama.habitacion',
+        ]);
 
         return $this->success($paciente);
     }

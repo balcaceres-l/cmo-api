@@ -14,98 +14,57 @@ class CitaRepositoryImpl(
 
     override suspend fun refreshCitas(): List<Cita> = dataSource.syncCitasFromRemote()
 
-    override suspend fun agendarCita(
-        especialidad: String,
-        medicoNombre: String,
-        pacienteNombre: String,
-        dui: String,
-        fechaNacimiento: String?,
-        fecha: String,
-        horaInicio: String,
-        motivo: String,
-        box: String
-    ): Result<Cita> {
-        if (Cita.hayConflictoHorario(citasFlow.value, medicoNombre, fecha, horaInicio)) {
-            return Result.failure(
-                IllegalStateException(
-                    "Horario no disponible: $medicoNombre ya tiene una cita a las $horaInicio."
-                )
-            )
-        }
-        val horaFin = Cita.calcularFin30Minutos(horaInicio)
-        val nuevaCita = Cita(
-            id = "c-" + System.currentTimeMillis().toString().takeLast(6),
-            fecha = fecha,
-            horaInicio = horaInicio,
-            horaFin = horaFin,
-            estado = "AGENDADA",
-            motivo = motivo,
-            medicoNombre = medicoNombre,
-            especialidad = especialidad,
-            paciente = PacienteInfo(
-                id = "p-" + System.currentTimeMillis().toString().takeLast(4),
-                nombreCompleto = pacienteNombre,
-                numeroExpediente = Paciente.generarNumeroExpediente(
-                    pacienteNombre,
-                    2026,
-                    (10..99).random()
-                ),
-                dui = dui.ifBlank { null },
-                sexo = "M",
-                fechaNacimiento = fechaNacimiento
-            ),
-            consultorio = ConsultorioInfo(
-                id = "cs-1",
-                nombre = "$especialidad ($box)",
-                codigo = box
-            )
-        )
-        dataSource.agendarCitaRemotaOLocal(nuevaCita)
-        return Result.success(nuevaCita)
-    }
+    override suspend fun especialidades(): Result<List<EspecialidadCatalogo>> =
+        dataSource.getEspecialidades()
 
-    override suspend fun marcarLlegada(citaId: String) {
-        dataSource.marcarLlegada(citaId)
-    }
+    override suspend fun medicos(): Result<List<User>> = dataSource.getMedicosAgenda()
 
-    override suspend fun obtenerMedicosYConsultorios() =
-        dataSource.obtenerMedicosYConsultorios()
+    override suspend fun consultorios(): Result<List<ConsultorioInfo>> = dataSource.getConsultorios()
 
-    override suspend fun confirmarCitaSolicitada(
-        citaId: String,
+    override suspend fun disponibilidad(
         idMedico: String?,
-        idConsultorio: String?,
-        medicoNombre: String?,
-        consultorioCodigo: String?
-    ): Result<String> = dataSource.confirmarCitaSolicitada(
-        citaId = citaId,
-        idMedico = idMedico,
-        idConsultorio = idConsultorio,
-        medicoNombre = medicoNombre,
-        consultorioCodigo = consultorioCodigo
-    )
+        fecha: String,
+        idEspecialidad: String?
+    ): Result<List<BloqueAgenda>> =
+        dataSource.getDisponibilidad(idMedico = idMedico, fecha = fecha, idEspecialidad = idEspecialidad)
 
-    override suspend fun cancelarCita(citaId: String, motivo: String) {
+    override suspend fun buscarPacientes(texto: String): Result<List<Paciente>> =
+        dataSource.buscarPacientes(texto)
+
+    override suspend fun agendarCita(
+        idPaciente: String,
+        programacion: ProgramacionCita,
+        motivo: String
+    ): Result<Cita> = dataSource.agendarCita(idPaciente, programacion, motivo)
+
+    override suspend fun confirmarCita(citaId: String, programacion: ProgramacionCita): Result<Cita> =
+        dataSource.confirmarCita(citaId, programacion)
+
+    override suspend fun reprogramarCita(citaId: String, programacion: ProgramacionCita): Result<Cita> =
+        dataSource.reprogramarCita(citaId, programacion)
+
+    override suspend fun marcarLlegada(citaId: String): Result<Cita> = dataSource.marcarLlegada(citaId)
+
+    override suspend fun cancelarCita(citaId: String, motivo: String): Result<Cita> =
         dataSource.cancelarCita(citaId, motivo)
-    }
 
     override suspend fun registrarTriajeOPasarAConsulta(
         citaId: String,
         signosVitales: SignosVitales?,
         pasarAConsulta: Boolean
     ): Result<String> {
-        val transferida = dataSource.actualizarTriajeOPasarAConsulta(
-            citaId = citaId,
-            signosVitales = signosVitales,
-            pasarAConsulta = pasarAConsulta
-        )
-        return if (pasarAConsulta && transferida != null) {
-            Result.success(
-                "Paciente ${transferida.paciente?.nombreCompleto} transferido a Consulta Activa en ${transferida.consultorio?.codigo ?: "Box 03"}."
+        if (pasarAConsulta) {
+            return Result.failure(
+                IllegalStateException("La consulta la inicia el médico desde su app; recepción registra la llegada y los signos.")
             )
-        } else {
-            Result.success("Signos vitales de triaje guardados correctamente.")
         }
+        val citaPrevia = dataSource.citasState.value.firstOrNull { it.id == citaId }
+            ?: return Result.failure(IllegalArgumentException("No se encontró la cita seleccionada."))
+        if (!citaPrevia.esDelDia()) {
+            return Result.failure(IllegalStateException("La toma de signos vitales solo está habilitada el día de la cita."))
+        }
+        return dataSource.guardarSignosVitales(citaId, signosVitales ?: SignosVitales())
+            .map { "Signos vitales de ${citaPrevia.paciente?.nombreCompleto ?: "el paciente"} guardados." }
     }
 
     override fun reLlamarTurno(): Cita? = dataSource.reLlamarTurno()

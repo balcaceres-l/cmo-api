@@ -5,28 +5,19 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.cmo.hospital.core.domain.model.PersonalGuardia
+import com.cmo.hospital.core.domain.model.MedicoDeTurno
 import com.cmo.hospital.databinding.ItemPersonalGuardiaBinding
 
-class PersonalGuardiaAdapter :
-    ListAdapter<PersonalGuardia, PersonalGuardiaAdapter.GuardiaViewHolder>(DiffCallback) {
+/** Médicos con turno en curso (GET /publico/medicos-de-turno). */
+class PersonalGuardiaAdapter : ListAdapter<MedicoDeTurno, PersonalGuardiaAdapter.GuardiaViewHolder>(Diff) {
 
-    object DiffCallback : DiffUtil.ItemCallback<PersonalGuardia>() {
-        override fun areItemsTheSame(oldItem: PersonalGuardia, newItem: PersonalGuardia): Boolean =
-            oldItem.id == newItem.id
-
-        override fun areContentsTheSame(oldItem: PersonalGuardia, newItem: PersonalGuardia): Boolean =
-            oldItem == newItem
+    object Diff : DiffUtil.ItemCallback<MedicoDeTurno>() {
+        override fun areItemsTheSame(oldItem: MedicoDeTurno, newItem: MedicoDeTurno) = oldItem.nombre == newItem.nombre
+        override fun areContentsTheSame(oldItem: MedicoDeTurno, newItem: MedicoDeTurno) = oldItem == newItem
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): GuardiaViewHolder {
-        val binding = ItemPersonalGuardiaBinding.inflate(
-            LayoutInflater.from(parent.context),
-            parent,
-            false
-        )
-        return GuardiaViewHolder(binding)
-    }
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): GuardiaViewHolder =
+        GuardiaViewHolder(ItemPersonalGuardiaBinding.inflate(LayoutInflater.from(parent.context), parent, false))
 
     override fun onBindViewHolder(holder: GuardiaViewHolder, position: Int) {
         holder.bind(getItem(position))
@@ -35,13 +26,11 @@ class PersonalGuardiaAdapter :
     class GuardiaViewHolder(
         private val binding: ItemPersonalGuardiaBinding
     ) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(item: PersonalGuardia) {
-            binding.tvGuardiaNombre.text = item.nombreCompleto
-            binding.tvGuardiaCargoYArea.text = "${item.cargo} • ${item.area}"
-            val relevo = item.relevoEn?.let { " • Relevo: $it" }.orEmpty()
-            binding.tvGuardiaHorario.text =
-                "Turno: ${item.horaInicio} - ${item.horaFin}$relevo"
-            binding.tvGuardiaEstadoBadge.text = item.estado
+        fun bind(item: MedicoDeTurno) {
+            binding.tvGuardiaNombre.text = item.nombre
+            binding.tvGuardiaCargoYArea.text = item.cargo ?: "Médico"
+            binding.tvGuardiaHorario.text = "Área: ${item.area ?: "Sin área asignada"}"
+            binding.tvGuardiaEstadoBadge.text = "De turno"
         }
     }
 }

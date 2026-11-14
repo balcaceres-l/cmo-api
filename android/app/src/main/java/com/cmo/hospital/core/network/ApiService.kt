@@ -23,7 +23,9 @@ interface ApiService {
 
     // Citas y Turnos de Atención (30 min)
     @GET("citas")
-    suspend fun getCitas(): Response<ApiResponse<PaginatedData<Cita>>>
+    suspend fun getCitas(
+        @Query("per_page") perPage: Int = 100
+    ): Response<ApiResponse<PaginatedData<Cita>>>
 
     @POST("citas")
     suspend fun agendarCita(
@@ -35,23 +37,53 @@ interface ApiService {
         @Path("id") id: String
     ): Response<ApiResponse<Cita>>
 
-    @PATCH("citas/{id}/confirmar")
-    suspend fun confirmarCita(
-        @Path("id") id: String,
-        @Body body: Map<String, Any?>
-    ): Response<ApiResponse<Cita>>
-
-    @GET("medicos")
-    suspend fun getMedicos(): Response<ApiResponse<List<MedicoDto>>>
-
-    @GET("consultorios")
-    suspend fun getConsultorios(): Response<ApiResponse<List<ConsultorioDto>>>
-
     @PATCH("citas/{id}/cancelar")
     suspend fun cancelarCita(
         @Path("id") id: String,
         @Body motivo: Map<String, String>
     ): Response<ApiResponse<Cita>>
+
+    @PATCH("citas/{id}/reprogramar")
+    suspend fun reprogramarCita(
+        @Path("id") id: String,
+        @Body request: Map<String, Any?>
+    ): Response<ApiResponse<Cita>>
+
+    /** Signos vitales del día de la cita (recepción o el médico de la cita); reemplaza los anteriores. */
+    @PUT("citas/{id}/signos-vitales")
+    suspend fun guardarSignosVitales(
+        @Path("id") id: String,
+        @Body signos: SignosVitales
+    ): Response<ApiResponse<SignosVitales>>
+
+    /** Convierte una solicitud del paciente (SOLICITADA) en cita AGENDADA. */
+    @PATCH("citas/{id}/confirmar")
+    suspend fun confirmarCita(
+        @Path("id") id: String,
+        @Body request: Map<String, Any?>
+    ): Response<ApiResponse<Cita>>
+
+    // Agenda: catálogos para programar citas
+    @GET("especialidades")
+    suspend fun getEspecialidades(
+        @Query("activas") activas: Int = 1
+    ): Response<ApiResponse<List<EspecialidadCatalogo>>>
+
+    @GET("medicos")
+    suspend fun getMedicos(
+        @Query("per_page") perPage: Int = 100
+    ): Response<ApiResponse<PaginatedData<User>>>
+
+    @GET("consultorios")
+    suspend fun getConsultorios(): Response<ApiResponse<List<ConsultorioInfo>>>
+
+    /** Bloques libres del médico o de la especialidad ese día. */
+    @GET("agenda/disponibilidad")
+    suspend fun getDisponibilidad(
+        @Query("id_medico") idMedico: String? = null,
+        @Query("fecha") fecha: String,
+        @Query("id_especialidad") idEspecialidad: String? = null
+    ): Response<ApiResponse<List<BloqueAgenda>>>
 
     // Pacientes y Expedientes
     @GET("pacientes")
@@ -79,37 +111,39 @@ interface ApiService {
     @GET("pacientes/{id}/expediente")
     suspend fun getExpediente(
         @Path("id") id: String
-    ): Response<ApiResponse<Map<String, Any>>>
+    ): Response<ApiResponse<ExpedienteDto>>
+
+    /** Antecedentes del historial clínico (solo médico tratante o administrador). */
+    @PUT("pacientes/{id}/historial")
+    suspend fun actualizarHistorial(
+        @Path("id") id: String,
+        @Body request: Map<String, Any?>
+    ): Response<ApiResponse<HistorialDto>>
 
     // Habitaciones y Camas Hospitalarias (17 camas estrictas)
     @GET("habitaciones")
-    suspend fun getHabitaciones(): Response<ApiResponse<Map<String, List<Map<String, Any?>>>>>
-
-    @GET("ingresos")
-    suspend fun getIngresos(
-        @Query("activos") activos: Int = 1,
-        @Query("per_page") perPage: Int = 50
-    ): Response<ApiResponse<PaginatedData<IngresoDto>>>
+    suspend fun getHabitaciones(): Response<ApiResponse<com.google.gson.JsonElement>>
 
     @POST("ingresos")
     suspend fun ingresarPaciente(
-        @Body request: IngresoPacienteRequest
-    ): Response<ApiResponse<IngresoDto>>
-
-    @PATCH("ingresos/{id}/trasladar")
-    suspend fun trasladarIngreso(
-        @Path("id") id: String,
-        @Body body: Map<String, Any?>
-    ): Response<ApiResponse<IngresoDto>>
+        @Body request: Map<String, Any?>
+    ): Response<ApiResponse<Map<String, Any?>>>
 
     @PATCH("ingresos/{id}/alta")
     suspend fun altaPaciente(
         @Path("id") id: String
-    ): Response<ApiResponse<Unit>>
+    ): Response<ApiResponse<Map<String, Any?>>>
 
-    // Ambulancia Única (Tiempo Real y Bitácora)
+    /** Da de alta la cama actual y ocupa la de destino en una sola transacción. */
+    @PATCH("ingresos/{id}/trasladar")
+    suspend fun trasladarPaciente(
+        @Path("id") id: String,
+        @Body request: Map<String, Any?>
+    ): Response<ApiResponse<Map<String, Any?>>>
+
+    // Ambulancia (única unidad): estado, servicio en curso, reportes y bitácora
     @GET("ambulancia")
-    suspend fun getAmbulancia(): Response<ApiResponse<Map<String, Any>>>
+    suspend fun getAmbulancia(): Response<ApiResponse<AmbulanciaRecurso>>
 
     @GET("publico/ambulancia")
     suspend fun getAmbulanciaPublica(): Response<ApiResponse<Map<String, Any>>>
@@ -122,17 +156,25 @@ interface ApiService {
     @PATCH("ambulancia/servicios/{id}/finalizar")
     suspend fun finalizarServicioAmbulancia(
         @Path("id") id: String,
-        @Body notas: Map<String, String>
-    ): Response<ApiResponse<Unit>>
+        @Body notas: Map<String, Any?>
+    ): Response<ApiResponse<ServicioAmbulanciaDetalle>>
 
     @POST("ambulancia/servicios/{id}/reportes")
     suspend fun reportarDesdeAmbulancia(
         @Path("id") id: String,
-        @Body request: ReporteAmbulancia
+        @Body request: Map<String, Any?>
     ): Response<ApiResponse<ReporteAmbulancia>>
 
+    /** Firma la suscripción a un canal privado de Reverb (responde {"auth": "..."}, sin envoltorio). */
+    @POST("broadcasting/auth")
+    suspend fun autorizarCanal(
+        @Body request: Map<String, String>
+    ): Response<Map<String, String>>
+
     @GET("ambulancia/servicios")
-    suspend fun getBitacoraAmbulancia(): Response<ApiResponse<PaginatedData<ServicioAmbulanciaDetalle>>>
+    suspend fun getBitacoraAmbulancia(
+        @Query("per_page") perPage: Int = 15
+    ): Response<ApiResponse<PaginatedData<ServicioAmbulanciaDetalle>>>
 
     // Consulta Médica, CIE-10 y Recetas Digitales
     @POST("citas/{id}/consulta")
@@ -218,8 +260,10 @@ interface ApiService {
 
     // Turnos y Personal de Guardia
     @GET("mi/turnos")
-    suspend fun getMisTurnos(): Response<ApiResponse<List<Map<String, Any>>>>
+    suspend fun getMisTurnos(
+        @Query("per_page") perPage: Int = 100
+    ): Response<ApiResponse<PaginatedData<TurnoDto>>>
 
     @GET("publico/medicos-de-turno")
-    suspend fun getMedicosDeTurno(): Response<ApiResponse<List<Map<String, Any>>>>
+    suspend fun getMedicosDeTurno(): Response<ApiResponse<List<MedicoDeTurno>>>
 }

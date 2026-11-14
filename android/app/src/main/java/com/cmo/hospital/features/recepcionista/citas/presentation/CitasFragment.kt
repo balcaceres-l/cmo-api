@@ -1,11 +1,11 @@
 package com.cmo.hospital.features.recepcionista.citas.presentation
 
-import android.content.res.ColorStateList
 import android.os.Bundle
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
+import android.widget.FrameLayout
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -14,16 +14,26 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.cmo.hospital.CmoApplication
-import com.cmo.hospital.R
-import com.cmo.hospital.core.domain.model.CatalogoClinico
 import com.cmo.hospital.core.domain.model.Cita
+import com.cmo.hospital.core.domain.model.EspecialidadCatalogo
 import com.cmo.hospital.core.domain.model.Paciente
+import com.cmo.hospital.core.domain.model.User
+import com.cmo.hospital.core.ui.DateUtils
 import com.cmo.hospital.core.ui.simpleViewModelFactory
 import com.cmo.hospital.databinding.FragmentRecepCitasBinding
 import com.cmo.hospital.features.recepcionista.shell.presentation.RecepcionistaToastHost
 import com.google.android.material.chip.Chip
+import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.util.Locale
 
 class CitasFragment : Fragment() {
 
@@ -36,12 +46,16 @@ class CitasFragment : Fragment() {
     }
 
     private lateinit var citasAdapter: CitasRecepcionAdapter
+    private lateinit var calendarioAdapter: CalendarioCitasAdapter
+    private lateinit var selector: SelectorAgendaController
 
     private var formAbierto = false
-    private var especialidadSeleccionada = CatalogoClinico.CATALOGO_ESPECIALIDADES.keys.first()
-    private var medicoSeleccionado =
-        CatalogoClinico.CATALOGO_ESPECIALIDADES[especialidadSeleccionada]?.first().orEmpty()
-    private var horaSeleccionada = "09:30"
+    private var pacienteSeleccionado: Paciente? = null
+    private var especialidadSeleccionadaId: String? = null
+    private var especialidadSeleccionadaNombre: String? = null // null = todas
+    private var actualizandoCalendarioWidget = false
+
+    private data class EspecialidadFiltroUi(val id: String?, val nombre: String)
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -55,260 +69,449 @@ class CitasFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        setupTabs()
         setupRecyclerView()
-        setupLlamadorSala()
-        setupFormularioCascada()
+        setupFiltros()
+        setupCalendario()
+        setupFormulario()
         observeState()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.refrescar()
+    }
+
+    private fun setupTabs() {
+        binding.tabLayoutCitasRecep.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                val esCalendario = tab?.position == 1
+                binding.scrollTabGestionCitas.visibility = if (esCalendario) View.GONE else View.VISIBLE
+                binding.scrollTabCalendarioCitas.visibility = if (esCalendario) View.VISIBLE else View.GONE
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab?) = Unit
+            override fun onTabReselected(tab: TabLayout.Tab?) = Unit
+        })
     }
 
     private fun setupRecyclerView() {
         citasAdapter = CitasRecepcionAdapter(
             onRegistrarLlegada = { cita -> viewModel.registrarLlegada(cita.id) },
-            onConfirmarSolicitada = { cita -> mostrarDialogoConfirmarCita(cita) },
-            onAbrirTriaje = { cita ->
-                TriajeCitaDialogFragment(cita) { signos, pasar ->
-                    viewModel.guardarTriajeOPasarConsulta(cita.id, signos, pasar)
-                }.show(childFragmentManager, "dialog_triaje_${cita.id}")
-            },
+            onAbrirTriaje = { cita -> abrirDialogoSignosVitales(cita) },
             onPasarDirectoAConsulta = { cita ->
                 viewModel.guardarTriajeOPasarConsulta(cita.id, cita.signosVitales, pasarAConsulta = true)
             },
-            onCancelarCita = { cita -> viewModel.cancelarCita(cita.id) }
+            onCancelarCita = { cita -> pedirMotivoCancelacion(cita) },
+            onReprogramar = { cita -> abrirProgramacion(cita, ProgramarCitaDialogFragment.MODO_REPROGRAMAR) },
+            onConfirmarSolicitud = { cita -> abrirProgramacion(cita, ProgramarCitaDialogFragment.MODO_CONFIRMAR) }
         )
         binding.rvCitasRecepcion.layoutManager = LinearLayoutManager(requireContext())
         binding.rvCitasRecepcion.adapter = citasAdapter
+
+        calendarioAdapter = CalendarioCitasAdapter(
+            onAbrirSignosVitales = { cita -> abrirDialogoSignosVitales(cita) }
+        )
+        binding.rvCalendarioCitas.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvCalendarioCitas.adapter = calendarioAdapter
     }
 
-    private fun mostrarDialogoConfirmarCita(cita: Cita) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            val (medicos, consultorios) = viewModel.cargarMedicosYConsultorios()
-            if (medicos.isEmpty() || consultorios.isEmpty()) {
-                viewModel.confirmarCita(
-                    citaId = cita.id,
-                    idMedico = null,
-                    idConsultorio = null,
-                    medicoNombre = medicoSeleccionado,
-                    consultorioCodigo = "Box 03"
-                )
-                return@launch
+    private fun abrirDialogoSignosVitales(cita: Cita) {
+        TriajeCitaDialogFragment(cita) { signos, pasar ->
+            viewModel.guardarTriajeOPasarConsulta(cita.id, signos, pasar)
+        }.show(childFragmentManager, "dialog_triaje_${cita.id}")
+    }
+
+    /** Filtros de la agenda por estado, por médico y por fecha. */
+    private fun setupFiltros() {
+        val grupo = binding.chipGroupFiltroEstadoCitas
+        grupo.isSingleSelection = true
+        grupo.removeAllViews()
+        CitasViewModel.FILTROS_ESTADO.forEach { estado ->
+            grupo.addView(Chip(requireContext()).apply {
+                id = View.generateViewId()
+                text = estado
+                isCheckable = true
+                isChecked = estado == viewModel.filtroEstado.value
+                textSize = 12f
+                setOnClickListener { viewModel.setFiltroEstado(estado) }
+            })
+        }
+        actualizarDropdownFiltroDoctores(emptyList())
+        binding.actvFiltroDoctor.setOnItemClickListener { _, _, position, _ ->
+            viewModel.setFiltroDoctor(binding.actvFiltroDoctor.adapter?.getItem(position)?.toString().orEmpty())
+        }
+        binding.actvFiltroDoctor.doAfterTextChanged { viewModel.setFiltroDoctor(it?.toString().orEmpty().trim()) }
+
+        binding.etFiltroFechaCita.setOnClickListener { abrirSelectorFiltroFecha() }
+        binding.tilFiltroFechaCita.setOnClickListener { abrirSelectorFiltroFecha() }
+        binding.btnLimpiarFiltroFechaCita.setOnClickListener {
+            viewModel.limpiarFiltroFecha()
+        }
+    }
+
+    /** Configuración del Módulo de Calendario con filtros por doctor y por fecha. */
+    private fun setupCalendario() {
+        binding.actvCalendarioDoctor.setOnItemClickListener { _, _, position, _ ->
+            val elegido = binding.actvCalendarioDoctor.adapter?.getItem(position)?.toString().orEmpty()
+            viewModel.setCalendarioDoctor(elegido)
+        }
+        binding.actvCalendarioDoctor.doAfterTextChanged {
+            viewModel.setCalendarioDoctor(it?.toString().orEmpty().trim())
+        }
+
+        binding.calendarViewCitas.setOnDateChangeListener { _, year, month, dayOfMonth ->
+            if (actualizandoCalendarioWidget) return@setOnDateChangeListener
+            val iso = String.format(Locale.US, "%04d-%02d-%02d", year, month + 1, dayOfMonth)
+            viewModel.setCalendarioFecha(iso)
+        }
+
+        binding.etCalendarioFecha.setOnClickListener { abrirSelectorFechaCalendario() }
+        binding.tilCalendarioFecha.setOnClickListener { abrirSelectorFechaCalendario() }
+
+        binding.btnCalendarioHoy.setOnClickListener {
+            val hoyIso = LocalDate.now().toString()
+            viewModel.setCalendarioFecha(hoyIso)
+            sincronizarCalendarViewConFecha(hoyIso)
+        }
+
+        binding.btnCalendarioTodasFechas.setOnClickListener {
+            viewModel.setCalendarioFecha("")
+        }
+    }
+
+    private fun abrirSelectorFiltroFecha() {
+        if (childFragmentManager.findFragmentByTag("picker_filtro_fecha_cita") != null) return
+        val picker = MaterialDatePicker.Builder.datePicker()
+            .setTitleText("Filtrar citas por fecha")
+            .build()
+        picker.addOnPositiveButtonClickListener { millis ->
+            val iso = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString()
+            viewModel.setFiltroFecha(iso)
+        }
+        picker.show(childFragmentManager, "picker_filtro_fecha_cita")
+    }
+
+    private fun abrirSelectorFechaCalendario() {
+        if (childFragmentManager.findFragmentByTag("picker_calendario_fecha") != null) return
+        val picker = MaterialDatePicker.Builder.datePicker()
+            .setTitleText("Seleccionar fecha en el calendario")
+            .build()
+        picker.addOnPositiveButtonClickListener { millis ->
+            val iso = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate().toString()
+            viewModel.setCalendarioFecha(iso)
+            sincronizarCalendarViewConFecha(iso)
+        }
+        picker.show(childFragmentManager, "picker_calendario_fecha")
+    }
+
+    private fun sincronizarCalendarViewConFecha(fechaIso: String) {
+        if (fechaIso.isBlank()) return
+        try {
+            val ld = LocalDate.parse(DateUtils.toIsoDate(fechaIso))
+            val millis = ld.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            actualizandoCalendarioWidget = true
+            binding.calendarViewCitas.setDate(millis, true, true)
+            actualizandoCalendarioWidget = false
+        } catch (_: Exception) {
+            actualizandoCalendarioWidget = false
+        }
+    }
+
+    private fun actualizarDropdownFiltroDoctores(citas: List<Cita>) {
+        val medicosApi = viewModel.agenda.value.medicos.map { it.nombreCompleto }
+        val enCitas = citas.mapNotNull { c -> c.medicoNombre?.takeIf { it.isNotBlank() } }
+        val opciones = listOf(CitasViewModel.TODOS_LOS_MEDICOS) + (medicosApi + enCitas).distinct().sorted()
+        val array = opciones.toTypedArray()
+
+        binding.actvFiltroDoctor.setSimpleItems(array)
+        if (binding.actvFiltroDoctor.text.isNullOrBlank()) {
+            binding.actvFiltroDoctor.setText(CitasViewModel.TODOS_LOS_MEDICOS, false)
+        }
+
+        binding.actvCalendarioDoctor.setSimpleItems(array)
+        if (binding.actvCalendarioDoctor.text.isNullOrBlank()) {
+            binding.actvCalendarioDoctor.setText(CitasViewModel.TODOS_LOS_MEDICOS, false)
+        }
+    }
+
+    private fun setupFormulario() {
+        binding.headerToggleAgendar.setOnClickListener { alternarFormulario(!formAbierto) }
+
+        selector = SelectorAgendaController(
+            binding = binding.selectorAgenda,
+            fragmentManager = childFragmentManager
+        ) { idMedico, fecha, idEspecialidad -> viewModel.cargarDisponibilidad(idMedico, fecha, idEspecialidad) }
+        childFragmentManager.setFragmentResultListener(
+            ProgramarCitaDialogFragment.RESULTADO_CERRADO, viewLifecycleOwner
+        ) { _, _ -> viewModel.cargarDisponibilidad(selector.idMedico, selector.fecha, selector.idEspecialidad) }
+
+        binding.etCitaPacienteBuscar.doAfterTextChanged { texto ->
+            val valor = texto?.toString().orEmpty()
+            // Escribir de nuevo descarta al paciente elegido.
+            if (pacienteSeleccionado != null && valor != etiquetaPaciente(pacienteSeleccionado!!)) {
+                seleccionarPaciente(null)
             }
-            val medLabels = medicos.map {
-                val cargo = it.cargo?.takeIf { c -> c.isNotBlank() }?.let { c -> " ($c)" } ?: ""
-                "${it.nombreCompleto}$cargo"
-            }.toTypedArray()
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Asignar Médico (${cita.paciente?.nombreCompleto ?: "Paciente"})")
-                .setItems(medLabels) { _, medIdx ->
-                    val med = medicos[medIdx]
-                    val boxLabels = consultorios.map { "${it.codigo} • ${it.nombre}" }.toTypedArray()
-                    MaterialAlertDialogBuilder(requireContext())
-                        .setTitle("Asignar Consultorio")
-                        .setItems(boxLabels) { _, boxIdx ->
-                            val box = consultorios[boxIdx]
-                            viewModel.confirmarCita(
-                                citaId = cita.id,
-                                idMedico = med.id,
-                                idConsultorio = box.id,
-                                medicoNombre = med.nombreCompleto,
-                                consultorioCodigo = box.codigo
-                            )
-                        }
-                        .setNegativeButton("Cancelar", null)
-                        .show()
-                }
-                .setNegativeButton("Cancelar", null)
-                .show()
+            if (pacienteSeleccionado == null) viewModel.buscarPacientes(valor)
+            binding.tilCitaPacienteBuscar.error = null
         }
-    }
-
-    private fun setupLlamadorSala() {
-        binding.btnCallerReLlamar.setOnClickListener { viewModel.reLlamarEnSala() }
-        binding.btnCallerSiguiente.setOnClickListener { viewModel.llamarSiguienteEnSala() }
-    }
-
-    private fun setupFormularioCascada() {
-        binding.headerToggleAgendar.setOnClickListener {
-            formAbierto = !formAbierto
-            binding.containerFormAgendar.visibility = if (formAbierto) View.VISIBLE else View.GONE
-            binding.tvToggleAgendarLabel.text = if (formAbierto) "Cerrar" else "+ Abrir"
-        }
-
-        // 1. Poblar chips de especialidades
-        binding.chipGroupEspecialidades.removeAllViews()
-        CatalogoClinico.CATALOGO_ESPECIALIDADES.keys.forEach { esp ->
-            val chip = createSelectableChip(esp, esp == especialidadSeleccionada)
-            chip.setOnClickListener {
-                especialidadSeleccionada = esp
-                poblarMedicosDeEspecialidad(esp)
-                actualizarChipsBloques30m()
-            }
-            binding.chipGroupEspecialidades.addView(chip)
-        }
-
-        poblarMedicosDeEspecialidad(especialidadSeleccionada)
-
-        binding.etCitaFecha.doAfterTextChanged { actualizarChipsBloques30m() }
-        actualizarChipsBloques30m()
+        binding.etCitaMotivo.doAfterTextChanged { binding.tilCitaMotivo.error = null }
 
         binding.btnConfirmarAgendarCita.setOnClickListener {
+            ocultarErroresFormulario()
             viewModel.agendarCita(
-                especialidad = especialidadSeleccionada,
-                medicoNombre = medicoSeleccionado,
-                pacienteNombre = binding.etCitaPacienteNombre.text?.toString().orEmpty(),
-                dui = binding.etCitaDui.text?.toString().orEmpty(),
-                fechaNacimiento = binding.etCitaFechaNac.text?.toString(),
-                fecha = binding.etCitaFecha.text?.toString().orEmpty(),
-                horaInicio = horaSeleccionada,
-                motivo = binding.etCitaMotivo.text?.toString().orEmpty(),
-                box = binding.etCitaBox.text?.toString().orEmpty(),
-                onSuccess = {
-                    binding.etCitaPacienteNombre.text?.clear()
-                    binding.etCitaDui.text?.clear()
-                    binding.etCitaFechaNac.text?.clear()
-                    binding.etCitaMotivo.text?.clear()
-                    formAbierto = false
-                    binding.containerFormAgendar.visibility = View.GONE
-                    binding.tvToggleAgendarLabel.text = "+ Abrir"
-                }
-            )
+                idPaciente = pacienteSeleccionado?.id,
+                programacion = selector.programacion(),
+                motivo = binding.etCitaMotivo.text?.toString().orEmpty()
+            ) {
+                limpiarFormulario()
+                alternarFormulario(false)
+            }
         }
     }
 
-    private fun poblarMedicosDeEspecialidad(especialidad: String) {
-        val doctores = CatalogoClinico.CATALOGO_ESPECIALIDADES[especialidad].orEmpty()
-        medicoSeleccionado = doctores.firstOrNull().orEmpty()
-        binding.chipGroupMedicos.removeAllViews()
-        doctores.forEachIndexed { index, doc ->
-            val chip = createSelectableChip(doc, index == 0)
-            chip.setOnClickListener {
-                medicoSeleccionado = doc
-                actualizarChipsBloques30m()
-            }
-            binding.chipGroupMedicos.addView(chip)
+    private fun alternarFormulario(abrir: Boolean) {
+        formAbierto = abrir
+        binding.containerFormAgendar.visibility = if (abrir) View.VISIBLE else View.GONE
+        binding.tvToggleAgendarLabel.text = if (abrir) "Cerrar" else "+ Abrir"
+        if (abrir && viewModel.agenda.value.medicos.isEmpty()) viewModel.cargarCatalogos()
+    }
+
+    private fun seleccionarPaciente(paciente: Paciente?) {
+        pacienteSeleccionado = paciente
+        binding.tvCitaPacienteSeleccionado.text = paciente?.let {
+            "✓ ${it.nombreCompleto} • Exp. ${it.numeroExpediente ?: "N/D"}" +
+                (it.dui?.let { dui -> " • DUI $dui" } ?: "")
+        } ?: "Ningún paciente seleccionado"
+        if (paciente != null) {
+            binding.etCitaPacienteBuscar.setText(etiquetaPaciente(paciente))
+            binding.etCitaPacienteBuscar.setSelection(binding.etCitaPacienteBuscar.length())
+            viewModel.limpiarBusquedaPacientes()
         }
     }
 
-    private fun actualizarChipsBloques30m() {
-        val citasActuales = viewModel.citas.value
-        val fecha = binding.etCitaFecha.text?.toString()?.trim().orEmpty()
-        binding.chipGroupBloques30m.removeAllViews()
+    private fun etiquetaPaciente(p: Paciente) = p.nombreCompleto
 
-        // Si la hora seleccionada actual quedó ocupada, preseleccionar el primer bloque libre
-        if (Cita.hayConflictoHorario(citasActuales, medicoSeleccionado, fecha, horaSeleccionada)) {
-            CatalogoClinico.BLOQUES_30_MINUTOS.firstOrNull { h ->
-                !Cita.hayConflictoHorario(citasActuales, medicoSeleccionado, fecha, h)
-            }?.let { libre ->
-                horaSeleccionada = libre
-            }
+    private fun pintarPacientes(encontrados: List<Paciente>, buscando: Boolean) {
+        val grupo = binding.chipGroupPacientes
+        grupo.removeAllViews()
+        if (pacienteSeleccionado != null) return
+        encontrados.forEach { p ->
+            val texto = "${p.nombreCompleto} · ${p.dui ?: p.numeroExpediente ?: ""}".trimEnd(' ', '·')
+            grupo.addView(chipAgenda(requireContext(), texto, false).apply {
+                setOnClickListener { seleccionarPaciente(p) }
+            })
         }
+        val busqueda = binding.etCitaPacienteBuscar.text?.toString().orEmpty().trim()
+        if (!buscando && encontrados.isEmpty() && busqueda.length >= 2) {
+            binding.tvCitaPacienteSeleccionado.text =
+                "Sin coincidencias. Registre al paciente en la pestaña Pacientes."
+        } else if (encontrados.isEmpty()) {
+            binding.tvCitaPacienteSeleccionado.text = if (buscando) "Buscando…" else "Ningún paciente seleccionado"
+        }
+    }
 
+    /** Especialidades del catálogo (con respaldo de especialidadVisible en médicos). */
+    private fun opcionesEspecialidad(
+        especialidades: List<EspecialidadCatalogo>,
+        medicos: List<User>
+    ): List<EspecialidadFiltroUi> {
+        if (especialidades.isNotEmpty()) {
+            return especialidades.map { EspecialidadFiltroUi(id = it.id, nombre = it.nombre) }
+        }
+        return medicos.mapNotNull { m ->
+            m.especialidadVisible?.let { nombre -> EspecialidadFiltroUi(id = m.idEspecialidad, nombre = nombre) }
+        }.distinctBy { it.nombre.lowercase() }.sortedBy { it.nombre }
+    }
+
+    private fun pintarEspecialidades(especialidades: List<EspecialidadCatalogo>, medicos: List<User>) {
+        val grupo = binding.chipGroupEspecialidades
+        grupo.removeAllViews()
+        val opciones = opcionesEspecialidad(especialidades, medicos)
+        val sigueActiva = opciones.any {
+            (especialidadSeleccionadaId != null && it.id == especialidadSeleccionadaId) ||
+                (especialidadSeleccionadaNombre != null && it.nombre.equals(especialidadSeleccionadaNombre, ignoreCase = true))
+        }
+        if (!sigueActiva) {
+            especialidadSeleccionadaId = null
+            especialidadSeleccionadaNombre = null
+        }
+        grupo.addView(chipAgenda(requireContext(), "Todas", especialidadSeleccionadaNombre == null).apply {
+            setOnClickListener { cambiarEspecialidad(null, especialidades, medicos) }
+        })
+        opciones.forEach { op ->
+            val marcada = (especialidadSeleccionadaId != null && op.id == especialidadSeleccionadaId) ||
+                (especialidadSeleccionadaNombre != null && op.nombre.equals(especialidadSeleccionadaNombre, ignoreCase = true))
+            grupo.addView(chipAgenda(requireContext(), op.nombre, marcada).apply {
+                setOnClickListener { cambiarEspecialidad(op, especialidades, medicos) }
+            })
+        }
+    }
+
+    private fun cambiarEspecialidad(
+        opcion: EspecialidadFiltroUi?,
+        especialidades: List<EspecialidadCatalogo>,
+        medicos: List<User>
+    ) {
+        especialidadSeleccionadaId = opcion?.id
+        especialidadSeleccionadaNombre = opcion?.nombre
+        pintarEspecialidades(especialidades, medicos)
+        selector.establecerEspecialidad(
+            idEspecialidad = especialidadSeleccionadaId,
+            nombreEspecialidad = especialidadSeleccionadaNombre,
+            listaFiltrada = medicosFiltrados(medicos)
+        )
+    }
+
+    private fun medicosFiltrados(medicos: List<User>): List<User> {
+        val selId = especialidadSeleccionadaId
+        val selNombre = especialidadSeleccionadaNombre
+        if (selId == null && selNombre == null) return medicos
+        return medicos.filter { m ->
+            (selId != null && m.idEspecialidad == selId) ||
+                (selNombre != null && m.especialidadVisible.equals(selNombre, ignoreCase = true))
+        }
+    }
+
+    private fun pedirMotivoCancelacion(cita: Cita) {
         val ctx = requireContext()
-        CatalogoClinico.BLOQUES_30_MINUTOS.forEach { hora ->
-            val ocupado = Cita.hayConflictoHorario(citasActuales, medicoSeleccionado, fecha, hora)
-            val seleccionado = hora == horaSeleccionada && !ocupado
-            val chip = Chip(ctx).apply {
-                text = if (ocupado) "$hora ⛔" else hora
-                isCheckable = !ocupado
-                isChecked = seleccionado
-                isEnabled = !ocupado
-                textSize = 11f
-                if (ocupado) {
-                    chipBackgroundColor = ColorStateList.valueOf(
-                        ContextCompat.getColor(ctx, R.color.huc_error_container)
-                    )
-                    setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_error_container))
-                } else if (seleccionado) {
-                    chipBackgroundColor = ColorStateList.valueOf(
-                        ContextCompat.getColor(ctx, R.color.huc_primary_container)
-                    )
-                    setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_primary))
-                } else {
-                    chipBackgroundColor = ColorStateList.valueOf(
-                        ContextCompat.getColor(ctx, R.color.huc_surface_low)
-                    )
-                    setTextColor(ContextCompat.getColor(ctx, R.color.huc_on_surface))
-                }
-                setOnClickListener {
-                    if (!ocupado) {
-                        horaSeleccionada = hora
-                        actualizarChipsBloques30m()
-                    }
-                }
-            }
-            binding.chipGroupBloques30m.addView(chip)
+        val campo = TextInputEditText(ctx).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            setText("Cancelada en mostrador")
         }
-
-        val fin = Cita.calcularFin30Minutos(horaSeleccionada)
-        binding.tvCitaBloqueResumen.text = "$horaSeleccionada - $fin (30 min)"
-
-        val conflictoActual =
-            Cita.hayConflictoHorario(citasActuales, medicoSeleccionado, fecha, horaSeleccionada)
-        binding.tvCitaConflictoWarning.visibility =
-            if (conflictoActual) View.VISIBLE else View.GONE
-        binding.btnConfirmarAgendarCita.isEnabled = !conflictoActual
+        val contenedor = FrameLayout(ctx).apply {
+            val pad = (20 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad / 2, pad, 0)
+            addView(TextInputLayout(ctx).apply {
+                hint = "Motivo de la cancelación"
+                addView(campo)
+            })
+        }
+        MaterialAlertDialogBuilder(ctx)
+            .setTitle("Cancelar cita")
+            .setMessage("${cita.paciente?.nombreCompleto ?: "Paciente"} • ${DateUtils.toUiDate(cita.fecha)} ${cita.horaInicio}".trim())
+            .setView(contenedor)
+            .setNegativeButton("Volver", null)
+            .setPositiveButton("Cancelar cita") { _, _ ->
+                viewModel.cancelarCita(cita.id, campo.text?.toString().orEmpty())
+            }
+            .show()
     }
 
-    private fun createSelectableChip(label: String, checked: Boolean): Chip {
-        val ctx = requireContext()
-        return Chip(ctx).apply {
-            text = label
-            isCheckable = true
-            isChecked = checked
-            textSize = 11f
-            setOnCheckedChangeListener { buttonView, isChecked ->
-                buttonView.setTextColor(
-                    ContextCompat.getColor(
-                        ctx,
-                        if (isChecked) R.color.huc_on_primary else R.color.huc_on_surface
-                    )
-                )
-                chipBackgroundColor = ColorStateList.valueOf(
-                    ContextCompat.getColor(
-                        ctx,
-                        if (isChecked) R.color.huc_primary_container else R.color.huc_surface_low
-                    )
-                )
-            }
-            // Estado inicial
-            setTextColor(
-                ContextCompat.getColor(
-                    ctx,
-                    if (checked) R.color.huc_on_primary else R.color.huc_on_surface
-                )
-            )
-            chipBackgroundColor = ColorStateList.valueOf(
-                ContextCompat.getColor(
-                    ctx,
-                    if (checked) R.color.huc_primary_container else R.color.huc_surface_low
-                )
-            )
+    private fun abrirProgramacion(cita: Cita, modo: String) {
+        ProgramarCitaDialogFragment.nuevo(cita.id, modo)
+            .show(childFragmentManager, "programar_${cita.id}")
+    }
+
+    private fun mostrarErrorFormulario(error: ErrorProgramacion) {
+        when (error.campo) {
+            "id_paciente" -> binding.tilCitaPacienteBuscar.error = error.mensaje
+            "id_medico", "id_especialidad" -> selector.marcarErrorMedico(error.mensaje)
+            "motivo" -> binding.tilCitaMotivo.error = error.mensaje
+            "fecha" -> selector.marcarErrorFecha(error.mensaje)
         }
+        binding.tvCitaFormError.text = error.mensaje
+        binding.tvCitaFormError.visibility = View.VISIBLE
+    }
+
+    private fun ocultarErroresFormulario() {
+        binding.tvCitaFormError.visibility = View.GONE
+        binding.tilCitaPacienteBuscar.error = null
+        binding.tilCitaMotivo.error = null
+        selector.marcarErrorMedico(null)
+        selector.marcarErrorFecha(null)
+        viewModel.limpiarError(OrigenProgramacion.FORMULARIO)
+    }
+
+    private fun limpiarFormulario() {
+        seleccionarPaciente(null)
+        binding.etCitaPacienteBuscar.text?.clear()
+        binding.etCitaMotivo.text?.clear()
+        ocultarErroresFormulario()
+        // El bloque recién usado ya no está libre.
+        viewModel.cargarDisponibilidad(selector.idMedico, selector.fecha, selector.idEspecialidad)
     }
 
     private fun observeState() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    viewModel.citas.collect { lista ->
-                        citasAdapter.submitList(lista)
-                        binding.tvCitasTotalBadge.text = "${lista.size} citas"
-                        actualizarChipsBloques30m()
+                    viewModel.citasFiltradas.collect { filtradas ->
+                        citasAdapter.submitList(filtradas)
+                        binding.tvCitasEmpty.visibility = if (filtradas.isEmpty()) View.VISIBLE else View.GONE
                     }
                 }
 
                 launch {
-                    viewModel.turnoEnBox.collect { turno ->
-                        if (turno != null) {
-                            binding.tvCallerBoxBadge.text = turno.consultorio?.codigo ?: "Box 03"
-                            val rawName = turno.paciente?.nombreCompleto ?: "Paciente en Box"
-                            binding.tvCallerPatientAnon.text = Paciente.anonimizarNombre(rawName)
-                            binding.tvCallerDetail.text =
-                                "${turno.horaInicio} • ${turno.especialidad ?: "Medicina General"} • ${turno.medicoNombre ?: "Médico"}"
+                    viewModel.filtroFecha.collect { fechaFiltro ->
+                        if (fechaFiltro.isBlank()) {
+                            binding.etFiltroFechaCita.setText("")
+                            binding.btnLimpiarFiltroFechaCita.visibility = View.GONE
                         } else {
-                            binding.tvCallerBoxBadge.text = "Sala Libre"
-                            binding.tvCallerPatientAnon.text = "Sin turno activo"
-                            binding.tvCallerDetail.text = "Presione 'Siguiente a Box' para llamar paciente"
+                            binding.etFiltroFechaCita.setText(DateUtils.toUiDate(fechaFiltro))
+                            binding.btnLimpiarFiltroFechaCita.visibility = View.VISIBLE
                         }
+                    }
+                }
+
+                launch {
+                    viewModel.citasCalendarioFiltradas.collect { citasCal ->
+                        calendarioAdapter.submitList(citasCal)
+                        binding.tvCalendarioTotalBadge.text = "${citasCal.size} citas"
+                        binding.tvCalendarioEmpty.visibility = if (citasCal.isEmpty()) View.VISIBLE else View.GONE
+                    }
+                }
+
+                launch {
+                    viewModel.calendarioFecha.collect { fechaCal ->
+                        if (fechaCal.isBlank()) {
+                            binding.etCalendarioFecha.setText("Todas las fechas")
+                            binding.tvCalendarioSubtituloLista.text = "Todas las citas agendadas"
+                        } else {
+                            val ui = DateUtils.toUiDate(fechaCal)
+                            binding.etCalendarioFecha.setText(ui)
+                            binding.tvCalendarioSubtituloLista.text = "Citas agendadas para el $ui"
+                        }
+                    }
+                }
+
+                launch {
+                    viewModel.citas.collect { lista ->
+                        binding.tvCitasTotalBadge.text = "${lista.size} citas"
+                        actualizarDropdownFiltroDoctores(lista)
+                    }
+                }
+
+                launch {
+                    var catalogosPintados: Pair<List<User>, List<EspecialidadCatalogo>>? = null
+                    viewModel.agenda.collect { estado ->
+                        val actuales = estado.medicos to estado.especialidades
+                        if (actuales != catalogosPintados) {
+                            catalogosPintados = actuales
+                            pintarEspecialidades(estado.especialidades, estado.medicos)
+                            selector.establecerEspecialidad(
+                                idEspecialidad = especialidadSeleccionadaId,
+                                nombreEspecialidad = especialidadSeleccionadaNombre,
+                                listaFiltrada = medicosFiltrados(estado.medicos)
+                            )
+                            actualizarDropdownFiltroDoctores(viewModel.citas.value)
+                        }
+                        if (estado.catalogosError != null) {
+                            binding.selectorAgenda.tvAgendaAviso.text =
+                                "No se pudo cargar la agenda: ${estado.catalogosError}"
+                        } else {
+                            selector.mostrarDisponibilidad(estado.disponibilidad)
+                        }
+                        pintarPacientes(estado.pacientesEncontrados, estado.buscandoPacientes)
+                        binding.btnConfirmarAgendarCita.isEnabled = !estado.enviando
+                        binding.btnConfirmarAgendarCita.text =
+                            if (estado.enviando) "Agendando…" else "Agendar cita"
+                    }
+                }
+
+                launch {
+                    viewModel.errorProgramacion.collect { error ->
+                        if (error?.origen == OrigenProgramacion.FORMULARIO) mostrarErrorFormulario(error)
                     }
                 }
 

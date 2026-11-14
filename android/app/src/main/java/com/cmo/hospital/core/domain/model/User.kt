@@ -2,6 +2,14 @@ package com.cmo.hospital.core.domain.model
 
 import com.google.gson.annotations.SerializedName
 
+data class EspecialidadResumen(
+    @SerializedName("id_especialidad") val id: String,
+    val nombre: String,
+    val descripcion: String? = null,
+    @SerializedName("es_sistema") val esSistema: Boolean = false,
+    val activo: Boolean = true
+)
+
 /**
  * Entidad de dominio del usuario autenticado vía Laravel Sanctum.
  */
@@ -13,10 +21,19 @@ data class User(
     val rol: String,
     val cargo: String?,
     val telefono: String?,
-    val estado: String
+    val estado: String,
+    @SerializedName("id_especialidad") val idEspecialidad: String? = null,
+    @SerializedName("especialidad_nombre") val especialidadNombre: String? = null,
+    val especialidad: EspecialidadResumen? = null
 ) {
     val cargoPerfil: CargoPerfil
         get() = CargoAccessPolicy.resolverPerfil(this)
+
+    /** Especialidad visible del médico (nuevo campo o cargo heredado para compatibilidad). */
+    val especialidadVisible: String?
+        get() = especialidadNombre?.takeIf { it.isNotBlank() }
+            ?: especialidad?.nombre?.takeIf { it.isNotBlank() }
+            ?: cargo?.takeIf { it.isNotBlank() }
 }
 
 enum class CargoPerfil(val etiquetaBadge: String) {
@@ -56,7 +73,10 @@ object CargoAccessPolicy {
                 if (esEnfermeria) CargoPerfil.ENFERMERA else CargoPerfil.RECEPCIONISTA
             }
             "MEDICO" -> {
-                val esEmergencia = cargoNorm.contains("emergen") ||
+                val espNorm = (user.especialidadVisible ?: "").trim().lowercase()
+                val esEmergencia = espNorm.contains("emergen") ||
+                    espNorm.contains("urgenc") ||
+                    cargoNorm.contains("emergen") ||
                     cargoNorm.contains("urgenc") ||
                     usuarioNorm.contains("emergen")
                 if (esEmergencia) CargoPerfil.MEDICO_EMERGENCIA else CargoPerfil.MEDICO_CONSULTA

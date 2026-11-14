@@ -6,99 +6,133 @@
     android:layout_height="wrap_content"
     android:layout_marginBottom="8dp"
     android:background="@drawable/bg_surface_container_16"
-    android:gravity="center_vertical"
-    android:orientation="horizontal"
-    android:paddingHorizontal="10dp"
-    android:paddingVertical="8dp">
+    android:orientation="vertical"
+    android:paddingHorizontal="12dp"
+    android:paddingVertical="10dp">
 
-    <TextView
-        android:id="@+id/tvSalaCodigo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:paddingEnd="8dp"
-        android:textAppearance="@style/TextAppearance.Huc.TitleSm"
-        tools:text="HAB-202" />
-
-    <View
-        android:layout_width="0dp"
-        android:layout_height="1dp"
-        android:layout_weight="1" />
-
-    <!-- Cama A -->
     <LinearLayout
-        android:id="@+id/btnCamaA"
-        android:layout_width="wrap_content"
-        android:layout_height="32dp"
-        android:background="@drawable/bg_bed_semi_occupied"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingHorizontal="9dp">
-
-        <View
-            android:id="@+id/dotCamaA"
-            android:layout_width="6dp"
-            android:layout_height="6dp"
-            android:background="@drawable/bg_dot_circle"
-            android:backgroundTint="@color/huc_error" />
+        android:orientation="horizontal">
 
         <TextView
-            android:id="@+id/tvCamaALabel"
+            android:id="@+id/tvSalaCodigo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textAppearance="@style/TextAppearance.Huc.TitleSm"
+            tools:text="Habitación HAB-201 • 2ª Planta" />
+
+        <TextView
+            android:id="@+id/tvSalaResumenEstado"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="5dp"
-            android:text="Cama A (Ocup.)"
-            android:textColor="@color/huc_error"
-            android:textSize="11sp"
-            android:textStyle="bold" />
-
-        <ImageView
-            android:id="@+id/ivCamaACheck"
-            android:layout_width="14dp"
-            android:layout_height="14dp"
-            android:layout_marginStart="3dp"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_check"
-            android:visibility="gone"
-            app:tint="@color/huc_primary_fixed" />
+            android:background="@drawable/bg_pill_primary_fixed"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:textColor="@color/huc_on_primary_fixed"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            tools:text="2/2 Disponibles" />
     </LinearLayout>
 
-    <!-- Cama B -->
     <LinearLayout
-        android:id="@+id/btnCamaB"
-        android:layout_width="wrap_content"
-        android:layout_height="32dp"
-        android:layout_marginStart="6dp"
-        android:background="@drawable/bg_bed_semi_available"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingHorizontal="9dp">
+        android:orientation="horizontal">
 
-        <View
-            android:id="@+id/dotCamaB"
-            android:layout_width="6dp"
-            android:layout_height="6dp"
-            android:background="@drawable/bg_dot_circle"
-            android:backgroundTint="@color/huc_primary" />
-
-        <TextView
-            android:id="@+id/tvCamaBLabel"
-            android:layout_width="wrap_content"
+        <!-- Cama A -->
+        <LinearLayout
+            android:id="@+id/btnCamaA"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="5dp"
-            android:text="Cama B (Disp.)"
-            android:textColor="@color/huc_primary"
-            android:textSize="11sp"
-            android:textStyle="bold" />
+            android:layout_marginEnd="4dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_bed_semi_occupied"
+            android:gravity="center_vertical"
+            android:minHeight="38dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="6dp">
 
-        <ImageView
-            android:id="@+id/ivCamaBCheck"
-            android:layout_width="14dp"
-            android:layout_height="14dp"
-            android:layout_marginStart="3dp"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_check"
-            android:visibility="gone"
-            app:tint="@color/huc_primary_fixed" />
+            <View
+                android:id="@+id/dotCamaA"
+                android:layout_width="7dp"
+                android:layout_height="7dp"
+                android:background="@drawable/bg_dot_circle"
+                android:backgroundTint="@color/huc_error" />
+
+            <TextView
+                android:id="@+id/tvCamaALabel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:text="Cama A: Ocupada"
+                android:textColor="@color/huc_error"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/ivCamaACheck"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_marginStart="3dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_check"
+                android:visibility="gone"
+                app:tint="@color/huc_primary_fixed" />
+        </LinearLayout>
+
+        <!-- Cama B -->
+        <LinearLayout
+            android:id="@+id/btnCamaB"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_bed_semi_available"
+            android:gravity="center_vertical"
+            android:minHeight="38dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="6dp">
+
+            <View
+                android:id="@+id/dotCamaB"
+                android:layout_width="7dp"
+                android:layout_height="7dp"
+                android:background="@drawable/bg_dot_circle"
+                android:backgroundTint="@color/huc_primary" />
+
+            <TextView
+                android:id="@+id/tvCamaBLabel"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:text="Cama B: Disponible"
+                android:textColor="@color/huc_primary"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/ivCamaBCheck"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_marginStart="3dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_check"
+                android:visibility="gone"
+                app:tint="@color/huc_primary_fixed" />
+        </LinearLayout>
     </LinearLayout>
 
 </LinearLayout>

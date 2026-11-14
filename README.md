@@ -5,7 +5,7 @@ Ecosistema multiplataforma para la gestión operativa y clínica de un hospital 
 | Carpeta | Proyecto | Tecnología |
 | --- | --- | --- |
 | [`backend/`](backend) | API REST compartida | Laravel 12, Sanctum, MariaDB, Reverb |
-| [`android/`](android) | App de recepción, enfermería y doctores | Kotlin, Jetpack Compose, MVVM |
+| [`android/`](android) | App de recepción y médicos | Kotlin, vistas XML, MVVM |
 | [`ios/`](ios) | App de doctores y pacientes | Swift, SwiftUI, MVVM |
 | [`web/`](web) | Panel web de administración y operaciones | React 18, Vite, TypeScript |
 | [`docs/`](docs) | Plan de trabajo y documentación | HTML interactivo, Backlog |

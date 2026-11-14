@@ -42,7 +42,7 @@
             android:textColor="@color/huc_primary_fixed"
             android:textSize="14sp"
             android:textStyle="bold"
-            tools:text="Hospital Universitario Central - Admisión" />
+            tools:text="Centro Médico de Occidente - Admisión" />
 
         <TextView
             android:id="@+id/tvBannerSubtitle"

@@ -82,12 +82,16 @@ class ConsultaViewModel(
     }
 
     fun guardarSignos(signos: SignosVitales) {
-        actualizarSignosConsultaUseCase(signos)
-        _toastEvent.value = Triple(
-            "Signos Vitales Registrados",
-            "Parámetros clínicos actualizados en la consulta.",
-            false
-        )
+        viewModelScope.launch {
+            actualizarSignosConsultaUseCase(signos).fold(
+                onSuccess = {
+                    _toastEvent.value = Triple("Signos vitales guardados", "Quedaron registrados en la cita.", false)
+                },
+                onFailure = { err ->
+                    _toastEvent.value = Triple("No se guardaron los signos", err.message ?: "Intente de nuevo.", true)
+                }
+            )
+        }
     }
 
     fun agregarCie10(codigo: String, descripcion: String) {

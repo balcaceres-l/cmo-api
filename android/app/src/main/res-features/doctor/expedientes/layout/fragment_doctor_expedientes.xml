@@ -46,14 +46,14 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Acceso Clínico Auditado • Privacidad"
+                    android:text="Acceso clínico restringido"
                     android:textAppearance="@style/TextAppearance.Huc.TitleSm"
                     android:textColor="@color/huc_primary_fixed" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Trazabilidad de lectura de historia clínica electrónica CMO"
+                    android:text="Solo ve los expedientes de los pacientes que atiende."
                     android:textAppearance="@style/TextAppearance.Huc.BodySm"
                     android:textColor="@color/huc_on_primary_container" />
             </LinearLayout>
@@ -108,8 +108,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/huc_space_sm"
-                app:endIconMode="clear_text"
-                app:hintEnabled="false"
+                android:hint="Buscar por nombre, DUI o N° Expediente (ej. CM-2026-001)"
                 app:startIconDrawable="@drawable/ic_search"
                 app:startIconTint="@color/huc_primary_container">
 
@@ -117,57 +116,25 @@
                     android:id="@+id/etBuscarExpediente"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Buscar por Nombre, DUI o Expediente"
                     android:inputType="text"
                     android:maxLines="1"
                     android:textAppearance="@style/TextAppearance.Huc.BodyMd" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Lista Desplegable Alfabética al Tocar/Escribir en el Buscador -->
-            <LinearLayout
-                android:id="@+id/containerDropdownPacientes"
+            <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/bg_surface_low_16"
-                android:orientation="vertical"
-                android:padding="10dp"
-                android:visibility="gone">
+                android:layout_marginTop="@dimen/huc_space_sm"
+                android:scrollbars="none">
 
-                <LinearLayout
-                    android:layout_width="match_parent"
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupPacientesExpediente"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="4dp"
-                    android:paddingBottom="6dp">
-
-                    <TextView
-                        android:id="@+id/tvDropdownPacientesCount"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="Pacientes (A–Z)"
-                        android:textAppearance="@style/TextAppearance.Huc.LabelSm"
-                        android:textColor="@color/huc_on_surface_variant" />
-
-                    <TextView
-                        android:id="@+id/btnCerrarDropdownPacientes"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:paddingHorizontal="8dp"
-                        android:paddingVertical="4dp"
-                        android:text="Cerrar"
-                        android:textAppearance="@style/TextAppearance.Huc.LabelSm"
-                        android:textColor="@color/huc_primary" />
-                </LinearLayout>
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvPacientesDropdown"
-                    android:layout_width="match_parent"
-                    android:layout_height="220dp"
-                    android:nestedScrollingEnabled="true" />
-            </LinearLayout>
+                    app:selectionRequired="true"
+                    app:singleLine="true"
+                    app:singleSelection="true" />
+            </HorizontalScrollView>
         </LinearLayout>
 
         <!-- Mensaje sin coincidencias -->
@@ -225,7 +192,7 @@
                         android:background="@drawable/bg_pill_tertiary_fixed"
                         android:paddingHorizontal="10dp"
                         android:paddingVertical="4dp"
-                        android:text="Protegido • Privacidad"
+                        android:text="Protegido"
                         android:textAppearance="@style/TextAppearance.Huc.LabelSm"
                         android:textColor="@color/huc_on_tertiary_fixed"
                         android:visibility="gone" />
@@ -244,7 +211,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="45 años • DNI: 14.891.203-K • Sangre: O+"
+                    android:text="45 años • DUI: 01234567-8 • Sangre: O+"
                     android:textAppearance="@style/TextAppearance.Huc.BodySm" />
 
                 <TextView
@@ -315,10 +282,19 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnExpEditarAntecedentes"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Editar antecedentes" />
             </LinearLayout>
 
-            <!-- Signos Vitales Registrados -->
+            <!-- Signos vitales: la API no los guarda todavía, la tarjeta queda oculta. -->
             <LinearLayout
+                android:id="@+id/cardSignosExpediente"
+                android:visibility="gone"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/huc_space_md"

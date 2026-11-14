@@ -65,9 +65,11 @@ class DoctorShellFragment : Fragment(), DoctorShellHost {
                 )
             },
             onLogoutClick = {
-                viewLifecycleOwner.lifecycleScope.launch {
+                // En el alcance de la actividad: este fragmento se destruye al navegar.
+                val actividad = requireActivity()
+                actividad.lifecycleScope.launch {
                     appContainer.logoutUseCase()
-                    (activity as? AuthNavigationHost)?.onLogoutCompleted()
+                    (actividad as? AuthNavigationHost)?.onLogoutCompleted()
                 }
             }
         )
@@ -161,12 +163,13 @@ class DoctorShellFragment : Fragment(), DoctorShellHost {
         val consulta = appContainer.clinicalDataSource.consultaActiva.value
         AgendarSeguimientoDialogFragment().apply {
             this.pacientePreseleccionado = pacientePreseleccionado
-            this.medicoNombre = user?.nombreCompleto ?: consulta.medicoNombre
-            this.especialidad = user?.cargo ?: consulta.especialidad
+            this.idMedico = user?.id
+            this.medicoNombre = user?.nombreCompleto ?: consulta.medicoNombre.orEmpty()
+            this.especialidad = user?.especialidadVisible ?: consulta.especialidad.orEmpty()
             this.onCitaAgendada = { cita ->
                 showToastSuccess(
-                    "Control Médico Agendado",
-                    "${cita.paciente?.nombreCompleto} • ${cita.fecha} (${cita.horaInicio} - ${cita.horaFin})"
+                    "Control agendado",
+                    "${cita.paciente?.nombreCompleto ?: "Paciente"} • ${com.cmo.hospital.core.ui.DateUtils.toUiDate(cita.fecha)} a las ${cita.horaInicio}"
                 )
             }
         }.show(childFragmentManager, "dialog_agendar_seguimiento_doc")

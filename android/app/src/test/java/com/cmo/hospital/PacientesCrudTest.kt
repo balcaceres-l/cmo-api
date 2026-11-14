@@ -84,4 +84,63 @@ class PacientesCrudTest {
         // Ignora caracteres extra y dígitos de más.
         assertEquals("01234567-8", DuiTextWatcher.formatear("0123 4567-89"))
     }
+
+    @Test
+    fun testMenorDeEdadDeshabilitaDuiYExigeDatosDelResponsable() {
+        val hoy = LocalDate.of(2026, 11, 11)
+        val menorBase = PacienteForm(
+            nombreCompleto = "Mateo Pérez",
+            fechaNacimiento = "2016-05-10", // 10 años (menor de edad)
+            sexo = "M",
+            dui = null,
+            telefono = "7123-4567",
+            direccion = "Col. Escalón, San Salvador",
+            responsableNombre = "Claudia Pérez",
+            responsableFechaNacimiento = "1988-03-15",
+            responsableTipoDocumento = "DUI",
+            responsableDocumento = "01234567-8",
+            responsableTelefono = "7123-4567",
+            responsableParentesco = "Madre",
+            exigirDatosCompletos = true
+        )
+
+        // Válido con datos de responsable y sin DUI del menor
+        assertNull(GuardarPacienteUseCase.validarCampo(menorBase, hoy))
+
+        // Si se intenta enviar DUI en el menor, falla en el campo "dui"
+        assertEquals(
+            "dui",
+            GuardarPacienteUseCase.validarCampo(menorBase.copy(dui = "01234567-8"), hoy)?.first
+        )
+
+        // Si falta cualquiera de los datos del responsable, marca el campo correspondiente
+        assertEquals(
+            "responsable_nombre",
+            GuardarPacienteUseCase.validarCampo(menorBase.copy(responsableNombre = ""), hoy)?.first
+        )
+        assertEquals(
+            "responsable_fecha_nacimiento",
+            GuardarPacienteUseCase.validarCampo(menorBase.copy(responsableFechaNacimiento = "2012-01-01"), hoy)?.first
+        )
+        assertEquals(
+            "responsable_documento",
+            GuardarPacienteUseCase.validarCampo(menorBase.copy(responsableDocumento = "123"), hoy)?.first
+        )
+        assertEquals(
+            "responsable_telefono",
+            GuardarPacienteUseCase.validarCampo(menorBase.copy(responsableTelefono = "123"), hoy)?.first
+        )
+        assertEquals(
+            "responsable_parentesco",
+            GuardarPacienteUseCase.validarCampo(menorBase.copy(responsableParentesco = ""), hoy)?.first
+        )
+
+        // Soporta pasaporte tanto en adulto como en responsable
+        assertNull(
+            GuardarPacienteUseCase.validarCampo(
+                menorBase.copy(responsableTipoDocumento = "PASAPORTE", responsableDocumento = "A0987654"),
+                hoy
+            )
+        )
+    }
 }

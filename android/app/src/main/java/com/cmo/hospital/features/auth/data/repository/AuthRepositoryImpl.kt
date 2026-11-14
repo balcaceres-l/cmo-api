@@ -8,6 +8,8 @@ import com.cmo.hospital.core.network.dto.LoginRequest
 import com.cmo.hospital.core.session.SessionManager
 import com.cmo.hospital.features.auth.domain.repository.AuthRepository
 import com.cmo.hospital.features.auth.domain.repository.AuthResult
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 
@@ -54,8 +56,12 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun logout() {
+        // Revoca el token en el servidor, pero sin dejar al usuario esperando
+        // si la red falla: la sesión local se borra igual.
         try {
-            apiService.logout()
+            withTimeoutOrNull(5_000) { apiService.logout() }
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
         }
         sessionManager.clear()

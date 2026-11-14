@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="10dp"
+    android:background="@drawable/bg_card_rounded_16"
+    android:elevation="1dp"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <!-- Fila Superior: Día de la cita + Hora de la cita + Estado -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_event"
+            app:tint="@color/huc_primary_container" />
+
+        <TextView
+            android:id="@+id/tvCalCitaDia"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:fontFamily="@font/manrope_bold"
+            android:textColor="@color/huc_on_surface"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            tools:text="Día: 10/11/2026" />
+
+        <TextView
+            android:id="@+id/tvCalCitaHora"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_pill_primary_fixed"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="2dp"
+            android:textColor="@color/huc_on_primary_fixed"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            tools:text="09:00 - 09:30" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/tvCalCitaEstado"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_pill_secondary_fixed"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="3dp"
+            android:textColor="@color/huc_on_secondary_fixed"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            tools:text="Agendada" />
+    </LinearLayout>
+
+    <!-- Información del Paciente y de la Cita -->
+    <TextView
+        android:id="@+id/tvCalCitaPaciente"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textAppearance="@style/TextAppearance.Huc.TitleMd"
+        tools:text="Lucía Morales Castillo" />
+
+    <TextView
+        android:id="@+id/tvCalCitaExpediente"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/huc_on_surface_variant"
+        android:textSize="12sp"
+        tools:text="Expediente: LM-2026-002 • DUI: 16.782.341-8" />
+
+    <TextView
+        android:id="@+id/tvCalCitaMotivo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textAppearance="@style/TextAppearance.Huc.BodySm"
+        android:textColor="@color/huc_on_surface"
+        tools:text="Motivo: Cefalea persistente y mareos matutinos" />
+
+    <!-- Bloque del Doctor que atenderá -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_surface_low_16"
+        android:gravity="center_vertical"
+        android:orientation="vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="8dp">
+
+        <TextView
+            android:id="@+id/tvCalCitaDoctor"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/huc_secondary"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            tools:text="Médico que atenderá: Dr. Alejandro Restrepo" />
+
+        <TextView
+            android:id="@+id/tvCalCitaEspecialidadYBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/huc_on_surface_variant"
+            android:textSize="11sp"
+            tools:text="Especialidad: Medicina General • Consultorio: Box 03" />
+    </LinearLayout>
+
+    <!-- Estado de signos vitales y botón rápido si corresponde al día -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tvCalCitaSignosInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/huc_on_surface_variant"
+            android:textSize="11sp"
+            tools:text="Signos vitales disponibles el día de la cita" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCalCitaSignos"
+            style="@style/Widget.Huc.Button.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginStart="8dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minHeight="36dp"
+            android:text="Signos Vitales"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+</LinearLayout>

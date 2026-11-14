@@ -63,6 +63,8 @@ class TriajeCitaDialogFragment(
             return if (sv.hasAnyData) sv else null
         }
 
+        // Recepción solo guarda signos: la consulta la inicia el médico.
+        binding.btnTriajePasarAConsulta.visibility = android.view.View.GONE
         binding.btnTriajePasarAConsulta.setOnClickListener {
             onDecision(buildSignos(), true)
             dismiss()

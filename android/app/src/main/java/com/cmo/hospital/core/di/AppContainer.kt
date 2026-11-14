@@ -25,8 +25,9 @@ import com.cmo.hospital.features.doctor.consulta.domain.usecase.TickCronometroCo
 import com.cmo.hospital.features.doctor.consulta.presentation.ConsultaViewModel
 import com.cmo.hospital.features.doctor.expedientes.data.repository.ExpedientesRepositoryImpl
 import com.cmo.hospital.features.doctor.expedientes.domain.repository.ExpedientesRepository
-import com.cmo.hospital.features.doctor.expedientes.domain.usecase.FiltrarExpedientesUseCase
-import com.cmo.hospital.features.doctor.expedientes.domain.usecase.GetExpedientesFlowUseCase
+import com.cmo.hospital.features.doctor.expedientes.domain.usecase.BuscarPacientesTratadosUseCase
+import com.cmo.hospital.features.doctor.expedientes.domain.usecase.CargarExpedienteUseCase
+import com.cmo.hospital.features.doctor.expedientes.domain.usecase.GuardarAntecedentesUseCase
 import com.cmo.hospital.features.doctor.expedientes.presentation.ExpedientesViewModel
 import com.cmo.hospital.features.doctor.inicio.data.repository.InicioDoctorRepositoryImpl
 import com.cmo.hospital.features.doctor.inicio.domain.repository.InicioDoctorRepository
@@ -34,6 +35,7 @@ import com.cmo.hospital.features.doctor.inicio.domain.usecase.AbrirExpedientePac
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.ConstruirPacientesMedicoUseCase
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.IniciarORetomarConsultaMedicoUseCase
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.ObserveCitasMedicoUseCase
+import com.cmo.hospital.features.doctor.inicio.domain.usecase.ResumirMisTurnosUseCase
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.ObserveConsultaEnCursoUseCase
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.ObserveExpedientesMedicoUseCase
 import com.cmo.hospital.features.doctor.inicio.domain.usecase.SincronizarPanelMedicoUseCase
@@ -47,22 +49,35 @@ import com.cmo.hospital.features.doctor.laboratorio.domain.usecase.GetOrdenesLab
 import com.cmo.hospital.features.doctor.laboratorio.presentation.LaboratorioViewModel
 import com.cmo.hospital.features.recepcionista.admision.data.repository.AdmisionRepositoryImpl
 import com.cmo.hospital.features.recepcionista.admision.domain.repository.AdmisionRepository
-import com.cmo.hospital.features.recepcionista.admision.domain.usecase.GenerarBrazaleteQrUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.BuscarPacientesIngresoUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.CargarMedicosTratantesUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.DarAltaUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.IngresarPacienteUseCase
 import com.cmo.hospital.features.recepcionista.admision.domain.usecase.ObserveCapacidadCamasUseCase
-import com.cmo.hospital.features.recepcionista.admision.domain.usecase.RegistrarIngresoPacienteUseCase
-import com.cmo.hospital.features.recepcionista.admision.domain.usecase.SimularEscanerDocumentoUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.ObserveHabitacionesDetalladasUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.RefrescarCamasUseCase
+import com.cmo.hospital.features.recepcionista.admision.domain.usecase.TrasladarPacienteUseCase
 import com.cmo.hospital.features.recepcionista.admision.presentation.AdmisionViewModel
 import com.cmo.hospital.features.recepcionista.ambulancia.data.repository.AmbulanciaGuardiaRepositoryImpl
 import com.cmo.hospital.features.recepcionista.ambulancia.domain.repository.AmbulanciaGuardiaRepository
-import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.CambiarEstadoAmbulanciaUseCase
-import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.GetAmbulanciaFlowUseCase
-import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.GetPersonalGuardiaFiltradoUseCase
+import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.CargarPanelAmbulanciaUseCase
+import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.EnviarReporteAmbulanciaUseCase
+import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.FinalizarServicioAmbulanciaUseCase
+import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.ObservarAmbulanciaEnVivoUseCase
 import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.SolicitarDespachoAmbulanciaUseCase
 import com.cmo.hospital.features.recepcionista.ambulancia.presentation.AmbulanciaGuardiaViewModel
+import com.cmo.hospital.core.realtime.ReverbClient
+import com.cmo.hospital.features.doctor.inicio.presentation.AmbulanciaMedicoViewModel
+import com.cmo.hospital.features.recepcionista.ambulancia.domain.usecase.CargarAmbulanciaMedicoUseCase
 import com.cmo.hospital.features.recepcionista.insumos.presentation.InsumosEnfermeriaViewModel
 import com.cmo.hospital.features.recepcionista.citas.data.repository.CitaRepositoryImpl
 import com.cmo.hospital.features.recepcionista.citas.domain.repository.CitaRepository
-import com.cmo.hospital.features.recepcionista.citas.domain.usecase.AgendarCitaCascadaUseCase
+import com.cmo.hospital.features.recepcionista.citas.domain.usecase.AgendarCitaUseCase
+import com.cmo.hospital.features.recepcionista.citas.domain.usecase.BuscarPacientesParaCitaUseCase
+import com.cmo.hospital.features.recepcionista.citas.domain.usecase.CargarCatalogosAgendaUseCase
+import com.cmo.hospital.features.recepcionista.citas.domain.usecase.ConfirmarCitaUseCase
+import com.cmo.hospital.features.recepcionista.citas.domain.usecase.GetDisponibilidadUseCase
+import com.cmo.hospital.features.recepcionista.citas.domain.usecase.ReprogramarCitaUseCase
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.CancelarCitaUseCase
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.ControlarLlamadorSalaUseCase
 import com.cmo.hospital.features.recepcionista.citas.domain.usecase.GetCitasFlowUseCase
@@ -102,10 +117,10 @@ class AppContainer(context: Context) {
         LaboratorioRecepcionRepositoryImpl(apiService)
     val admisionRepository: AdmisionRepository = AdmisionRepositoryImpl(clinicalDataSource)
     val ambulanciaRepository: AmbulanciaGuardiaRepository =
-        AmbulanciaGuardiaRepositoryImpl(clinicalDataSource)
+        AmbulanciaGuardiaRepositoryImpl(apiService, ReverbClient())
     val consultaRepository: ConsultaRepository = ConsultaRepositoryImpl(clinicalDataSource)
-    val inicioDoctorRepository: InicioDoctorRepository = InicioDoctorRepositoryImpl(clinicalDataSource)
-    val expedientesRepository: ExpedientesRepository = ExpedientesRepositoryImpl(clinicalDataSource)
+    val inicioDoctorRepository: InicioDoctorRepository = InicioDoctorRepositoryImpl(clinicalDataSource, apiService)
+    val expedientesRepository: ExpedientesRepository = ExpedientesRepositoryImpl(apiService, clinicalDataSource)
     val laboratorioRepository: LaboratorioRepository = LaboratorioRepositoryImpl(clinicalDataSource)
 
     // ─── Casos de Uso transversales de Sesión & Seguimiento ──────────────────
@@ -124,12 +139,16 @@ class AppContainer(context: Context) {
             getCitasFlowUseCase = GetCitasFlowUseCase(citaRepository),
             getTurnoEnBoxFlowUseCase = GetTurnoEnBoxFlowUseCase(citaRepository),
             refreshCitasUseCase = RefreshCitasUseCase(citaRepository),
-            agendarCitaCascadaUseCase = AgendarCitaCascadaUseCase(citaRepository),
+            cargarCatalogosAgendaUseCase = CargarCatalogosAgendaUseCase(citaRepository),
+            getDisponibilidadUseCase = GetDisponibilidadUseCase(citaRepository),
+            buscarPacientesParaCitaUseCase = BuscarPacientesParaCitaUseCase(citaRepository),
+            agendarCitaUseCase = AgendarCitaUseCase(citaRepository),
+            confirmarCitaUseCase = ConfirmarCitaUseCase(citaRepository),
+            reprogramarCitaUseCase = ReprogramarCitaUseCase(citaRepository),
             marcarLlegadaCitaUseCase = MarcarLlegadaCitaUseCase(citaRepository),
             cancelarCitaUseCase = CancelarCitaUseCase(citaRepository),
             registrarTriajeYPasarConsultaUseCase = RegistrarTriajeYPasarConsultaUseCase(citaRepository),
-            controlarLlamadorSalaUseCase = ControlarLlamadorSalaUseCase(citaRepository),
-            repository = citaRepository
+            controlarLlamadorSalaUseCase = ControlarLlamadorSalaUseCase(citaRepository)
         )
 
     fun createPacientesViewModel(): PacientesViewModel =
@@ -148,18 +167,30 @@ class AppContainer(context: Context) {
     fun createAdmisionViewModel(): AdmisionViewModel =
         AdmisionViewModel(
             observeCapacidadCamasUseCase = ObserveCapacidadCamasUseCase(admisionRepository),
-            simularEscanerDocumentoUseCase = SimularEscanerDocumentoUseCase(),
-            registrarIngresoPacienteUseCase = RegistrarIngresoPacienteUseCase(admisionRepository),
-            generarBrazaleteQrUseCase = GenerarBrazaleteQrUseCase(),
-            repository = admisionRepository
+            observeHabitacionesDetalladasUseCase = ObserveHabitacionesDetalladasUseCase(admisionRepository),
+            refrescarCamasUseCase = RefrescarCamasUseCase(admisionRepository),
+            cargarMedicosTratantesUseCase = CargarMedicosTratantesUseCase(admisionRepository),
+            buscarPacientesIngresoUseCase = BuscarPacientesIngresoUseCase(admisionRepository),
+            ingresarPacienteUseCase = IngresarPacienteUseCase(admisionRepository),
+            darAltaUseCase = DarAltaUseCase(admisionRepository),
+            trasladarPacienteUseCase = TrasladarPacienteUseCase(admisionRepository),
+            guardarPacienteUseCase = GuardarPacienteUseCase(pacientesRepository)
         )
 
     fun createAmbulanciaGuardiaViewModel(): AmbulanciaGuardiaViewModel =
         AmbulanciaGuardiaViewModel(
-            getAmbulanciaFlowUseCase = GetAmbulanciaFlowUseCase(ambulanciaRepository),
-            cambiarEstadoAmbulanciaUseCase = CambiarEstadoAmbulanciaUseCase(ambulanciaRepository),
+            cargarPanelAmbulanciaUseCase = CargarPanelAmbulanciaUseCase(ambulanciaRepository),
             solicitarDespachoAmbulanciaUseCase = SolicitarDespachoAmbulanciaUseCase(ambulanciaRepository),
-            getPersonalGuardiaFiltradoUseCase = GetPersonalGuardiaFiltradoUseCase(ambulanciaRepository)
+            finalizarServicioAmbulanciaUseCase = FinalizarServicioAmbulanciaUseCase(ambulanciaRepository),
+            enviarReporteAmbulanciaUseCase = EnviarReporteAmbulanciaUseCase(ambulanciaRepository),
+            observarAmbulanciaEnVivoUseCase = ObservarAmbulanciaEnVivoUseCase(ambulanciaRepository)
+        )
+
+    fun createAmbulanciaMedicoViewModel(): AmbulanciaMedicoViewModel =
+        AmbulanciaMedicoViewModel(
+            cargarAmbulanciaMedicoUseCase = CargarAmbulanciaMedicoUseCase(ambulanciaRepository),
+            enviarReporteAmbulanciaUseCase = EnviarReporteAmbulanciaUseCase(ambulanciaRepository),
+            observarAmbulanciaEnVivoUseCase = ObservarAmbulanciaEnVivoUseCase(ambulanciaRepository)
         )
 
     fun createInsumosEnfermeriaViewModel(): InsumosEnfermeriaViewModel =
@@ -173,7 +204,8 @@ class AppContainer(context: Context) {
             sincronizarPanelMedicoUseCase = SincronizarPanelMedicoUseCase(inicioDoctorRepository),
             iniciarORetomarConsultaMedicoUseCase = IniciarORetomarConsultaMedicoUseCase(inicioDoctorRepository),
             abrirExpedientePacienteUseCase = AbrirExpedientePacienteUseCase(inicioDoctorRepository),
-            construirPacientesMedicoUseCase = ConstruirPacientesMedicoUseCase()
+            construirPacientesMedicoUseCase = ConstruirPacientesMedicoUseCase(),
+            resumirMisTurnosUseCase = ResumirMisTurnosUseCase(inicioDoctorRepository)
         )
 
     fun createConsultaViewModel(): ConsultaViewModel =
@@ -192,9 +224,10 @@ class AppContainer(context: Context) {
 
     fun createExpedientesViewModel(): ExpedientesViewModel =
         ExpedientesViewModel(
-            getExpedientesFlowUseCase = GetExpedientesFlowUseCase(expedientesRepository),
             expedientesRepository = expedientesRepository,
-            filtrarExpedientesUseCase = FiltrarExpedientesUseCase(),
+            buscarPacientesTratadosUseCase = BuscarPacientesTratadosUseCase(expedientesRepository),
+            cargarExpedienteUseCase = CargarExpedienteUseCase(expedientesRepository),
+            guardarAntecedentesUseCase = GuardarAntecedentesUseCase(expedientesRepository),
             emitirOrdenLabUseCase = EmitirOrdenLabUseCase(laboratorioRepository),
             cancelarOrdenLabUseCase = CancelarOrdenLabUseCase(laboratorioRepository)
         )

@@ -79,7 +79,12 @@ class PacientesViewModel(
      * [onTerminado] recibe null si se guardó, o el error para mostrarlo dentro del
      * formulario: el toast del shell queda detrás del diálogo y no se vería.
      */
-    fun guardar(paciente: Paciente?, form: PacienteForm, onTerminado: (ErrorFormulario?) -> Unit) {
+    fun guardar(
+        paciente: Paciente?,
+        form: PacienteForm,
+        onGuardadoExitoso: (Paciente) -> Unit = {},
+        onTerminado: (ErrorFormulario?) -> Unit
+    ) {
         viewModelScope.launch {
             guardarPacienteUseCase(paciente?.id, form).fold(
                 onSuccess = { guardado ->
@@ -88,6 +93,7 @@ class PacientesViewModel(
                     } else {
                         PacientesUiEvent("Datos actualizados", guardado.nombreCompleto)
                     }
+                    onGuardadoExitoso(guardado)
                     onTerminado(null)
                     cargar()
                 },

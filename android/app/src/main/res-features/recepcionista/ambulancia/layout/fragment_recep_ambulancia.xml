@@ -54,14 +54,14 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Ambulancia Alfa-1 (Recurso Único)"
+                        android:text="Ambulancia del hospital"
                         android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
 
                     <TextView
                         android:id="@+id/tvAmbulanciaPlaca"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Placa Oficial: P-123456 • UCI Móvil"
+                        android:text="Placa: —"
                         android:textAppearance="@style/TextAppearance.Huc.BodySm" />
                 </LinearLayout>
 
@@ -83,9 +83,18 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="Estado Operativo en Tiempo Real"
+                android:text="Estado (cambia al despachar y finalizar)"
                 android:textAppearance="@style/TextAppearance.Huc.LabelMd"
                 android:textColor="@color/huc_on_surface_variant" />
+
+            <TextView
+                android:id="@+id/tvAmbTiempoReal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/huc_on_surface_variant"
+                android:textSize="11sp"
+                tools:text="● En vivo" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -145,7 +154,8 @@
                 android:background="@drawable/bg_error_container_16"
                 android:orientation="vertical"
                 android:padding="12dp"
-                android:visibility="visible">
+                android:visibility="gone"
+                tools:visibility="visible">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -157,7 +167,8 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="🚨 MISIÓN EN CURSO • CÓDIGO ROJO"
+                        android:id="@+id/tvMisionTitulo"
+                        android:text="🚨 SERVICIO EN CURSO"
                         android:textColor="@color/huc_on_error_container"
                         android:textSize="11sp"
                         android:textStyle="bold" />
@@ -172,7 +183,7 @@
                         android:textColor="@color/huc_error"
                         android:textSize="11sp"
                         android:textStyle="bold"
-                        tools:text="ETA: 18 min" />
+                        tools:text="Salió 10:42" />
                 </LinearLayout>
 
                 <TextView
@@ -195,14 +206,44 @@
                     tools:text="Origen: Av. Libertador #412 → Hosp. Universitario - Ala B" />
 
                 <TextView
-                    android:id="@+id/tvMisionTripulacion"
+                    android:id="@+id/tvMisionUltimoReporte"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3dp"
                     android:textColor="@color/huc_primary_container"
                     android:textSize="11sp"
                     android:textStyle="bold"
-                    tools:text="Tripulación: M. Peralta (Par.) • G. Soto (Chofer)" />
+                    tools:text="Último reporte 10:55 • DELICADO • llega 11:10" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMisionReportar"
+                        style="@style/Widget.Huc.Button.Outlined"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_marginEnd="6dp"
+                        android:layout_weight="1"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="Enviar reporte"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnMisionFinalizar"
+                        style="@style/Widget.Huc.Button.Primary"
+                        android:layout_width="0dp"
+                        android:layout_height="40dp"
+                        android:layout_weight="1"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="Finalizar servicio"
+                        android:textSize="12sp" />
+                </LinearLayout>
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
@@ -211,7 +252,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:layout_marginTop="14dp"
-                android:text="Solicitar Despacho de Emergencia"
+                android:text="Despachar ambulancia"
                 app:backgroundTint="@color/huc_error"
                 app:icon="@drawable/ic_ambulance"
                 app:iconGravity="textStart" />
@@ -230,53 +271,17 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Turnos Activos del Personal en Guardia"
+                android:text="Médicos de turno ahora"
                 android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="Dotación clínica activa por área y horario de relevo."
+                android:id="@+id/tvGuardiaResumen"
+                android:text="Según los turnos registrados para hoy."
                 android:textAppearance="@style/TextAppearance.Huc.BodySm" />
 
-            <HorizontalScrollView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:scrollbars="none">
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/chipGroupFiltroGuardia"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    app:selectionRequired="true"
-                    app:singleLine="true"
-                    app:singleSelection="true">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipGuardiaTodos"
-                        style="@style/Widget.Material3.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:text="Todos" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipGuardiaMedicos"
-                        style="@style/Widget.Material3.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Doctores" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipGuardiaRecepcion"
-                        style="@style/Widget.Material3.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Recepción &amp; Enfermería" />
-                </com.google.android.material.chip.ChipGroup>
-            </HorizontalScrollView>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvPersonalGuardia"
@@ -285,6 +290,38 @@
                 android:layout_marginTop="8dp"
                 android:nestedScrollingEnabled="false"
                 tools:listitem="@layout/item_personal_guardia" />
+        </LinearLayout>
+
+        <!-- Bitácora: GET /ambulancia/servicios -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_card_rounded_16"
+            android:elevation="1dp"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bitácora de servicios"
+                android:textAppearance="@style/TextAppearance.Huc.TitleMd" />
+
+            <TextView
+                android:id="@+id/tvBitacoraResumen"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Cargando…"
+                android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+
+            <LinearLayout
+                android:id="@+id/llBitacora"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="vertical" />
         </LinearLayout>
 
     </LinearLayout>

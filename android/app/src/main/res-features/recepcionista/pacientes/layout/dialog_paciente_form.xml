@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/scrollPacForm"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/scrollPacForm"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@color/huc_surface_lowest">
@@ -71,7 +71,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:hint="Fecha de nacimiento * (AAAA-MM-DD)"
+            android:hint="Fecha de nacimiento * (DD/MM/AAAA)"
             app:startIconDrawable="@drawable/ic_event">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -82,6 +82,18 @@
                 android:focusable="false"
                 android:inputType="none" />
         </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:id="@+id/tvPacFormEdadBadge"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textAppearance="@style/TextAppearance.Huc.BodySm"
+            android:textColor="@color/huc_primary"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:text="Edad calculada: 10 años • Menor de edad (requiere datos del responsable)"
+            tools:visibility="visible" />
 
         <TextView
             android:layout_width="wrap_content"
@@ -117,22 +129,69 @@
                 android:textAllCaps="false" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
+        <!-- Selector DUI / Pasaporte del paciente -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Documento de identidad *"
+                android:textAppearance="@style/TextAppearance.Huc.LabelMd" />
+
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/toggleTipoDocPaciente"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:selectionRequired="true"
+                app:singleSelection="true">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDocDui"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="38dp"
+                    android:text="DUI"
+                    android:textAllCaps="false"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDocPasaporte"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minHeight="38dp"
+                    android:text="Pasaporte"
+                    android:textAllCaps="false"
+                    android:textSize="12sp" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+        </LinearLayout>
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/tilPacFormDui"
             style="@style/Widget.Huc.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:hint="DUI (solo los 9 dígitos)"
-            app:helperText="El guion se agrega solo: 00000000-0">
+            android:layout_marginTop="4dp"
+            android:hint="DUI o Pasaporte *"
+            app:helperText="Formato DUI: 00000000-0">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etPacFormDui"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:digits="0123456789-"
-                android:inputType="number"
-                android:maxLength="10" />
+                android:inputType="textCapCharacters"
+                android:maxLength="12" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -141,7 +200,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:hint="Teléfono">
+            android:hint="Teléfono * (ej. 7000-0000)">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etPacFormTelefono"
@@ -157,7 +216,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:hint="Dirección">
+            android:hint="Dirección de residencia *">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etPacFormDireccion"
@@ -167,7 +226,183 @@
                 android:minLines="2" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Solo al registrar: recepción no puede leer estos datos después -->
+        <!-- Sección de Datos del Responsable (visible cuando el paciente es menor de 18 años) -->
+        <LinearLayout
+            android:id="@+id/containerPacFormResponsable"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_surface_low_16"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:contentDescription="Responsable"
+                    android:src="@drawable/ic_contact_emergency"
+                    app:tint="@color/huc_primary" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="Datos del Responsable (Paciente Menor de Edad)"
+                    android:textAppearance="@style/TextAppearance.Huc.TitleMd"
+                    android:textColor="@color/huc_primary" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Por ser menor de 18 años, el DUI/Pasaporte del paciente se deshabilita y debe registrarse la identificación del adulto responsable."
+                android:textAppearance="@style/TextAppearance.Huc.BodySm" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilRespNombre"
+                style="@style/Widget.Huc.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:hint="Nombre completo del responsable *">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etRespNombre"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPersonName|textCapWords"
+                    android:maxLength="150" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilRespNacimiento"
+                style="@style/Widget.Huc.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Fecha de nacimiento del responsable * (DD/MM/AAAA)"
+                app:startIconDrawable="@drawable/ic_event">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etRespNacimiento"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:cursorVisible="false"
+                    android:focusable="false"
+                    android:inputType="none" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Documento del responsable *"
+                    android:textAppearance="@style/TextAppearance.Huc.LabelMd" />
+
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/toggleTipoDocResp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnRespDocDui"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minHeight="36dp"
+                        android:text="DUI"
+                        android:textAllCaps="false"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnRespDocPasaporte"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:minHeight="36dp"
+                        android:text="Pasaporte"
+                        android:textAllCaps="false"
+                        android:textSize="12sp" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+            </LinearLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilRespDocumento"
+                style="@style/Widget.Huc.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:hint="DUI o Pasaporte del responsable *"
+                app:helperText="Formato DUI: 00000000-0">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etRespDocumento"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textCapCharacters"
+                    android:maxLength="12" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilRespTelefono"
+                style="@style/Widget.Huc.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Teléfono del responsable *">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etRespTelefono"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="phone"
+                    android:maxLength="25" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilRespParentesco"
+                style="@style/Widget.Huc.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="Parentesco *"
+                app:endIconMode="dropdown_menu">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/actvRespParentesco"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:completionThreshold="0"
+                    android:inputType="textCapWords"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="12dp" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <!-- Datos clínicos opcionales (Tipo de sangre y alergias) -->
         <LinearLayout
             android:id="@+id/containerPacFormClinicos"
             android:layout_width="match_parent"
@@ -178,7 +413,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Datos clínicos (opcional). Solo los verán el médico tratante y el paciente."
+                android:text="Datos clínicos (opcionales). Solo los verán el médico tratante y el paciente."
                 android:textAppearance="@style/TextAppearance.Huc.BodySm" />
 
             <LinearLayout
@@ -194,14 +429,18 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="4dp"
                     android:layout_weight="1"
-                    android:hint="Tipo de sangre">
+                    android:hint="Tipo de sangre (opc.)"
+                    app:endIconMode="dropdown_menu">
 
-                    <com.google.android.material.textfield.TextInputEditText
+                    <com.google.android.material.textfield.MaterialAutoCompleteTextView
                         android:id="@+id/etPacFormTipoSangre"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:completionThreshold="0"
                         android:inputType="textCapCharacters"
-                        android:maxLength="5" />
+                        android:maxLength="5"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="12dp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -211,7 +450,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
                     android:layout_weight="2"
-                    android:hint="Alergias">
+                    android:hint="Alergias (opcional)">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etPacFormAlergias"
