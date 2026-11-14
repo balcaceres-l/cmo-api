@@ -17,7 +17,10 @@ class AuthController extends ApiController
     {
         $d = $r->validate(['usuario' => 'required|string', 'password' => 'required|string']);
         $u = User::where('usuario', $d['usuario'])->first();
-        if (! $u || ! Hash::check($d['password'], $u->password) || $u->estado !== 'ACTIVO') {
+        if ($u && $u->fecha_salida && $u->fecha_salida->lt(today()) && $u->estado === 'ACTIVO') {
+            $u->update(['estado' => 'INACTIVO']);
+        }
+        if (! $u || ! Hash::check($d['password'], $u->password) || ! $u->estaVigenteEn(today())) {
             return $this->failure('Credenciales incorrectas.', 401);
         }
 
@@ -63,14 +66,14 @@ class AuthController extends ApiController
 
     private function token(User $u, int $status = 200)
     {
-        $u->load('paciente');
+        $u->load(['paciente', 'especialidad']);
 
         return $this->success(['usuario' => $u, 'id_paciente' => $u->paciente?->getKey(), 'token' => $u->createToken('api')->plainTextToken, 'token_type' => 'Bearer'], 'Autenticación exitosa.', $status);
     }
 
     public function me(Request $r)
     {
-        $u = $r->user()->load('paciente');
+        $u = $r->user()->load(['paciente', 'especialidad']);
 
         return $this->success(['usuario' => $u, 'id_paciente' => $u->paciente?->getKey()]);
     }

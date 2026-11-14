@@ -18,6 +18,8 @@ return new class extends Migration
             $t->string('cargo')->nullable();
             $t->string('telefono', 25)->nullable();
             $t->enum('estado', ['ACTIVO', 'INACTIVO'])->default('ACTIVO');
+            $t->date('fecha_ingreso')->nullable();
+            $t->date('fecha_salida')->nullable();
             $t->rememberToken();
             $t->timestamps();
         });
