@@ -1,50 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { BedIcon, SearchIcon, PlusCircleIcon, RefreshCwIcon } from '../../components/Icons';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  BedIcon,
+  SearchIcon,
+  PlusCircleIcon,
+  RefreshCwIcon,
+  ActivityIcon,
+  FileTextIcon,
+} from '../../components/Icons';
 import { apiClient, ApiError } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { isJefeOperaciones } from '../../utils/roles';
-
-interface BedData {
-  id: string; // id_cama o código
-  codigo: string;
-  planta: number;
-  tipo: 'VIP' | 'SEMIPRIVADA';
-  letra?: 'A' | 'B';
-  habitacion: string;
-  estado: 'OCUPADA' | 'DISPONIBLE' | 'MANTENIMIENTO';
-  id_ingreso?: string;
-  paciente?: {
-    id_paciente?: string;
-    nombre: string;
-    expediente: string;
-    dui?: string;
-    diagnostico?: string;
-    medico?: string;
-    fechaIngreso?: string;
-  };
-}
-
-interface PacienteOption {
-  id_paciente: string;
-  nombre_completo: string;
-  numero_expediente: string;
-  dui: string | null;
-}
-
-interface MedicoOption {
-  id: string;
-  nombre_completo: string;
-  cargo: string | null;
-}
+import {
+  BedData,
+  IngresoRecord,
+  MedicoOption,
+  ModalType,
+  PacienteOption,
+  RoomGroup,
+  getStayHours,
+} from './types';
+import { BedsKpiHeader } from './components/BedsKpiHeader';
+import { FloorMapView } from './components/FloorMapView';
+import { BedDetailDrawer } from './components/BedDetailDrawer';
+import { AdmissionsAuditTable } from './components/AdmissionsAuditTable';
+import { BedModals } from './components/BedModals';
 
 const FALLBACK_BEDS: BedData[] = [
-  // Planta 3 - VIP
   { id: 'b-301', codigo: 'VIP-301', planta: 3, tipo: 'VIP', habitacion: 'VIP-301', estado: 'DISPONIBLE' },
   { id: 'b-302', codigo: 'VIP-302', planta: 3, tipo: 'VIP', habitacion: 'VIP-302', estado: 'DISPONIBLE' },
   { id: 'b-303', codigo: 'VIP-303', planta: 3, tipo: 'VIP', habitacion: 'VIP-303', estado: 'DISPONIBLE' },
   { id: 'b-304', codigo: 'VIP-304', planta: 3, tipo: 'VIP', habitacion: 'VIP-304', estado: 'DISPONIBLE' },
   { id: 'b-305', codigo: 'VIP-305', planta: 3, tipo: 'VIP', habitacion: 'VIP-305', estado: 'DISPONIBLE' },
-  // Planta 2 - Semiprivadas
   { id: 'b-201a', codigo: 'HAB-201-A', planta: 2, tipo: 'SEMIPRIVADA', letra: 'A', habitacion: 'HAB-201', estado: 'DISPONIBLE' },
   { id: 'b-201b', codigo: 'HAB-201-B', planta: 2, tipo: 'SEMIPRIVADA', letra: 'B', habitacion: 'HAB-201', estado: 'DISPONIBLE' },
   { id: 'b-202a', codigo: 'HAB-202-A', planta: 2, tipo: 'SEMIPRIVADA', letra: 'A', habitacion: 'HAB-202', estado: 'DISPONIBLE' },
@@ -64,27 +50,30 @@ export const BedsPage: React.FC = () => {
   const isOps = isJefeOperaciones(user);
 
   const [beds, setBeds] = useState<BedData[]>([]);
+  const [ingresosHistory, setIngresosHistory] = useState<IngresoRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [activeTab, setActiveTab] = useState<'ALL' | 'P3' | 'P2' | 'LIST'>('ALL');
+  const [viewMode, setViewMode] = useState<'MAP' | 'AUDIT'>('MAP');
+  const [floorFilter, setFloorFilter] = useState<'ALL' | 'P3' | 'P2'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'DISPONIBLE' | 'OCUPADA'>('ALL');
   const [filterQuery, setFilterQuery] = useState('');
-  const [selectedBed, setSelectedBed] = useState<BedData | null>(null);
-  const [modalType, setModalType] = useState<'INGRESO' | 'ALTA' | 'TRASLADO' | null>(null);
+
+  const [drawerBed, setDrawerBed] = useState<BedData | null>(null);
+  const [modalBed, setModalBed] = useState<BedData | null>(null);
+  const [modalType, setModalType] = useState<ModalType>(null);
+
   const [feedback, setFeedback] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Auxiliares
+  // Auxiliares para modales operativos (Jefe de Operaciones)
   const [pacientes, setPacientes] = useState<PacienteOption[]>([]);
   const [medicos, setMedicos] = useState<MedicoOption[]>([]);
-
-  // Formularios
   const [ingresoForm, setIngresoForm] = useState({
     id_paciente: '',
     tipo: 'SEMIPRIVADA' as 'VIP' | 'SEMIPRIVADA',
     id_medico: '',
     motivo: '',
   });
-
   const [trasladoIdCama, setTrasladoIdCama] = useState('');
 
   const showNotification = (msg: string) => {
@@ -98,35 +87,44 @@ export const BedsPage: React.FC = () => {
     try {
       const [habsRes, ingresosRes]: any[] = await Promise.all([
         apiClient.get('/habitaciones'),
-        apiClient.get('/ingresos?activos=1'),
+        apiClient.get('/ingresos?per_page=100'),
       ]);
 
-      const activeIngresos = Array.isArray(ingresosRes)
+      const allIngresos: IngresoRecord[] = Array.isArray(ingresosRes)
         ? ingresosRes
         : ingresosRes?.data || [];
+      setIngresosHistory(allIngresos);
 
-      // Mapear ingresos activos por código o id de cama
-      const ingresoPorCama = new Map<string, any>();
-      activeIngresos.forEach((ing: any) => {
-        if (ing.cama?.codigo) {
-          ingresoPorCama.set(ing.cama.codigo, ing);
-        }
-        if (ing.id_cama) {
-          ingresoPorCama.set(ing.id_cama, ing);
-        }
+      const activeIngresos = allIngresos.filter((i) => !i.fecha_alta);
+      const ingresoPorCama = new Map<string, IngresoRecord>();
+      activeIngresos.forEach((ing) => {
+        if (ing.cama?.codigo) ingresoPorCama.set(ing.cama.codigo, ing);
+        if (ing.id_cama) ingresoPorCama.set(ing.id_cama, ing);
       });
 
-      // El endpoint /habitaciones devuelve un mapa o arreglo por plantas
-      const rawPlants = habsRes;
       const flatBeds: BedData[] = [];
-
       const processHabitacion = (hab: any, plantaNum: number) => {
         if (!hab.camas || !Array.isArray(hab.camas)) return;
         hab.camas.forEach((c: any) => {
-          const matchingIngreso = ingresoPorCama.get(c.codigo) || ingresoPorCama.get(c.id_cama);
-          const isOcupada = c.estado === 'OCUPADA' || !!matchingIngreso;
-
+          const matchingIngreso = ingresoPorCama.get(c.codigo) || (c.id_cama ? ingresoPorCama.get(c.id_cama) : undefined);
+          const isOcupada = c.estado === 'OCUPADA' || !!matchingIngreso || !!c.ingreso;
           const letMatch = c.codigo.endsWith('-A') ? 'A' : c.codigo.endsWith('-B') ? 'B' : undefined;
+
+          const fechaIso = c.ingreso?.fecha_ingreso || matchingIngreso?.fecha_ingreso;
+          const pacienteInfo = isOcupada
+            ? {
+                id_paciente: c.paciente?.id_paciente || matchingIngreso?.paciente?.id_paciente,
+                nombre: c.paciente?.nombre_completo || matchingIngreso?.paciente?.nombre_completo || 'Paciente Hospitalizado',
+                expediente: c.paciente?.numero_expediente || matchingIngreso?.paciente?.numero_expediente || 'EXP-2026',
+                dui: c.paciente?.dui || matchingIngreso?.paciente?.dui,
+                diagnostico: c.ingreso?.motivo || matchingIngreso?.motivo || 'Observación clínica',
+                medico: c.ingreso?.medico || matchingIngreso?.medico?.nombre_completo || 'Médico de Turno',
+                fechaIngresoIso: fechaIso,
+                fechaIngreso: fechaIso ? new Date(fechaIso).toLocaleString() : 'Reciente',
+                registradoPor:
+                  c.ingreso?.registrado_por || matchingIngreso?.registrado_por?.nombre_completo,
+              }
+            : undefined;
 
           flatBeds.push({
             id: c.id_cama || c.codigo,
@@ -136,51 +134,28 @@ export const BedsPage: React.FC = () => {
             letra: letMatch as 'A' | 'B' | undefined,
             habitacion: hab.codigo,
             estado: isOcupada ? 'OCUPADA' : 'DISPONIBLE',
-            id_ingreso: matchingIngreso?.id_ingreso || matchingIngreso?.id,
-            paciente: isOcupada
-              ? {
-                  id_paciente: matchingIngreso?.paciente?.id_paciente || c.paciente?.id_paciente,
-                  nombre: matchingIngreso?.paciente?.nombre_completo || c.paciente?.nombre_completo || 'Paciente Hospitalizado',
-                  expediente: matchingIngreso?.paciente?.numero_expediente || c.paciente?.numero_expediente || 'EXP-2026',
-                  dui: matchingIngreso?.paciente?.dui,
-                  diagnostico: matchingIngreso?.motivo || 'Observación clínica',
-                  medico: matchingIngreso?.medico?.nombre_completo || 'Médico de Turno',
-                  fechaIngreso: matchingIngreso?.fecha_ingreso ? new Date(matchingIngreso.fecha_ingreso).toLocaleString() : 'Reciente',
-                }
-              : undefined,
+            id_ingreso: c.ingreso?.id_ingreso || matchingIngreso?.id_ingreso,
+            paciente: pacienteInfo,
           });
         });
       };
 
-      if (Array.isArray(rawPlants)) {
-        rawPlants.forEach((item: any) => {
-          if (Array.isArray(item)) {
-            // item es un arreglo de habitaciones de una planta
-            const sampleHab = item[0];
-            const pNum = sampleHab?.tipo === 'VIP' || sampleHab?.codigo?.startsWith('VIP') ? 3 : 2;
-            item.forEach((hab) => processHabitacion(hab, pNum));
-          } else if (item && typeof item === 'object') {
-            // Puede ser objeto de habitación directamente
-            const pNum = item.tipo === 'VIP' ? 3 : 2;
-            processHabitacion(item, pNum);
-          }
-        });
-      } else if (rawPlants && typeof rawPlants === 'object') {
-        // En caso que venga como { "2": [...], "3": [...] }
-        Object.entries(rawPlants).forEach(([plantaStr, habs]: [string, any]) => {
-          const pNum = parseInt(plantaStr, 10) || 2;
-          if (Array.isArray(habs)) {
-            habs.forEach((hab) => processHabitacion(hab, pNum));
-          }
-        });
+      const rawPlants = habsRes;
+      if (rawPlants && typeof rawPlants === 'object') {
+        if (Array.isArray(rawPlants['3'])) rawPlants['3'].forEach((h: any) => processHabitacion(h, 3));
+        if (Array.isArray(rawPlants['2'])) rawPlants['2'].forEach((h: any) => processHabitacion(h, 2));
+        if (Array.isArray(rawPlants)) {
+          rawPlants.forEach((h: any) => processHabitacion(h, h.planta || (h.tipo === 'VIP' ? 3 : 2)));
+        }
       }
 
-      if (flatBeds.length > 0) {
-        setBeds(flatBeds);
-      } else {
-        setBeds(FALLBACK_BEDS);
-      }
+      const resolvedBeds = flatBeds.length > 0 ? flatBeds : FALLBACK_BEDS;
+      setBeds(resolvedBeds);
+
+      // Si el drawer está abierto, actualizar su referencia con los datos frescos
+      setDrawerBed((prev) => (prev ? resolvedBeds.find((b) => b.id === prev.id || b.codigo === prev.codigo) || null : null));
     } catch {
+      setErrorMsg('No se pudo conectar con la API de habitaciones. Mostrando mapa base local.');
       setBeds(FALLBACK_BEDS);
     } finally {
       setLoading(false);
@@ -188,56 +163,45 @@ export const BedsPage: React.FC = () => {
   };
 
   const fetchAuxiliares = async () => {
+    if (!isOps) return;
     try {
-      const [pacsRes, medsRes]: any[] = await Promise.allSettled([
-        apiClient.get('/pacientes'),
-        apiClient.get('/medicos'),
+      const [pacRes, medRes]: any[] = await Promise.all([
+        apiClient.get('/pacientes?per_page=100'),
+        apiClient.get('/usuarios?rol=MEDICO&per_page=100'),
       ]);
-
-      if (pacsRes.status === 'fulfilled') {
-        const pacs = Array.isArray(pacsRes.value) ? pacsRes.value : pacsRes.value?.data || [];
-        setPacientes(pacs);
-        if (pacs.length > 0) {
-          setIngresoForm((prev) => ({ ...prev, id_paciente: pacs[0].id_paciente }));
-        }
-      }
-
-      if (medsRes.status === 'fulfilled') {
-        const meds = Array.isArray(medsRes.value) ? medsRes.value : medsRes.value?.data || [];
-        setMedicos(meds);
-        if (meds.length > 0) {
-          setIngresoForm((prev) => ({ ...prev, id_medico: meds[0].id }));
-        }
-      }
+      const pacList = Array.isArray(pacRes) ? pacRes : pacRes?.data || [];
+      const medList = Array.isArray(medRes) ? medRes : medRes?.data || [];
+      setPacientes(pacList);
+      setMedicos(medList);
+      if (pacList.length > 0) setIngresoForm((p) => ({ ...p, id_paciente: pacList[0].id_paciente }));
+      if (medList.length > 0) setIngresoForm((p) => ({ ...p, id_medico: medList[0].id }));
     } catch {
-      // Ignorar
+      // Silencioso si no hay conexión auxiliar
     }
   };
 
   useEffect(() => {
     fetchHospitalizacion();
     fetchAuxiliares();
-  }, []);
+  }, [isOps]);
 
-  // Dar de Alta
   const handleDarDeAlta = async () => {
-    if (!selectedBed) return;
+    if (!modalBed || !isOps) return;
     setIsSubmitting(true);
     try {
-      if (selectedBed.id_ingreso) {
-        await apiClient.patch(`/ingresos/${selectedBed.id_ingreso}/alta`);
-      } else {
-        // Si no tenemos id_ingreso directo, buscar en ingresos
+      let ingresoId = modalBed.id_ingreso;
+      if (!ingresoId) {
         const res: any = await apiClient.get('/ingresos?activos=1');
         const list = Array.isArray(res) ? res : res?.data || [];
-        const match = list.find((i: any) => i.cama?.codigo === selectedBed.codigo || i.id_cama === selectedBed.id);
-        if (match) {
-          await apiClient.patch(`/ingresos/${match.id_ingreso || match.id}/alta`);
-        }
+        const match = list.find((i: any) => i.cama?.codigo === modalBed.codigo || i.id_cama === modalBed.id);
+        ingresoId = match?.id_ingreso || match?.id;
       }
-      showNotification(`Alta procesada exitosamente para la cama ${selectedBed.codigo}.`);
+      if (!ingresoId) throw new Error('No se encontró el ingreso activo de esta cama.');
+      await apiClient.patch(`/ingresos/${ingresoId}/alta`);
+      showNotification(`Alta procesada exitosamente para la cama ${modalBed.codigo}.`);
       setModalType(null);
-      setSelectedBed(null);
+      setModalBed(null);
+      setDrawerBed(null);
       fetchHospitalizacion();
     } catch (err: unknown) {
       const e = err as ApiError;
@@ -247,38 +211,32 @@ export const BedsPage: React.FC = () => {
     }
   };
 
-  // Asignar Ingreso
   const handleAsignarIngreso = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ingresoForm.id_paciente || !ingresoForm.id_medico || !ingresoForm.motivo) {
+    if (!isOps) return;
+    if (!ingresoForm.id_paciente || !ingresoForm.id_medico || !ingresoForm.motivo.trim()) {
       alert('Por favor completa todos los campos del ingreso.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const payload: any = {
+      const payload: Record<string, any> = {
         id_paciente: ingresoForm.id_paciente,
-        tipo: selectedBed ? selectedBed.tipo : ingresoForm.tipo,
+        tipo: modalBed ? modalBed.tipo : ingresoForm.tipo,
         id_medico: ingresoForm.id_medico,
-        motivo: ingresoForm.motivo,
+        motivo: ingresoForm.motivo.trim(),
       };
-
-      // Si seleccionamos una cama disponible concreta
-      if (selectedBed && selectedBed.estado === 'DISPONIBLE') {
-        payload.id_cama = selectedBed.id;
+      if (modalBed && modalBed.estado === 'DISPONIBLE') {
+        payload.id_cama = modalBed.id;
       }
 
       await apiClient.post('/ingresos', payload);
-      showNotification('Ingreso hospitalario registrado exitosamente en la base de datos.');
+      showNotification('Ingreso hospitalario registrado exitosamente.');
       setModalType(null);
-      setSelectedBed(null);
-      setIngresoForm({
-        id_paciente: pacientes[0]?.id_paciente || '',
-        tipo: 'SEMIPRIVADA',
-        id_medico: medicos[0]?.id || '',
-        motivo: '',
-      });
+      setModalBed(null);
+      setDrawerBed(null);
+      setIngresoForm((prev) => ({ ...prev, motivo: '' }));
       fetchHospitalizacion();
     } catch (err: unknown) {
       const e = err as ApiError;
@@ -288,26 +246,22 @@ export const BedsPage: React.FC = () => {
     }
   };
 
-  // Trasladar
   const handleTrasladar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedBed || !trasladoIdCama) {
-      alert('Selecciona la cama de destino.');
-      return;
-    }
+    if (!isOps || !modalBed || !trasladoIdCama) return;
 
     setIsSubmitting(true);
     try {
-      const ingresoId = selectedBed.id_ingreso;
-      if (!ingresoId) {
+      if (!modalBed.id_ingreso) {
         throw new Error('No se encontró el ID de ingreso activo para esta cama.');
       }
-      await apiClient.patch(`/ingresos/${ingresoId}/trasladar`, {
+      await apiClient.patch(`/ingresos/${modalBed.id_ingreso}/trasladar`, {
         id_cama: trasladoIdCama,
       });
-      showNotification(`Traslado hospitalario completado con éxito hacia la nueva cama.`);
+      showNotification('Traslado hospitalario completado sin generar alta ficticia.');
       setModalType(null);
-      setSelectedBed(null);
+      setModalBed(null);
+      setDrawerBed(null);
       setTrasladoIdCama('');
       fetchHospitalizacion();
     } catch (err: unknown) {
@@ -318,31 +272,71 @@ export const BedsPage: React.FC = () => {
     }
   };
 
-  // Totales
-  const totalCamas = beds.length || 17;
-  const ocupadas = beds.filter((b) => b.estado === 'OCUPADA').length;
-  const disponibles = totalCamas - ocupadas;
-  const p3Ocupadas = beds.filter((b) => b.planta === 3 && b.estado === 'OCUPADA').length;
-  const p2Ocupadas = beds.filter((b) => b.planta === 2 && b.estado === 'OCUPADA').length;
+  // Agrupación por habitación y filtrado
+  const filteredBeds = useMemo(() => {
+    return beds.filter((b) => {
+      if (floorFilter === 'P3' && b.planta !== 3) return false;
+      if (floorFilter === 'P2' && b.planta !== 2) return false;
+      if (statusFilter !== 'ALL' && b.estado !== statusFilter) return false;
+      if (filterQuery.trim()) {
+        const q = filterQuery.toLowerCase();
+        const matchCode = b.codigo.toLowerCase().includes(q) || b.habitacion.toLowerCase().includes(q);
+        const matchPatient = b.paciente?.nombre.toLowerCase().includes(q) || b.paciente?.expediente.toLowerCase().includes(q);
+        const matchDoc = b.paciente?.medico?.toLowerCase().includes(q);
+        return matchCode || matchPatient || matchDoc;
+      }
+      return true;
+    });
+  }, [beds, floorFilter, statusFilter, filterQuery]);
 
-  const filteredBeds = beds.filter((b) => {
-    if (activeTab === 'P3' && b.planta !== 3) return false;
-    if (activeTab === 'P2' && b.planta !== 2) return false;
-    if (filterQuery) {
-      const q = filterQuery.toLowerCase();
-      const codeMatches = b.codigo.toLowerCase().includes(q);
-      const patientMatches = b.paciente?.nombre.toLowerCase().includes(q);
-      const doctorMatches = b.paciente?.medico?.toLowerCase().includes(q);
-      return codeMatches || patientMatches || doctorMatches;
-    }
-    return true;
-  });
+  const rooms = useMemo<RoomGroup[]>(() => {
+    const map = new Map<string, RoomGroup>();
+    filteredBeds.forEach((bed) => {
+      const key = `${bed.planta}-${bed.habitacion}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          codigo: bed.habitacion,
+          planta: bed.planta,
+          tipo: bed.tipo,
+          camas: [],
+        });
+      }
+      map.get(key)!.camas.push(bed);
+    });
+    return Array.from(map.values()).sort((a, b) => b.planta - a.planta || a.codigo.localeCompare(b.codigo));
+  }, [filteredBeds]);
 
-  const availableBedsForTransfer = beds.filter((b) => b.estado === 'DISPONIBLE');
+  // Habitaciones semiprivadas parcialmente ocupadas (1/2) sobre el total sin filtrar
+  const halfOccupiedRoomsCount = useMemo(() => {
+    const byRoom = new Map<string, BedData[]>();
+    beds
+      .filter((b) => b.planta === 2)
+      .forEach((b) => {
+        const arr = byRoom.get(b.habitacion) || [];
+        arr.push(b);
+        byRoom.set(b.habitacion, arr);
+      });
+    let count = 0;
+    byRoom.forEach((arr) => {
+      const occ = arr.filter((c) => c.estado === 'OCUPADA').length;
+      if (occ === 1 && arr.length === 2) count += 1;
+    });
+    return count;
+  }, [beds]);
+
+  const longStayBeds = useMemo(
+    () => beds.filter((b) => b.estado === 'OCUPADA' && getStayHours(b.paciente?.fechaIngresoIso) >= 48),
+    [beds]
+  );
+
+  const availableBedsForTransfer = useMemo(
+    () => beds.filter((b) => b.estado === 'DISPONIBLE' && b.id !== modalBed?.id),
+    [beds, modalBed]
+  );
 
   return (
-    <div style={{ display: 'grid', gap: '24px' }}>
-      {/* Top Header */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      {/* Cabecera */}
       <div
         style={{
           display: 'flex',
@@ -352,40 +346,54 @@ export const BedsPage: React.FC = () => {
           gap: '16px',
         }}
       >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '10px',
-                background: '#e6f4ea',
-                color: '#0b5d4b',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <BedIcon size={24} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0, color: '#13221c' }}>
-                Mapa de Camas e Ingresos
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '11px',
+              background: isOps ? '#e0f2fe' : '#fef3c7',
+              color: isOps ? '#0369a1' : '#92400e',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <BedIcon size={24} />
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: '1.45rem', fontWeight: 800, margin: 0, color: '#13221c' }}>
+                {isOps ? 'Control Operativo de Camas' : 'Supervisión y Censo de Camas'}
               </h1>
-              <p style={{ margin: 0, fontSize: '0.85rem', color: '#526b60' }}>
-                {isOps
-                  ? 'Control operativo de camas: asignación de ingresos hospitalarios, traslados entre salas y altas médicas.'
-                  : 'Supervisión institucional de capacidad hospitalaria, censo de camas VIP/Semiprivadas y auditoría de estancias.'}
-              </p>
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                  padding: '3px 9px',
+                  borderRadius: '999px',
+                  background: isOps ? '#e0f2fe' : '#fef3c7',
+                  color: isOps ? '#0369a1' : '#92400e',
+                  border: `1px solid ${isOps ? '#bae6fd' : '#fde68a'}`,
+                }}
+              >
+                {isOps ? 'OPERACIONES · INTERVENCIÓN HABILITADA' : 'DIRECCIÓN · SOLO LECTURA'}
+              </span>
             </div>
+            <p style={{ margin: '2px 0 0', fontSize: '0.84rem', color: '#526b60' }}>
+              {isOps
+                ? 'Monitoreo en tiempo real, detección de cuellos de botella y resolución de traslados o ingresos.'
+                : 'Supervisión institucional de capacidad (17 camas), ocupación por tipología y auditoría de movimientos.'}
+            </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <button
+            type="button"
             onClick={() => {
               fetchHospitalizacion();
-              showNotification('Camas y ocupación sincronizadas con la base de datos.');
+              showNotification('Censo de camas sincronizado.');
             }}
             disabled={loading}
             style={{
@@ -402,12 +410,14 @@ export const BedsPage: React.FC = () => {
               color: '#13221c',
             }}
           >
-            <RefreshCwIcon size={14} /> {loading ? 'Cargando...' : 'Sincronizar'}
+            <RefreshCwIcon size={14} /> {loading ? 'Sincronizando...' : 'Sincronizar'}
           </button>
+
           {isOps && (
             <button
+              type="button"
               onClick={() => {
-                setSelectedBed(null);
+                setModalBed(null);
                 setModalType('INGRESO');
               }}
               style={{
@@ -430,93 +440,82 @@ export const BedsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Notificaciones */}
       {feedback && (
         <div
           style={{
-            padding: '12px 18px',
+            padding: '11px 16px',
             background: '#ecfdf5',
             color: '#065f46',
             borderRadius: '10px',
             border: '1px solid #a7f3d0',
             fontWeight: 600,
-            fontSize: '0.88rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
+            fontSize: '0.86rem',
           }}
         >
-          <span>✓</span> {feedback}
+          ✓ {feedback}
         </div>
       )}
-
       {errorMsg && (
         <div
           style={{
-            padding: '12px 18px',
-            background: '#fee2e2',
-            color: '#b91c1c',
+            padding: '11px 16px',
+            background: '#fef3c7',
+            color: '#92400e',
             borderRadius: '10px',
-            border: '1px solid #fecaca',
+            border: '1px solid #fde68a',
             fontWeight: 600,
-            fontSize: '0.88rem',
+            fontSize: '0.84rem',
           }}
         >
           ⚠ {errorMsg}
         </div>
       )}
 
-      {/* KPI Cards */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '14px',
-        }}
-      >
-        <div style={{ background: '#ffffff', padding: '16px', borderRadius: '12px', border: '1px solid #e2ece7' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#526b60', textTransform: 'uppercase' }}>
-            Aforo Máximo Legal
-          </span>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#13221c', marginTop: '4px' }}>
-            {totalCamas} Camas
-          </div>
-          <span style={{ fontSize: '0.75rem', color: '#849a90' }}>Planta 3 (5) + Planta 2 (12)</span>
-        </div>
+      {/* KPIs */}
+      <BedsKpiHeader
+        isOps={isOps}
+        beds={beds}
+        ingresosHistory={ingresosHistory}
+        halfOccupiedRoomsCount={halfOccupiedRoomsCount}
+      />
 
-        <div style={{ background: '#ffffff', padding: '16px', borderRadius: '12px', border: '1px solid #e2ece7' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0b5d4b', textTransform: 'uppercase' }}>
-            Camas Disponibles
-          </span>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#0b5d4b', marginTop: '4px' }}>
-            {disponibles} Libres
+      {/* Franja de alertas operativas para Jefe de Operaciones */}
+      {isOps && (longStayBeds.length > 0 || halfOccupiedRoomsCount > 0) && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px',
+            padding: '10px 16px',
+            borderRadius: '10px',
+            background: '#f0f9ff',
+            border: '1px solid #bae6fd',
+            color: '#0369a1',
+            fontSize: '0.82rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+            <ActivityIcon size={16} />
+            <span>
+              <strong>Focos operativos:</strong>{' '}
+              {longStayBeds.length > 0
+                ? `${longStayBeds.length} paciente(s) con estancia ≥ 48h (${longStayBeds.map((b) => b.codigo).join(', ')}). `
+                : ''}
+              {halfOccupiedRoomsCount > 0
+                ? `${halfOccupiedRoomsCount} habitación(es) semiprivada(s) ocupada(s) al 50% (1/2).`
+                : ''}
+            </span>
           </div>
-          <span style={{ fontSize: '0.75rem', color: '#526b60' }}>
-            {Math.round((disponibles / totalCamas) * 100)}% de margen hospitalario
+          <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+            Haz clic en cualquier cama para ver detalles o trasladar
           </span>
         </div>
+      )}
 
-        <div style={{ background: '#ffffff', padding: '16px', borderRadius: '12px', border: '1px solid #e2ece7' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#b45309', textTransform: 'uppercase' }}>
-            Camas Ocupadas
-          </span>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#d97706', marginTop: '4px' }}>
-            {ocupadas} Camas
-          </div>
-          <span style={{ fontSize: '0.75rem', color: '#526b60' }}>Pacientes ingresados</span>
-        </div>
-
-        <div style={{ background: '#ffffff', padding: '16px', borderRadius: '12px', border: '1px solid #e2ece7' }}>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0369a1', textTransform: 'uppercase' }}>
-            Distribución
-          </span>
-          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0369a1', marginTop: '6px' }}>
-            P3 VIP: {p3Ocupadas}/5 · P2 Semi: {p2Ocupadas}/12
-          </div>
-          <span style={{ fontSize: '0.75rem', color: '#849a90' }}>Control por piso y tipología</span>
-        </div>
-      </div>
-
-      {/* Tabs and Search */}
+      {/* Barra de navegación: Mapa vs Auditoría + Filtros */}
       <div
         style={{
           display: 'flex',
@@ -530,558 +529,171 @@ export const BedsPage: React.FC = () => {
           border: '1px solid #e2ece7',
         }}
       >
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {[
-            { id: 'ALL', label: 'Todas las Camas' },
-            { id: 'P3', label: 'Planta 3 (5 VIP)' },
-            { id: 'P2', label: 'Planta 2 (12 Semiprivadas)' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '6px',
-                border: 'none',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                background: activeTab === tab.id ? '#0b5d4b' : '#f0f4f2',
-                color: activeTab === tab.id ? '#ffffff' : '#526b60',
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div style={{ position: 'relative', minWidth: '260px' }}>
-          <div style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#849a90' }}>
-            <SearchIcon size={16} />
-          </div>
-          <input
-            type="text"
-            placeholder="Buscar por código, paciente o médico..."
-            value={filterQuery}
-            onChange={(e) => setFilterQuery(e.target.value)}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setViewMode('MAP')}
             style={{
-              width: '100%',
-              padding: '8px 12px 8px 34px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 14px',
               borderRadius: '8px',
-              border: '1px solid #cad8d1',
-              fontSize: '0.85rem',
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Grid de Camas */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '16px',
-        }}
-      >
-        {filteredBeds.map((bed) => {
-          const isOcupada = bed.estado === 'OCUPADA';
-          return (
-            <div
-              key={bed.id}
-              style={{
-                background: '#ffffff',
-                borderRadius: '14px',
-                border: `1.5px solid ${isOcupada ? '#fde68a' : '#d1fae5'}`,
-                padding: '18px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: '14px',
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: '6px',
-                        fontWeight: 800,
-                        fontSize: '0.85rem',
-                        background: bed.tipo === 'VIP' ? '#f0fdf4' : '#eff6ff',
-                        color: bed.tipo === 'VIP' ? '#15803d' : '#1d4ed8',
-                      }}
-                    >
-                      {bed.codigo}
-                    </span>
-                    <span style={{ fontSize: '0.75rem', color: '#849a90', fontWeight: 600 }}>
-                      Planta {bed.planta} · {bed.tipo}
-                    </span>
-                  </div>
-
-                  <span
-                    style={{
-                      padding: '3px 8px',
-                      borderRadius: '999px',
-                      fontSize: '0.72rem',
-                      fontWeight: 800,
-                      background: isOcupada ? '#fef3c7' : '#ecfdf5',
-                      color: isOcupada ? '#b45309' : '#047857',
-                      border: `1px solid ${isOcupada ? '#fde68a' : '#a7f3d0'}`,
-                    }}
-                  >
-                    {isOcupada ? '● OCUPADA' : '○ DISPONIBLE'}
-                  </span>
-                </div>
-
-                {isOcupada && bed.paciente ? (
-                  <div style={{ marginTop: '14px', borderTop: '1px solid #f0f4f2', paddingTop: '12px' }}>
-                    <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#13221c' }}>
-                      {bed.paciente.nombre}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#849a90', marginTop: '2px' }}>
-                      Exp: {bed.paciente.expediente} {bed.paciente.dui && `· DUI: ${bed.paciente.dui}`}
-                    </div>
-                    <div style={{ fontSize: '0.78rem', color: '#526b60', marginTop: '6px' }}>
-                      <strong>Motivo:</strong> {bed.paciente.diagnostico}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: '#0b5d4b', marginTop: '4px', fontWeight: 600 }}>
-                      Tratante: {bed.paciente.medico}
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ marginTop: '16px', color: '#849a90', fontSize: '0.82rem', fontStyle: 'italic' }}>
-                    Cama lista y esterilizada para ingreso inmediato.
-                  </div>
-                )}
-              </div>
-
-              {/* Botones de acción */}
-              <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid #f0f4f2', paddingTop: '12px' }}>
-                {isOps ? (
-                  isOcupada ? (
-                    <>
-                      <button
-                        onClick={() => {
-                          setSelectedBed(bed);
-                          setModalType('ALTA');
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '6px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid #cbd5e1',
-                          background: '#ffffff',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          color: '#0b5d4b',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Dar de Alta
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedBed(bed);
-                          setTrasladoIdCama(availableBedsForTransfer[0]?.id || '');
-                          setModalType('TRASLADO');
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '6px 10px',
-                          borderRadius: '6px',
-                          border: '1px solid #d1d5db',
-                          background: '#f8faf9',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          color: '#374151',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Trasladar
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setSelectedBed(bed);
-                        setIngresoForm((prev) => ({ ...prev, tipo: bed.tipo }));
-                        setModalType('INGRESO');
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        background: '#0b5d4b',
-                        color: '#ffffff',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Asignar Cama a Paciente
-                    </button>
-                  )
-                ) : (
-                  <div
-                    style={{
-                      width: '100%',
-                      padding: '7px 10px',
-                      borderRadius: '6px',
-                      background: isOcupada ? '#fef3c7' : '#ecfdf5',
-                      color: isOcupada ? '#92400e' : '#047857',
-                      fontSize: '0.74rem',
-                      fontWeight: 700,
-                      textAlign: 'center',
-                    }}
-                  >
-                    {isOcupada ? '• Paciente Hospitalizado (Auditoría)' : '✓ Cama Disponible'}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* MODAL INGRESO */}
-      {modalType === 'INGRESO' && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            padding: '16px',
-          }}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '16px',
-              maxWidth: '480px',
-              width: '100%',
-              padding: '24px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+              border: 'none',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: viewMode === 'MAP' ? '#13221c' : '#f0f4f2',
+              color: viewMode === 'MAP' ? '#ffffff' : '#526b60',
             }}
           >
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 6px', color: '#13221c' }}>
-              Asignar Ingreso Hospitalario
-            </h3>
-            <p style={{ margin: '0 0 16px', fontSize: '0.82rem', color: '#526b60' }}>
-              {selectedBed
-                ? `Asignación directa para la cama ${selectedBed.codigo} (${selectedBed.tipo} - Planta ${selectedBed.planta}).`
-                : 'Asignación hospitalaria según capacidad disponible.'}
-            </p>
+            <BedIcon size={15} /> Mapa por Planta
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('AUDIT')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 14px',
+              borderRadius: '8px',
+              border: 'none',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: viewMode === 'AUDIT' ? '#13221c' : '#f0f4f2',
+              color: viewMode === 'AUDIT' ? '#ffffff' : '#526b60',
+            }}
+          >
+            <FileTextIcon size={15} /> {isOps ? 'Historial Operativo' : 'Auditoría e Historial'}
+          </button>
 
-            <form onSubmit={handleAsignarIngreso} style={{ display: 'grid', gap: '14px' }}>
-              <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#13221c', display: 'block', marginBottom: '4px' }}>
-                  Paciente
-                </label>
-                <select
-                  value={ingresoForm.id_paciente}
-                  onChange={(e) => setIngresoForm({ ...ingresoForm, id_paciente: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #cad8d1',
-                    fontSize: '0.85rem',
-                  }}
-                  required
-                >
-                  <option value="">-- Seleccionar Paciente --</option>
-                  {pacientes.map((p) => (
-                    <option key={p.id_paciente} value={p.id_paciente}>
-                      {p.nombre_completo} ({p.numero_expediente})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {!selectedBed && (
-                <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#13221c', display: 'block', marginBottom: '4px' }}>
-                    Tipo de Habitación Requerida
-                  </label>
-                  <select
-                    value={ingresoForm.tipo}
-                    onChange={(e) => setIngresoForm({ ...ingresoForm, tipo: e.target.value as any })}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #cad8d1',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    <option value="SEMIPRIVADA">Semiprivada (Planta 2 - 12 Camas)</option>
-                    <option value="VIP">VIP Individual (Planta 3 - 5 Camas)</option>
-                  </select>
-                </div>
-              )}
-
-              <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#13221c', display: 'block', marginBottom: '4px' }}>
-                  Médico Tratante a Cargo
-                </label>
-                <select
-                  value={ingresoForm.id_medico}
-                  onChange={(e) => setIngresoForm({ ...ingresoForm, id_medico: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #cad8d1',
-                    fontSize: '0.85rem',
-                  }}
-                  required
-                >
-                  <option value="">-- Seleccionar Médico --</option>
-                  {medicos.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.nombre_completo} ({m.cargo || 'Médico'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#13221c', display: 'block', marginBottom: '4px' }}>
-                  Motivo o Diagnóstico de Ingreso
-                </label>
-                <textarea
-                  value={ingresoForm.motivo}
-                  onChange={(e) => setIngresoForm({ ...ingresoForm, motivo: e.target.value })}
-                  placeholder="Ej. Postoperatorio inmediato de colecistectomía..."
-                  rows={3}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #cad8d1',
-                    fontSize: '0.85rem',
-                  }}
-                  required
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+          {viewMode === 'MAP' && (
+            <>
+              <span style={{ color: '#cbd5e1', margin: '0 4px' }}>|</span>
+              {[
+                { id: 'ALL', label: 'Todas' },
+                { id: 'P3', label: 'Planta 3 (VIP)' },
+                { id: 'P2', label: 'Planta 2 (Semi)' },
+              ].map((tab) => (
                 <button
+                  key={tab.id}
                   type="button"
-                  onClick={() => {
-                    setModalType(null);
-                    setSelectedBed(null);
-                  }}
+                  onClick={() => setFloorFilter(tab.id as any)}
                   style={{
-                    flex: 1,
-                    padding: '10px',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
                     border: 'none',
-                    background: '#0b5d4b',
-                    color: '#ffffff',
+                    fontSize: '0.78rem',
                     fontWeight: 700,
                     cursor: 'pointer',
+                    background: floorFilter === tab.id ? '#0b5d4b' : '#f0f4f2',
+                    color: floorFilter === tab.id ? '#ffffff' : '#526b60',
                   }}
                 >
-                  {isSubmitting ? 'Asignando...' : 'Confirmar Ingreso'}
+                  {tab.label}
                 </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+              ))}
 
-      {/* MODAL ALTA */}
-      {modalType === 'ALTA' && selectedBed && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            padding: '16px',
-          }}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '16px',
-              maxWidth: '440px',
-              width: '100%',
-              padding: '24px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
-            }}
-          >
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 6px', color: '#13221c' }}>
-              Confirmar Alta Hospitalaria
-            </h3>
-            <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: '#526b60' }}>
-              ¿Confirmas el alta médica de <strong>{selectedBed.paciente?.nombre}</strong>? La cama{' '}
-              <strong>{selectedBed.codigo}</strong> quedará liberada y disponible inmediatamente.
-            </p>
-
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setModalType(null);
-                  setSelectedBed(null);
-                }}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
                 style={{
-                  flex: 1,
-                  padding: '10px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #cad8d1',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  color: '#13221c',
                   background: '#ffffff',
-                  fontWeight: 700,
-                  cursor: 'pointer',
                 }}
               >
-                Volver
-              </button>
-              <button
-                type="button"
-                onClick={handleDarDeAlta}
-                disabled={isSubmitting}
-                style={{
-                  flex: 1,
-                  padding: '10px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  background: '#0b5d4b',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                {isSubmitting ? 'Procesando...' : 'Confirmar Alta'}
-              </button>
-            </div>
-          </div>
+                <option value="ALL">Estado: Todos</option>
+                <option value="DISPONIBLE">Solo Libres</option>
+                <option value="OCUPADA">Solo Ocupadas</option>
+              </select>
+            </>
+          )}
         </div>
+
+        {viewMode === 'MAP' && (
+          <div style={{ position: 'relative', minWidth: '250px' }}>
+            <div style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#849a90' }}>
+              <SearchIcon size={15} />
+            </div>
+            <input
+              type="text"
+              placeholder="Buscar cama, habitación, paciente o médico..."
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '7px 12px 7px 32px',
+                borderRadius: '8px',
+                border: '1px solid #cad8d1',
+                fontSize: '0.82rem',
+              }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Vista principal */}
+      {viewMode === 'MAP' ? (
+        <FloorMapView
+          rooms={rooms}
+          selectedBedId={drawerBed?.id}
+          onSelectBed={(bed) => setDrawerBed(bed)}
+          isOps={isOps}
+        />
+      ) : (
+        <AdmissionsAuditTable ingresos={ingresosHistory} isOps={isOps} />
       )}
 
-      {/* MODAL TRASLADO */}
-      {modalType === 'TRASLADO' && selectedBed && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-            padding: '16px',
+      {/* Drawer de detalle */}
+      <BedDetailDrawer
+        bed={drawerBed}
+        isOps={isOps}
+        onClose={() => setDrawerBed(null)}
+        onOpenIngreso={(bed) => {
+          setModalBed(bed);
+          setIngresoForm((prev) => ({ ...prev, tipo: bed.tipo }));
+          setModalType('INGRESO');
+        }}
+        onOpenTraslado={(bed) => {
+          setModalBed(bed);
+          const firstAvail = beds.find((b) => b.estado === 'DISPONIBLE' && b.id !== bed.id);
+          setTrasladoIdCama(firstAvail?.id || '');
+          setModalType('TRASLADO');
+        }}
+        onOpenAlta={(bed) => {
+          setModalBed(bed);
+          setModalType('ALTA');
+        }}
+      />
+
+      {/* Modales operativos — exclusivos de Jefe de Operaciones */}
+      {isOps && (
+        <BedModals
+          modalType={modalType}
+          selectedBed={modalBed}
+          pacientes={pacientes}
+          medicos={medicos}
+          availableBedsForTransfer={availableBedsForTransfer}
+          ingresoForm={ingresoForm}
+          trasladoIdCama={trasladoIdCama}
+          isSubmitting={isSubmitting}
+          onChangeIngresoForm={setIngresoForm}
+          onChangeTrasladoIdCama={setTrasladoIdCama}
+          onClose={() => {
+            setModalType(null);
+            setModalBed(null);
           }}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '16px',
-              maxWidth: '460px',
-              width: '100%',
-              padding: '24px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
-            }}
-          >
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 6px', color: '#13221c' }}>
-              Trasladar Paciente de Cama
-            </h3>
-            <p style={{ margin: '0 0 16px', fontSize: '0.82rem', color: '#526b60' }}>
-              Paciente: <strong>{selectedBed.paciente?.nombre}</strong> (Origen: {selectedBed.codigo})
-            </p>
-
-            <form onSubmit={handleTrasladar} style={{ display: 'grid', gap: '14px' }}>
-              <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#13221c', display: 'block', marginBottom: '4px' }}>
-                  Cama de Destino Disponible
-                </label>
-                <select
-                  value={trasladoIdCama}
-                  onChange={(e) => setTrasladoIdCama(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #cad8d1',
-                    fontSize: '0.85rem',
-                  }}
-                  required
-                >
-                  <option value="">-- Seleccionar Cama Disponible --</option>
-                  {availableBedsForTransfer.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.codigo} ({b.tipo} - Planta {b.planta})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setModalType(null);
-                    setSelectedBed(null);
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !trasladoIdCama}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: '#0b5d4b',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {isSubmitting ? 'Trasladando...' : 'Ejecutar Traslado'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+          onSubmitIngreso={handleAsignarIngreso}
+          onConfirmAlta={handleDarDeAlta}
+          onSubmitTraslado={handleTrasladar}
+        />
       )}
     </div>
   );
